@@ -31,18 +31,18 @@ subroutine calc_tot_ext(freq)
   real(8) dabh2o_t, dabh2o_v, dabh2o_p
   real(8) do2abs_t, do2abs_v,do2abs_p
   real(8), external  :: o2abs, absn2, abh2o
-  
+
   do level = 1, nlev
-    gas_prof(level)%absn2 = absn2(atm(level)%temperature,         &
-                                  atm(level)%pressure,freq,       &
+    gas_prof(level)%absn2 = absn2(atm(level)%temp, &
+                                  atm(level)%press,freq, &
                                   dabsn2_t, dabsn2_p)
-    gas_prof(level)%absh2o = abh2o(atm(level)%temperature,         &
-                                   atm(level)%pressure,           &
-                                   atm(level)%vapor_dens,freq, &
+    gas_prof(level)%absh2o = abh2o(atm(level)%temp, &
+                                   atm(level)%press, &
+                                   atm(level)%humid,freq, &
                                    dabh2o_t, dabh2o_v, dabh2o_p)
-    gas_prof(level)%o2abs = o2abs(atm(level)%temperature,         &
-                                  atm(level)%pressure,            &
-                                  atm(level)%vapor_dens,freq,  &
+    gas_prof(level)%o2abs = o2abs(atm(level)%temp, &
+                                  atm(level)%press, &
+                                  atm(level)%humid,freq, &
                                   do2abs_t, do2abs_v,do2abs_p)
     atm(level)%abs_o2 = gas_prof(level)%o2abs + gas_prof(level)%absn2
     atm(level)%abs_h2o = gas_prof(level)%absh2o
@@ -59,15 +59,15 @@ subroutine calc_tot_ext(freq)
     gas_prof(level)%do2abs_dw = do2abs_v
 
     phase = 1 ! cloud liquid
-    call hydrometeor_master_5ph_d( freq, phase,                                &
-                                   atm(level)%temperature,            &
-                                   atm(level)%clw_p,            &
-                                   atm(level)%clw_q,            &
-                                   atm(level)%clw_k0,           &
-                                   atm(level)%clw_a0,           &
+    call hydrometeor_master_5ph_d( freq, phase, &
+                                   atm(level)%temp, &
+                                   atm(level)%clw_p, &
+                                   atm(level)%clw_q, &
+                                   atm(level)%clw_k0, &
+                                   atm(level)%clw_a0, &
                                    abs_cloud_liq, scat_cloud_liq, g_cloud_liq, &
-                                   dhab, dhsc, dg,                             &
-                                   a0_is_constant(level,phase) )
+                                   dhab, dhsc, dg, &
+                                   a0_const(level,phase) )
     hydro_prof(level,phase)%cloudab = abs_cloud_liq
     hydro_prof(level,phase)%cloudsc = scat_cloud_liq
     hydro_prof(level,phase)%cloudg = g_cloud_liq
@@ -81,19 +81,16 @@ subroutine calc_tot_ext(freq)
     hydro_prof(level,phase)%dcloudg_dk0 = dg(2)
     hydro_prof(level,phase)%dcloudg_da0 = dg(3)
 
-    !write(debugout,*) "liquid: abs,sc,g=", abs_cloud_liq, scat_cloud_liq, g_cloud_liq
-    !call mexPrintf(debugout//achar(10))
-
     phase = 2 ! rain
-    call hydrometeor_master_5ph_d( freq, phase,                                &
-                                   atm(level)%temperature,            &
-                                   atm(level)%rain_p,             &
-                                   atm(level)%rain_q,             &
-                                   atm(level)%rain_k0,            &
-                                   atm(level)%rain_a0,            &
-                                   abs_cloud_rn, scat_cloud_rn, g_cloud_rn,    &
-                                   dhab, dhsc, dg,                             &
-                                   a0_is_constant(level,phase) )
+    call hydrometeor_master_5ph_d( freq, phase, &
+                                   atm(level)%temp, &
+                                   atm(level)%rain_p, &
+                                   atm(level)%rain_q, &
+                                   atm(level)%rain_k0, &
+                                   atm(level)%rain_a0, &
+                                   abs_cloud_rn, scat_cloud_rn, g_cloud_rn, &
+                                   dhab, dhsc, dg, &
+                                   a0_const(level,phase) )
     hydro_prof(level,phase)%cloudab = abs_cloud_rn
     hydro_prof(level,phase)%cloudsc = scat_cloud_rn
     hydro_prof(level,phase)%cloudg = g_cloud_rn
@@ -107,19 +104,16 @@ subroutine calc_tot_ext(freq)
     hydro_prof(level,phase)%dcloudg_dk0 = dg(2)
     hydro_prof(level,phase)%dcloudg_da0 = dg(3)
 
-    !write(debugout,*) "liquid: abs,sc,g=", abs_cloud_rn, scat_cloud_rn, g_cloud_rn
-    !call mexPrintf(debugout//achar(10))
-
     phase = 3 ! ice
-    call hydrometeor_master_5ph_d( freq, phase,                                 &
-                                   atm(level)%temperature,             &
-                                   atm(level)%ice_p,             &
-                                   atm(level)%ice_q,             &
-                                   atm(level)%ice_k0,            &
-                                   atm(level)%ice_a0,            &
-                                   abs_cloud_ice, scat_cloud_ice, g_cloud_ice,  &
-                                   dhab, dhsc, dg,                              &
-                                   a0_is_constant(level,phase) )
+    call hydrometeor_master_5ph_d( freq, phase, &
+                                   atm(level)%temp, &
+                                   atm(level)%ice_p, &
+                                   atm(level)%ice_q, &
+                                   atm(level)%ice_k0, &
+                                   atm(level)%ice_a0, &
+                                   abs_cloud_ice, scat_cloud_ice, g_cloud_ice, &
+                                   dhab, dhsc, dg, &
+                                   a0_const(level,phase) )
     hydro_prof(level,phase)%cloudab = abs_cloud_ice
     hydro_prof(level,phase)%cloudsc = scat_cloud_ice
     hydro_prof(level,phase)%cloudg = g_cloud_ice
@@ -134,15 +128,15 @@ subroutine calc_tot_ext(freq)
     hydro_prof(level,phase)%dcloudg_da0 = dg(3)
 
     phase = 4 ! snow
-    call hydrometeor_master_5ph_d( freq, phase,                                   &
-                                   atm(level)%temperature,               &
-                                   atm(level)%snow_p,              &
-                                   atm(level)%snow_q,              &
-                                   atm(level)%snow_k0,             &
-                                   atm(level)%snow_a0,             &
+    call hydrometeor_master_5ph_d( freq, phase, &
+                                   atm(level)%temp, &
+                                   atm(level)%snow_p, &
+                                   atm(level)%snow_q, &
+                                   atm(level)%snow_k0, &
+                                   atm(level)%snow_a0, &
                                    abs_cloud_snow, scat_cloud_snow, g_cloud_snow, &
-                                   dhab, dhsc, dg,                                &
-                                   a0_is_constant(level,phase) )
+                                   dhab, dhsc, dg, &
+                                   a0_const(level,phase) )
     hydro_prof(level,phase)%cloudab = abs_cloud_snow
     hydro_prof(level,phase)%cloudsc = scat_cloud_snow
     hydro_prof(level,phase)%cloudg = g_cloud_snow
@@ -157,15 +151,15 @@ subroutine calc_tot_ext(freq)
     hydro_prof(level,phase)%dcloudg_da0 = dg(3)
 
     phase = 5 ! graupel
-    call hydrometeor_master_5ph_d( freq, phase,                                   &
-                                   atm(level)%temperature,               &
-                                   atm(level)%grpl_p,              &
-                                   atm(level)%grpl_q,              &
-                                   atm(level)%grpl_k0,             &
-                                   atm(level)%grpl_a0,             &
+    call hydrometeor_master_5ph_d( freq, phase, &
+                                   atm(level)%temp, &
+                                   atm(level)%grpl_p, &
+                                   atm(level)%grpl_q, &
+                                   atm(level)%grpl_k0, &
+                                   atm(level)%grpl_a0, &
                                    abs_cloud_grpl, scat_cloud_grpl, g_cloud_grpl, &
-                                   dhab, dhsc, dg,                                &
-                                   a0_is_constant(level,phase) )
+                                   dhab, dhsc, dg, &
+                                   a0_const(level,phase) )
     hydro_prof(level,phase)%cloudab = abs_cloud_grpl
     hydro_prof(level,phase)%cloudsc = scat_cloud_grpl
     hydro_prof(level,phase)%cloudg = g_cloud_grpl
@@ -185,23 +179,23 @@ subroutine calc_tot_ext(freq)
                                        + scat_cloud_snow + scat_cloud_grpl
     if( (scat_cloud_liq + scat_cloud_rn + scat_cloud_ice + &
          scat_cloud_snow + scat_cloud_grpl) .ne. 0.0d0 ) then
-         atm(level)%asymmetry = (scat_cloud_liq * g_cloud_liq    &
-                                       +  scat_cloud_rn * g_cloud_rn      &
-                                       +  scat_cloud_ice * g_cloud_ice    &
-                                       +  scat_cloud_snow * g_cloud_snow  &
+         atm(level)%asymmetry = (scat_cloud_liq * g_cloud_liq &
+                                       +  scat_cloud_rn * g_cloud_rn &
+                                       +  scat_cloud_ice * g_cloud_ice &
+                                       +  scat_cloud_snow * g_cloud_snow &
                                        +  scat_cloud_grpl * g_cloud_grpl) &
                                        / (scat_cloud_liq + scat_cloud_rn + scat_cloud_ice &
                                        +  scat_cloud_snow + scat_cloud_grpl) 
     else
         atm(level)%asymmetry = 0
     end if
-    atm(level)%ext_tot = atm(level)%abs_o2    &
-                                + atm(level)%abs_h2o   &
+    atm(level)%ext_tot = atm(level)%abs_o2 &
+                                + atm(level)%abs_h2o &
                                 + atm(level)%abs_cloud &
                                 + atm(level)%scat_cloud
     atm(level)%albedo = atm(level)%scat_cloud &
                                / atm(level)%ext_tot
-    atm(level)%bb_spec_int = atm(level)%temperature
+    atm(level)%bb_spec_int = atm(level)%temp
     
   end do
 return

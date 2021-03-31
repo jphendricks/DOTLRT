@@ -19,7 +19,7 @@ real(8) function abh2o (temperature, pressure, RHO, frequency, dabh2o_t, dabh2o_
 !inputs:
 ! temperature (K)
 ! pressure (mb)
-! RHO = water vapor density (g/m3), named vapor_density in o2abs
+! RHO = water vapor density (g/m3), named humid in o2abs
 ! frequency (GHz)
 !
 ! line parameters from H. J. Liebe, Radio Science V.20(5), pp.1069-1089 (1985)

@@ -58,7 +58,12 @@ bad= .false.
     dTb_di_str_wrt = missing
     dTb_ds_str_wrt = missing
     dTb_dg_str_wrt = missing
+    
+    call create_tb_file()
   endif
+
+! write profile file
+  if (save_prof_file) call create_profile_file()
 
 end subroutine setup_all_outputs
 
@@ -82,7 +87,7 @@ implicit none
   integer kpts
   integer kind
   logical bad
-  integer j
+  integer iang
   real(8) endpts(2)
   real(8) alpha
   real(8) beta
@@ -106,13 +111,13 @@ implicit none
 
 ! get number of levels
   if (trim(prof_src) == 'single' ) then
-    open(unit=20, file=trim(file_single_in), form='formatted', status='old')
+    open(unit=20, file=trim(file_in), form='formatted', status='old')
     read(20,*) nlev
     close(unit=20)
     nlon=1
     nlat=1
   elseif (trim(prof_src) == 'WRF') then
-    call read_WRF_netcdf_dimensions(file_wrf)
+    call read_WRF_netcdf_dimensions(file_in)
     if (lon_stop>nlon) lon_stop=nlon
     if (lat_stop>nlat) lat_stop=nlat
   endif
@@ -133,14 +138,8 @@ implicit none
 ! assign nlev 
   if(flag_reduce_nvar) then
     nlev=new_nlev
-    nlr = new_nlev
-    m1 = 1
-    nlr1 = nlr*m1
   else
     nlev=nlev_max
-    nlr = nlev_max
-    m1 = 1
-    nlr1 = nlr*m1
   endif
   
 ! instrument specification parameters input file:
@@ -159,24 +158,36 @@ implicit none
     kind = 1
     endpts(1) = -1.0D0
     endpts(2) = +1.0D0
-    call gaussq(kind, nang, alpha, beta, kpts, endpts, b, quad, cris_quad_wghts)
+    call gaussq(kind, nang, alpha, beta, kpts, endpts, b, quad, quad_wts)
     quad(1) = -1.0d0
     quad(nang) = +1.0d0
-    do j = 1, nang
-      quad_angle(j) = (180.0d0/pi)*acos(quad(nang-j+1))
-      teta(j) = quad_angle(j)
-    end do
-    
+    do iang = 1, nang
+      quad_ang(iang) = (180.0d0/pi)*acos(quad(nang-iang+1))
+      cos_ang(iang)= dcos(quad_ang(iang)/180.d0*pi)
+      sin_ang(iang)= dsin(quad_ang(iang)/180.d0*pi)
+    enddo
+
 ! Henyey-Greenstein phase matrix
     call HG_phmat()
-!
+
 ! read atmosphere profiles
   if (trim(prof_src) == 'single' ) then
     call read_text_profile()
   elseif (trim(prof_src) == 'WRF') then
     call get_wrf_data()
   endif
-!
+
+! create surface reflectance tables
+  if (trim(prof_src) == 'WRF') then
+    call construct_surf_ref_table()
+  endif
+
+! execution time diagnostics
+  print_ex = .true.
+  nseg=20
+  time_seg=0.d0
+  num_call=0.d0
+
 ! Allocate brightness temperature and jacobian output variables
   allocate(Tb_obs_mat(0:nlev,2))
   allocate(dTb_dT_obs_mat(nlev,2))

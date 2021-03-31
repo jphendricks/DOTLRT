@@ -2,7 +2,7 @@
 !==============================================================================
 SUBROUTINE read_WRF_netcdf_dimensions()
 !==============================================================================
-! This program reads in output WRF model to extract model data
+! This program reads in WRF model output to extract input data for MRT
 !
 ! Input
 !  WRF Model Output file
@@ -43,15 +43,18 @@ character*50 subroutine ! subroutine name
   subroutine='read_WRF_netcdf'
 !
 ! Open file
-  status = nf90_open(file_wrf, NF90_NOWRITE, ncdfID)
-  if (status /= nf90_noerr) call handle_err(status, subroutine, 1)
+  status = nf90_open(file_in, NF90_NOWRITE, ncdfID)
+  if (status /= nf90_noerr) then
+    print*, trim(file_in)
+    call handle_err(status, subroutine, 1)
+  endif
 !
 !------------------------------------------------------------------------------
 ! read dimension information
 !------------------------------------------------------------------------------
   status = nf90_inquire( ncdfID,numdim,numvars,natt, nunlimited )
   if (status /= nf90_noerr) call handle_err(status, subroutine, 2)
-  write(6,*) trim(file_wrf)
+  write(6,*) trim(file_in)
 !
 ! loop through dimensions
   do idim = 1,numdim
@@ -94,13 +97,12 @@ character*50 subroutine ! subroutine name
 ! temperature variables 
   allocate(T(nlon, nlat, nlev_max))
   allocate(temp(nlon, nlat, nlev_max))
-  allocate(TSK(nlon, nlat))
 
 ! height variables
   allocate(PH(nlon, nlat, nlev_max))
   allocate(PHB(nlon, nlat, nlev_max))
-  allocate(HGT(nlon, nlat))
-  allocate(height(nlon, nlat, nlev_max))
+  allocate(height_ter(nlon, nlat))
+  allocate(height_mid(nlon, nlat, nlev_max))
 
 ! pressure variables
   allocate(P(nlon, nlat, nlev_max))
@@ -115,14 +117,21 @@ character*50 subroutine ! subroutine name
   allocate(QGRAUP(nlon, nlat, nlev_max))
   allocate(QRAIN(nlon, nlat, nlev_max))
 
-! land mask variables
+! surface reflectance variables
   allocate(landmask(nlon, nlat))
   allocate(lakemask(nlon, nlat))
-
-! optional ancillary data variables
-  if (flag_read_anc) then
+  allocate(TSK(nlon, nlat))
+  allocate(sref_hor(nlon, nlat, max_nchan, max_nang))
+  allocate(sref_ver(nlon, nlat, max_nchan, max_nang))
+  
+! allocate variables required for output files
+  if(save_rad_file) then
     allocate(XLAT(nlon, nlat))
     allocate(XLONG(nlon, nlat))
+  endif
+  
+! optional ancillary data variables
+  if (flag_read_anc) then
     allocate(PSFC(nlon, nlat))
     allocate(Q2(nlon, nlat))
     allocate(T2(nlon, nlat))
@@ -133,12 +142,6 @@ character*50 subroutine ! subroutine name
     allocate(u10m(nlon, nlat))
     allocate(v10m(nlon, nlat))
     allocate(wind(nlon, nlat))
-  endif
-
-! allocate variables required for output files
-  if(save_rad_file) then
-    allocate(XLAT(nlon, nlat))
-    allocate(XLONG(nlon, nlat))
   endif
 
 end subroutine read_WRF_netcdf_dimensions

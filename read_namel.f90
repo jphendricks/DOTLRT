@@ -16,7 +16,7 @@ namelist /dotlrt_control/ & ! execution configuration control
   flag_print_full, flag_read_anc, ocean_mod, prof_src
 
 namelist /dotlrt_input_files/ & ! input file names
-  file_instr, file_single_in, file_wrf, file_var
+  file_instr, file_var
   
 namelist /dotlrt_rad_tran_param/ & ! input radiative transfer parameters
   nstream, nstream_surf, obs_height, obs_theta, nsub_freq 
@@ -25,7 +25,7 @@ namelist /dotlrt_grid_param/ & ! input grid indeces
   chan_strt, chan_stop, lon_strt, lon_stop, lat_strt, lat_stop, flag_reduce_nvar, new_nlev
 
 namelist /dotlrt_output_control/ & ! output control parameters
-  save_sing_prof, save_ilon, save_ilat, out_path, save_rad_file, save_sing_rad
+  save_sing_prof, save_ilon, save_ilat, save_rad_file, save_jac_file, save_sing_rad, save_prof_file
 
 ! read in namel_dotlrt
     open(unit=2,file='namel_dotlrt',form='formatted')

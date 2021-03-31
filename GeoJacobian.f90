@@ -23,72 +23,66 @@ subroutine GeoJacobian()
 !-----------------------------------------------------------------------
 ! History:
 !   9/26/2020 Kevin Schaefer deleted unused variables
+!  12/12/2020 Kevin Schaefer changed to standard indexing variables
 !-----------------------------------------------------------------------
 
-    use dotlrt_variables
-    implicit none
-    integer ilr1, iphase
+use dotlrt_variables
+implicit none
+
+! internal variables
+  integer iphase ! (-) hydrometeor phase index
+  integer ilev   ! (-) vertical level index
 
     ! geophysical Jacobian
-    do ilr1 = 1, nlr1
+    do ilev = 1, nlev
       ! gaseous + hydrometeor absorption - temperature derivative
-      dKab_dT(ilr1) =   gas_prof(ilr1)%dabsn2_dt     &
-                    +   gas_prof(ilr1)%dabsh2o_dt    &
-                    +   gas_prof(ilr1)%do2abs_dt     &
-                    + hydro_prof(ilr1,1)%dcloudab_dt &
-                    + hydro_prof(ilr1,2)%dcloudab_dt &
-                    + hydro_prof(ilr1,3)%dcloudab_dt &
-                    + hydro_prof(ilr1,4)%dcloudab_dt &
-                    + hydro_prof(ilr1,5)%dcloudab_dt
+      dKab_dT(ilev) =   gas_prof(ilev)%dabsn2_dt     &
+                    +   gas_prof(ilev)%dabsh2o_dt    &
+                    +   gas_prof(ilev)%do2abs_dt     &
+                    + hydro_prof(ilev,1)%dcloudab_dt &
+                    + hydro_prof(ilev,2)%dcloudab_dt &
+                    + hydro_prof(ilev,3)%dcloudab_dt &
+                    + hydro_prof(ilev,4)%dcloudab_dt &
+                    + hydro_prof(ilev,5)%dcloudab_dt
       ! gaseous absorption - pressure derivative
-      dKab_dp(ilr1) = gas_prof(ilr1)%dabsn2_dp  &
-                    + gas_prof(ilr1)%dabsh2o_dp &
-                    + gas_prof(ilr1)%do2abs_dp
+      dKab_dp(ilev) = gas_prof(ilev)%dabsn2_dp  &
+                    + gas_prof(ilev)%dabsh2o_dp &
+                    + gas_prof(ilev)%do2abs_dp
       ! gaseous absorption - water vapor derivative
-      dKab_dq(ilr1) = gas_prof(ilr1)%dabsh2o_dw &
-                    + gas_prof(ilr1)%do2abs_dw
+      dKab_dq(ilev) = gas_prof(ilev)%dabsh2o_dw &
+                    + gas_prof(ilev)%do2abs_dw
       ! hydrometeor phases
       do iphase = 1, nphase
         ! hydrometeor scatter - temperature derivative
-        dKsc_dT(ilr1,iphase) = hydro_prof(ilr1,iphase)%dcloudsc_dt
+        dKsc_dT(ilev,iphase) = hydro_prof(ilev,iphase)%dcloudsc_dt
         ! hydrometeor asymmetry - temperature derivative
-          dg_dT(ilr1,iphase) = hydro_prof(ilr1,iphase)%dcloudg_dt
+        dg_dT(ilev,iphase) = hydro_prof(ilev,iphase)%dcloudg_dt
       end do
+
       ! iphase = 1 (cloud liquid) a0 = constant
-      dKab_dw(ilr1,1) = atm(ilr1)%dclw_k0_dw  &
-                      * hydro_prof(ilr1,1)%dcloudab_dk0
-      dKsc_dw(ilr1,1) = atm(ilr1)%dclw_k0_dw  &
-                      * hydro_prof(ilr1,1)%dcloudsc_dk0
-        dg_dw(ilr1,1) = atm(ilr1)%dclw_k0_dw  &
-                      * hydro_prof(ilr1,1)%dcloudg_dk0
+      dKab_dw(ilev,1) = atm(ilev)%dclw_k0_dw  * hydro_prof(ilev,1)%dcloudab_dk0
+      dKsc_dw(ilev,1) = atm(ilev)%dclw_k0_dw  * hydro_prof(ilev,1)%dcloudsc_dk0
+      dg_dw(ilev,1) = atm(ilev)%dclw_k0_dw    * hydro_prof(ilev,1)%dcloudg_dk0
+
       ! iphase = 2 (rain) k0 = constant
-      dKab_dw(ilr1,2) = atm(ilr1)%drain_a0_dw  &
-                      * hydro_prof(ilr1,2)%dcloudab_da0
-      dKsc_dw(ilr1,2) = atm(ilr1)%drain_a0_dw  &
-                      * hydro_prof(ilr1,2)%dcloudsc_da0
-        dg_dw(ilr1,2) = atm(ilr1)%drain_a0_dw  &
-                      * hydro_prof(ilr1,2)%dcloudg_da0
+      dKab_dw(ilev,2) = atm(ilev)%drain_a0_dw  * hydro_prof(ilev,2)%dcloudab_da0
+      dKsc_dw(ilev,2) = atm(ilev)%drain_a0_dw  * hydro_prof(ilev,2)%dcloudsc_da0
+      dg_dw(ilev,2) = atm(ilev)%drain_a0_dw    * hydro_prof(ilev,2)%dcloudg_da0
+
       ! iphase = 3 (ice) a0 = constant
-      dKab_dw(ilr1,3) = atm(ilr1)%dice_k0_dw  &
-                      * hydro_prof(ilr1,3)%dcloudab_dk0
-      dKsc_dw(ilr1,3) = atm(ilr1)%dice_k0_dw  &
-                      * hydro_prof(ilr1,3)%dcloudsc_dk0
-        dg_dw(ilr1,3) = atm(ilr1)%dice_k0_dw  &
-                      * hydro_prof(ilr1,3)%dcloudg_dk0
+      dKab_dw(ilev,3) = atm(ilev)%dice_k0_dw  * hydro_prof(ilev,3)%dcloudab_dk0
+      dKsc_dw(ilev,3) = atm(ilev)%dice_k0_dw  * hydro_prof(ilev,3)%dcloudsc_dk0
+      dg_dw(ilev,3) = atm(ilev)%dice_k0_dw    * hydro_prof(ilev,3)%dcloudg_dk0
+
       ! iphase = 4 (snow) k0 = constant
-      dKab_dw(ilr1,4) = atm(ilr1)%dsnow_a0_dw  &
-                      * hydro_prof(ilr1,4)%dcloudab_da0
-      dKsc_dw(ilr1,4) = atm(ilr1)%dsnow_a0_dw  &
-                      * hydro_prof(ilr1,4)%dcloudsc_da0
-        dg_dw(ilr1,4) = atm(ilr1)%dsnow_a0_dw  &
-                      * hydro_prof(ilr1,4)%dcloudg_da0
+      dKab_dw(ilev,4) = atm(ilev)%dsnow_a0_dw  * hydro_prof(ilev,4)%dcloudab_da0
+      dKsc_dw(ilev,4) = atm(ilev)%dsnow_a0_dw  * hydro_prof(ilev,4)%dcloudsc_da0
+      dg_dw(ilev,4) = atm(ilev)%dsnow_a0_dw    * hydro_prof(ilev,4)%dcloudg_da0
+
       ! iphase = 5 (graupel) k0 = constant
-      dKab_dw(ilr1,5) = atm(ilr1)%dgrpl_a0_dw  &
-                      * hydro_prof(ilr1,5)%dcloudab_da0
-      dKsc_dw(ilr1,5) = atm(ilr1)%dgrpl_a0_dw  &
-                      * hydro_prof(ilr1,5)%dcloudsc_da0 
-        dg_dw(ilr1,5) = atm(ilr1)%dgrpl_a0_dw  &
-                      * hydro_prof(ilr1,5)%dcloudg_da0
-    end do ! ilr1
+      dKab_dw(ilev,5) = atm(ilev)%dgrpl_a0_dw  * hydro_prof(ilev,5)%dcloudab_da0
+      dKsc_dw(ilev,5) = atm(ilev)%dgrpl_a0_dw  * hydro_prof(ilev,5)%dcloudsc_da0 
+      dg_dw(ilev,5) = atm(ilev)%dgrpl_a0_dw    * hydro_prof(ilev,5)%dcloudg_da0
+    end do ! ilev
 
 end subroutine GeoJacobian

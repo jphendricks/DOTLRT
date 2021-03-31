@@ -1,11 +1,11 @@
 !=============================================================================
-real(8) function o2abs(temperature, pressure, vapor_density, frequency, do2abs_t, do2abs_v,do2abs_p)
+real(8) function o2abs(temperature, pressure, humid, frequency, do2abs_t, do2abs_v,do2abs_p)
 !=============================================================================
 ! Real function o2abs  calculates the oxygen (o2) resonant and nonresonant absorption.
 !
 ! temperature (K)
 ! pressure (mb)
-! vapor_density (g/m**3) (water vapor density - enters linewidth calculation
+! humid (g/m**3) (water vapor density - enters linewidth calculation
 ! due to greater broadening efficiency of H2O)
 ! frequency (GHz)
 ! o2abs = air absorption coefficient due to oxygen , in (Np/km)
@@ -33,7 +33,7 @@ real(8) function o2abs(temperature, pressure, vapor_density, frequency, do2abs_t
 !   9/26/2020 Kevin Schaefer deleted unused variables, tabs, unused code
 !----------------------------------------------------------------------------
   implicit none
-  real(8) temperature, pressure, vapor_density, frequency
+  real(8) temperature, pressure, humid, frequency
   real(8)  B,    PRESDA,    PRESWV,    TH,    DFNR,    SUM1,    DF
   real(8) dB_t, dPRESDA_t, dPRESWV_t, dTH_t, dDFNR_t, dSUM1_t, dDF_t
   real(8)       dPRESDA_v, dPRESWV_v,        dDFNR_v, dSUM1_v, dDF_v
@@ -120,8 +120,8 @@ real(8) function o2abs(temperature, pressure, vapor_density, frequency, do2abs_t
   BB    = 0.0d0
   CC    = 0.0d0
 
-   PRESWV   = vapor_density * temperature / 217.0d0
-  dPRESWV_t = vapor_density/217.0d0
+   PRESWV   = humid * temperature / 217.0d0
+  dPRESWV_t = humid/217.0d0
   dPRESWV_v = temperature/217.0d0
 
    PRESDA   = pressure - PRESWV

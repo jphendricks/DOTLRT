@@ -11,20 +11,6 @@ module dotlrt_output
 
 implicit none
 
-! Define ouptput variables for single grid cell
-  real(8), allocatable :: Tb_obs_mat(:,:)         ! (K)      (nlev,npol)              Brightness temperature in sensor direction
-  real(8), allocatable :: dTb_dT_obs_mat(:,:)     ! (K/K)    (nlev,npol)              Jacobian brightness temp wrt air temperature in sensor direction
-  real(8), allocatable :: dTb_dp_obs_mat(:,:)     ! (K/mb)   (nlev,npol)              Jacobian brightness temp wrt pressure in sensor direction
-  real(8), allocatable :: dTb_dq_obs_mat(:,:)     ! (K m3/g) (nlev,npol)              Jacobian brightness temp wrt specific humidity in sensor direction
-  real(8), allocatable :: dTb_dw_obs_mat(:,:,:)   ! (K m3/g) (nvar,nlev,npol)         Jacobian brightness temp wrt hydrometeor in sensor direction
-  real(8)  Tbo_mat(2)                             ! (K)      (npol)                   Brightness temperature at sensor nadir angle 
-  real(8)  tau_mat(2)                             ! (-)      (npol)                   opacity at sensor
-  real(8), allocatable :: Tbo_str_mat(:,:)        ! (K)      (nstream,npol)           Brightness temperature at top of atmosphere 
-  real(8), allocatable :: dTb_dT_str_mat(:,:,:)   ! (K/K)    (nlev,nstream,npol)      Jacobian brightness temp wrt air temperature 
-  real(8), allocatable :: dTb_dp_str_mat(:,:,:)   ! (K/mb)   (nlev,nstream,npol)      Jacobian brightness temp wrt pressure
-  real(8), allocatable :: dTb_dq_str_mat(:,:,:)   ! (K m3/g) (nlev,nstream,npol)      Jacobian brightness temp wrt specific humidity
-  real(8), allocatable :: dTb_dw_str_mat(:,:,:,:) ! (K m3/g) (nvar,nlev,nstream,npol) Jacobian brightness temp wrt hydrometeor 
-
 ! define netcdf write arrays for full domain
   real(8), allocatable :: Tbo_wrt(:,:,:)            ! (K)      (nlat,nlon,npol)              Brightness temperature at top of atmosphere in sensor direction
   real(8), allocatable :: Tbo_str_wrt(:,:,:,:)      ! (K)      (nlat,nlon,nstream,npol)      Brightness temperature at top of atmosphere per stream angle 
@@ -46,6 +32,7 @@ implicit none
 
 ! Standard variable specification for netcdf
   type variable_spec
+     character*20 file       ! (-) output file type to write variable
      character*20 name       ! (-) netcdf variable name
      character*100 long_name ! (-) long name or description
      character*20 units      ! (-) variable units

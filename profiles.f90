@@ -20,12 +20,12 @@ integer ntime    ! (-) number of times
 ! temperature variables
 real(8), allocatable :: T(:,:,:)      ! (K) perturbation potential temperature
 real(8), allocatable :: temp(:,:,:)   ! (K) atmospheric temperature
-real(8), allocatable :: TSK(:,:)      ! (K) surface skin temperature
 
 ! Variables to calculate height
-real(8), allocatable :: PH(:,:,:)     ! (m2/s2) perturbation geopotential
-real(8), allocatable :: PHB(:,:,:)    ! (m2/s2) base state geopotential
-real(8), allocatable :: height(:,:,:) ! (km) height above sea level
+real(8), allocatable :: PH(:,:,:)         ! (m2/s2) perturbation geopotential
+real(8), allocatable :: PHB(:,:,:)        ! (m2/s2) base state geopotential
+real(8), allocatable :: height_ter(:,:)   ! (m) Terrain Height
+real(8), allocatable :: height_mid(:,:,:) ! (km) height above surface to middle of atmospheric layer
 
 ! Variables to calculate pressure
 real(8), allocatable :: P(:,:,:)      ! (Pa) perturbation atmospheric pressure
@@ -40,20 +40,24 @@ real(8), allocatable :: QSNOW(:,:,:)  ! (g m-3) snow mixing ratio
 real(8), allocatable :: QGRAUP(:,:,:) ! (g m-3) graupel mixing ratio
 real(8), allocatable :: QRAIN(:,:,:)  ! (g m-3) rain mixing ratio
 
-! Land/Lake/Ocean mask variables
-real(8), allocatable :: landmask(:,:) ! (-) land vs. ocean/water mask
-real(8), allocatable :: lakemask(:,:) ! (-) lake vs. ocean mask
+! surface reflctivity variables
+real(8), allocatable :: TSK(:,:)          ! (K) surface skin temperature
+real(8), allocatable :: landmask(:,:)     ! (-) land vs. ocean/water mask
+real(8), allocatable :: lakemask(:,:)     ! (-) lake vs. ocean mask
+real(8), allocatable :: sref_hor(:,:,:,:) ! (-) surface reflectivity horizontally polarized
+real(8), allocatable :: sref_ver(:,:,:,:) ! (-) surface reflectivity vertically polarized
 
 ! optional wind speed variables when ocean_mod = 'Wilheit'
 real(8), allocatable :: u10m(:,:)     ! (m s-1) u wind component
 real(8), allocatable :: v10m(:,:)     ! (m s-1) v wind component
 real(8), allocatable :: wind(:,:)     ! (m s-1) wind speed
 
-! Misc variables we read in, but apparently do not use
-real(8), allocatable :: PSFC(:,:)     ! (Pa) surface pressure
+! variables required in netcdf output files
 real(8), allocatable :: XLAT(:,:)     ! (deg) latitudes
 real(8), allocatable :: XLONG(:,:)    ! (deg) longitudes
-real(8), allocatable :: HGT(:,:)      ! (m) Terrain Height
+
+! optional, unused ancillary variables
+real(8), allocatable :: PSFC(:,:)     ! (Pa) surface pressure
 real(8), allocatable :: q2(:,:)       ! (kg kg-1) water mixing ratio at 2 meters
 real(8), allocatable :: t2(:,:)       ! (K) temperature at 2 meters
 

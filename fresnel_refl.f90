@@ -1,6 +1,6 @@
 !
 !==================================================================
-subroutine fresnel_refl( iang )
+subroutine fresnel_refl( iang, surf_ref_hor, surf_ref_ver )
 !==================================================================
 ! Computes the power reflection coefficients (rv and rh) for a
 ! specular dielectric surface.
@@ -8,7 +8,7 @@ subroutine fresnel_refl( iang )
 ! Note: kappa,mu are assumed negative for lossy media.
 !
 ! History:
-!  10/5/20 Kevin Schaefer commented the code
+!  10/5/2020 Kevin Schaefer commented the code
 !  10/16/2020 Kevin Schaefer switched to variables module
 !-----------------------------------------------------------------
 use dotlrt_variables
@@ -16,6 +16,11 @@ implicit none
 !
 ! inputs
   integer(4) iang   ! angle index
+
+! outputs
+  real(8) surf_ref_hor ! (-) horizontal surface reflectivity
+  real(8) surf_ref_ver ! (-) vertical surface reflectivity
+
 !
 ! internal
   real(8) costheta ! cosine of theta
@@ -27,13 +32,13 @@ implicit none
 
 ! the calculations
   mu = dcmplx(1.0d0, 0.0d0)
-  costheta = dcos(surf_inp%theta(iang)*pi/180.0d0) 
-  term1 = cdsqrt(surf_inp%dielectric*mu+costheta*costheta-1)
-  term2 = surf_inp%dielectric*costheta
+  costheta = dcos(surf%theta(iang)*pi/180.0d0) 
+  term1 = cdsqrt(surf%diel*mu+costheta*costheta-1)
+  term2 = surf%diel*costheta
   gamv = (term2-term1)/(term2+term1)
   term2 = mu*costheta
   gamh = (term2-term1)/(term2+term1)
-  surf_inp%vr(iang) = gamv * dconjg(gamv)
-  surf_inp%hr(iang) = gamh * dconjg(gamh)
+  surf_ref_ver = gamv * dconjg(gamv)
+  surf_ref_hor = gamh * dconjg(gamh)
 
 end subroutine fresnel_refl

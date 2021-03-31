@@ -41,14 +41,14 @@ subroutine calc_passband_freq()
         if( ( (lo_freq-bandwidth/2.0d0) .gt. 0.0d0) .and. &
             ( (lo_freq+bandwidth/2.0d0) .lt. max_freq) ) then
             if( nsub_freq .gt. 1 ) then
-                if( nsub_freq .gt. max_num_int_freqs ) then
-                    freq_incr = bandwidth/dble(max_num_int_freqs-1)
+                if( nsub_freq .gt. max_nfreq ) then
+                    freq_incr = bandwidth/dble(max_nfreq-1)
                     freq = lo_freq-bandwidth/2.0d0
-                    do i = 1, max_num_int_freqs 
+                    do i = 1, max_nfreq 
                         passband_freq(i) = freq
                         freq = freq+freq_incr
                     end do
-                    num_freqs = max_num_int_freqs
+                    num_freqs = max_nfreq
                     ! WARNING: Requested number of quadrature frequencies
                     !          not available. Maximum number being used
                 else
@@ -77,20 +77,20 @@ subroutine calc_passband_freq()
                 (if1_freq .gt. bandwidth/2.0d0) .and.                    &
                 (lo_freq .gt. if1_freq) ) then
                 if( nsub_freq .gt. 1 ) then
-                    if( nsub_freq .gt. idint(dble(max_num_int_freqs)/2.0d0)) THEN
-                        freq_incr = bandwidth/(idint(dble(max_num_int_freqs)/2.0d0)-1.0d0)
+                    if( nsub_freq .gt. idint(dble(max_nfreq)/2.0d0)) THEN
+                        freq_incr = bandwidth/(idint(dble(max_nfreq)/2.0d0)-1.0d0)
                         freq = lo_freq-if1_freq-bandwidth/2.0d0
-                        do i = 1, idint(dble(max_num_int_freqs)/2.0d0) 
+                        do i = 1, idint(dble(max_nfreq)/2.0d0) 
                             passband_freq(i) = freq
                             freq = freq+freq_incr
                         end do
                         freq = lo_freq+if1_freq-bandwidth/2.0d0
-                        do i = idint(dble(max_num_int_freqs)/2.0d0)+1, &
-                               2*idint(dble(max_num_int_freqs)/2.0d0)
+                        do i = idint(dble(max_nfreq)/2.0d0)+1, &
+                               2*idint(dble(max_nfreq)/2.0d0)
                             passband_freq(i) = freq
                             freq = freq+freq_incr
                         end do
-                        num_freqs = 2*idint(dble(max_num_int_freqs)/2.0d0)
+                        num_freqs = 2*idint(dble(max_nfreq)/2.0d0)
                         ! WARNING: Requested number of quadrature frequencies not available.
                         !          Maximum number being used
                     else
@@ -124,32 +124,32 @@ subroutine calc_passband_freq()
                 (if2_freq .gt. bandwidth/2.0d0) .and. (if1_freq .gt. if2_freq) .and. &
                 (lo_freq .gt. if1_freq) ) then
                 if( nsub_freq .gt. 1 ) then
-                    if( nsub_freq .gt. idint(dble(max_num_int_freqs)/4.0d0) ) then
-                        freq_incr = bandwidth/(idint(dble(max_num_int_freqs)/4.0d0)-1)
+                    if( nsub_freq .gt. idint(dble(max_nfreq)/4.0d0) ) then
+                        freq_incr = bandwidth/(idint(dble(max_nfreq)/4.0d0)-1)
                         freq = lo_freq-if1_freq-if2_freq-bandwidth/2.0d0
-                        do i = 1, idint(dble(max_num_int_freqs)/4.0d0)
+                        do i = 1, idint(dble(max_nfreq)/4.0d0)
                             passband_freq(i) = freq
                             freq = freq+freq_incr
                         end do
                         freq = lo_freq-if1_freq+if2_freq-bandwidth/2.0d0
-                        do i = idint(dble(max_num_int_freqs)/4.0d0)+1, &
-                               2*idint(dble(max_num_int_freqs)/4.0d0)
+                        do i = idint(dble(max_nfreq)/4.0d0)+1, &
+                               2*idint(dble(max_nfreq)/4.0d0)
                             passband_freq(i) = freq
                             freq = freq+freq_incr
                         end do
                         freq = lo_freq+if1_freq-if2_freq-bandwidth/2.0
-                        do i = 2*idint(dble(max_num_int_freqs)/4.0d0)+1, &
-                               3*idint(dble(max_num_int_freqs)/4.0d0)
+                        do i = 2*idint(dble(max_nfreq)/4.0d0)+1, &
+                               3*idint(dble(max_nfreq)/4.0d0)
                             passband_freq(i) = freq
                             freq = freq+freq_incr
                         end do
                         freq = lo_freq+if1_freq+if2_freq-bandwidth/2.0d0
-                        do i = 3*idint(dble(max_num_int_freqs)/4.0d0)+1, &
-                               4*idint(dble(max_num_int_freqs)/4.0d0)
+                        do i = 3*idint(dble(max_nfreq)/4.0d0)+1, &
+                               4*idint(dble(max_nfreq)/4.0d0)
                             passband_freq(i) = freq
                             freq = freq+freq_incr
                         end do
-                        num_freqs = 4*idint(dble(max_num_int_freqs)/4.0d0)
+                        num_freqs = 4*idint(dble(max_nfreq)/4.0d0)
                         ! WARNING: Requested number of quadrature frequencies not available.
                         !          Maximum number being used
                     else

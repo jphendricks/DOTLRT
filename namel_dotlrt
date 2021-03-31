@@ -6,17 +6,15 @@ $dotlrt_control
 /
 
 $dotlrt_input_files
-  file_instr='/home/kevin/code/DOTLRTv2.0/inputs/Instr_Spec.instr'
-  file_single_in='/home/kevin/DOTLRT_fort_v1.5/inputs/atm_profile.txt'
-  file_wrf='/home/kevin/inputs/WRF_Output/wrfout_d02_2019-05-26_12_00_00'
-  file_var='/home/kevin/code/DOTLRTv2.0/inputs/var_def.txt'
+  file_instr='/home/kevin/code/DOTLRTv2.1/inputs/Instr_Spec.instr'
+  file_var='/home/kevin/code/DOTLRTv2.1/inputs/var_def.txt'
 /
 
 $dotlrt_rad_tran_param
   nstream = 16
   nstream_surf = 8
   obs_height = 500.
-  obs_theta = 25.
+  obs_theta = 0.
   nsub_freq = 1
 /
 
@@ -32,12 +30,13 @@ $dotlrt_grid_param
 /
 
 $dotlrt_output_control
-  out_path = '/home/kevin/code/DOTLRTv2.0/output/'
   save_sing_prof = .false.
   save_sing_rad = .false.
   save_ilon = 100
   save_ilat = 200
   save_rad_file = .false.
+  save_jac_file = .false.
+  save_prof_file = .false.
 /
 
 ===============================================================
@@ -63,8 +62,7 @@ dotlrt_control
 
 dotlrt_input_files
   file_instr  = full path to instrument specification file
-  file_single = full path to single text atm profile
-  file_wrf    = full path to WRF output file
+  file_in     = full path to input atm profile file
 
 dotlrt_rad_tran_param
   nstream      ! (-) total number of stream angles
@@ -82,7 +80,6 @@ dotlrt_grid_param
   lat_stop  ! stop index for latitude
 
 dotlrt_output_control
-  out_path       ! path to output directory
   save_sing_prof ! save a single atmospheric profile at (save_ilon, save_ilat)
   save_sing_rad  ! save a single TOA radiation at (save_ilon, save_ilat)
   save_ilon      ! lon index to save single point

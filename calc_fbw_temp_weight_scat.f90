@@ -14,7 +14,8 @@ subroutine calc_fbw_temp_weight_scat( Tbo, tau, &
   use dotlrt_variables
   implicit none
 
-  real(8) tb_pl_inp(0:nlev), tb_mn_inp(0:nlev)
+  real(8) tb_pl_inp(0:nlev)
+  real(8) tb_mn_inp(0:nlev)
   real(8) dtb_pl_inp(0:nlev,nvar), dtb_mn_inp(0:nlev,nvar)
   real(8) Tbo_streams_inp(nangover2)
   real(8) Tbo_streams(nangover2)
@@ -23,38 +24,47 @@ subroutine calc_fbw_temp_weight_scat( Tbo, tau, &
   real(8) frequency
   real(8) Tb_inp, tau(2)
 
-  ! brightness temperatures passband quadrature
+! brightness temperatures passband quadrature
   real(8), DIMENSION(0:nlev,2) :: cTb
 
-  ! absorption/scattering coefficients passband quadrature
+! absorption/scattering coefficients passband quadrature
   real(8), dimension(nlev,5,3) :: cKsa
 
-  ! geophysical Jacobian passband quadrature
-  real(8), dimension(nlev) :: cdKab_dT, cdKab_dp, cdKab_dq
-  real(8), dimension(nlev,5) :: cdKsc_dT, cdg_dT, cdKab_dw, cdKsc_dw, cdg_dw
+! geophysical Jacobian passband quadrature
+  real(8), dimension(nlev) :: cdKab_dT
+  real(8), dimension(nlev) :: cdKab_dp
+  real(8), dimension(nlev) :: cdKab_dq
+  real(8), dimension(nlev,5) :: cdKsc_dT
+  real(8), dimension(nlev,5) :: cdg_dT
+  real(8), dimension(nlev,5) :: cdKab_dw
+  real(8), dimension(nlev,5) :: cdKsc_dw
+  real(8), dimension(nlev,5) :: cdg_dw
 
-  ! total Jacobian passband quadrature
-  real(8), dimension(nlev,2) :: cdTb_dT, cdTb_dp, cdTb_dq
+! total Jacobian passband quadrature
+  real(8), dimension(nlev,2) :: cdTb_dT
+  real(8), dimension(nlev,2) :: cdTb_dp
+  real(8), dimension(nlev,2) :: cdTb_dq
   real(8), dimension(nlev,5,2) :: cdTb_dw
 
-  ! total Jacobian passband quadrature over stream angles
-  real(8), dimension(nlev,nangover2,2) :: dTb_dT_streams, dTb_dp_streams, dTb_dq_streams
+! total Jacobian passband quadrature over stream angles
+  real(8), dimension(nlev,nangover2,2) :: dTb_dT_streams
+  real(8), dimension(nlev,nangover2,2) :: dTb_dp_streams
+  real(8), dimension(nlev,nangover2,2) :: dTb_dq_streams
   real(8), dimension(nlev,nangover2,5,2) :: dTb_dw_streams
 
-  ! radiative transfer Jacobian passband quadrature
-  real(8), dimension(nlev,2) :: &
-                                           cdTbdTr,      & ! temperature
-                                           cdTbdKa,      & ! absorption
-                                           cdTbdKsliq,   & ! scatter liquid
-                                           cdTbdgliq,    & ! asymmetry liquid
-                                           cdTbdKsrn,    & ! scatter rain
-                                           cdTbdgrn,     & ! asymmetry rain
-                                           cdTbdKsice,   & ! scatter ice
-                                           cdTbdgice,    & ! asymmetry ice
-                                           cdTbdKssnow,  & ! scatter snow
-                                           cdTbdgsnow,   & ! asymmetry snow
-                                           cdTbdKsgrpl,  & ! scatter graupel
-                                           cdTbdggrpl      ! asymmetry graupel
+! radiative transfer Jacobian passband quadrature
+  real(8), dimension(nlev,2) :: cdTbdTr     ! temperature
+  real(8), dimension(nlev,2) :: cdTbdKa     ! absorption
+  real(8), dimension(nlev,2) :: cdTbdKsliq  ! scatter liquid
+  real(8), dimension(nlev,2) :: cdTbdgliq   ! asymmetry liquid
+  real(8), dimension(nlev,2) :: cdTbdKsrn   ! scatter rain
+  real(8), dimension(nlev,2) :: cdTbdgrn    ! asymmetry rain
+  real(8), dimension(nlev,2) :: cdTbdKsice  ! scatter ice
+  real(8), dimension(nlev,2) :: cdTbdgice   ! asymmetry ice
+  real(8), dimension(nlev,2) :: cdTbdKssnow ! scatter snow
+  real(8), dimension(nlev,2) :: cdTbdgsnow  ! asymmetry snow
+  real(8), dimension(nlev,2) :: cdTbdKsgrpl ! scatter graupel
+  real(8), dimension(nlev,2) :: cdTbdggrpl  ! asymmetry graupel
 
   real(8), dimension(0:nlev,2) :: Tb_obs
   real(8), dimension(nlev,2) :: dTb_dT_obs
@@ -62,17 +72,19 @@ subroutine calc_fbw_temp_weight_scat( Tbo, tau, &
   real(8), dimension(nlev,2) :: dTb_dq_obs
   real(8), dimension(nlev,5,2) :: dTb_dw_obs
   real(8) Tbo
-  real(8), dimension(nlev) ::  cabs_total, cscat_cloud
+  real(8), dimension(nlev) :: cabs_total
+  real(8), dimension(nlev) :: cscat_cloud
 
-  integer j, ilr1, k, hydrometeor_phase, jud
-
+  integer j, k, jud
+  integer iphase ! (-) hydrometeor phase index
+  integer ilev ! (-) vertical level index
   real(8) quadweight, norm
 
-  ! Calculate passband quadrature frequencies
-  ! num_freqs: number of freq points for passband quadrature
-
+! Calculate passband quadrature frequencies
+! num_freqs: number of freq points for passband quadrature
   call calc_passband_freq()
-  ! Normalization of passband quadrature weights
+
+! Normalization of passband quadrature weights
   if( nsub_freq == 1 ) then
     norm = num_freqs
   else
@@ -80,77 +92,77 @@ subroutine calc_fbw_temp_weight_scat( Tbo, tau, &
   end if
 
   if(num_freqs .gt. 0) then
-     ! Initialize passband quadrature start !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+     ! Initialize passband quadrature start
      Tbo = 0.0d0
      do j = 1, nangover2
         Tbo_streams(j) = 0.0d0
      end do
      
      do jud = 1, 2
-        do ilr1 = 0, nlr1
+        do ilev = 0, nlev
            ! Brightness temperatures
-           cTb(ilr1,jud) = 0.0d0
+           cTb(ilev,jud) = 0.0d0
         end do
-        do ilr1 = 1, nlr1
+        do ilev = 1, nlev
            ! Geophysical/Radiation Jacobian
-           cdTb_dT(ilr1,jud)     = 0.0d0
-           cdTb_dp(ilr1,jud)     = 0.0d0
-           cdTb_dq(ilr1,jud)     = 0.0d0
-           do hydrometeor_phase = 1, nphase
-              cdTb_dw(ilr1,hydrometeor_phase,jud) = 0.0d0
+           cdTb_dT(ilev,jud)     = 0.0d0
+           cdTb_dp(ilev,jud)     = 0.0d0
+           cdTb_dq(ilev,jud)     = 0.0d0
+           do iphase = 1, nphase
+              cdTb_dw(ilev,iphase,jud) = 0.0d0
            end do
            ! Radiation Jacobian
-           cdTbdTr(ilr1,jud)     = 0.0d0
-           cdTbdKa(ilr1,jud)     = 0.0d0
-           cdTbdKsliq(ilr1,jud)  = 0.0d0
-           cdTbdgliq(ilr1,jud)   = 0.0d0
-           cdTbdKsrn(ilr1,jud)   = 0.0d0
-           cdTbdgrn(ilr1,jud)    = 0.0d0
-           cdTbdKsice(ilr1,jud)  = 0.0d0
-           cdTbdgice(ilr1,jud)   = 0.0d0
-           cdTbdKssnow(ilr1,jud) = 0.0d0
-           cdTbdgsnow(ilr1,jud)  = 0.0d0
-           cdTbdKsgrpl(ilr1,jud) = 0.0d0
-           cdTbdggrpl(ilr1,jud)  = 0.0d0
-        end do ! ilr1
+           cdTbdTr(ilev,jud)     = 0.0d0
+           cdTbdKa(ilev,jud)     = 0.0d0
+           cdTbdKsliq(ilev,jud)  = 0.0d0
+           cdTbdgliq(ilev,jud)   = 0.0d0
+           cdTbdKsrn(ilev,jud)   = 0.0d0
+           cdTbdgrn(ilev,jud)    = 0.0d0
+           cdTbdKsice(ilev,jud)  = 0.0d0
+           cdTbdgice(ilev,jud)   = 0.0d0
+           cdTbdKssnow(ilev,jud) = 0.0d0
+           cdTbdgsnow(ilev,jud)  = 0.0d0
+           cdTbdKsgrpl(ilev,jud) = 0.0d0
+           cdTbdggrpl(ilev,jud)  = 0.0d0
+        end do ! ilev
      end do ! jud
 
-     do ilr1 = 1, nlr1
+     do ilev = 1, nlev
         ! Geophysical Jacobian
-        cdKab_dT(ilr1) = 0.0d0
-        cdKab_dp(ilr1) = 0.0d0
-        cdKab_dq(ilr1) = 0.0d0
-        do hydrometeor_phase = 1, nphase
-           cdKsc_dT(ilr1,hydrometeor_phase) = 0.0d0
-           cdg_dT(ilr1,hydrometeor_phase)   = 0.0d0
-           cdKab_dw(ilr1,hydrometeor_phase) = 0.0d0
-           cdKsc_dw(ilr1,hydrometeor_phase) = 0.0d0
-           cdg_dw(ilr1,hydrometeor_phase)   = 0.0d0
+        cdKab_dT(ilev) = 0.0d0
+        cdKab_dp(ilev) = 0.0d0
+        cdKab_dq(ilev) = 0.0d0
+        do iphase = 1, nphase
+           cdKsc_dT(ilev,iphase) = 0.0d0
+           cdg_dT(ilev,iphase)   = 0.0d0
+           cdKab_dw(ilev,iphase) = 0.0d0
+           cdKsc_dw(ilev,iphase) = 0.0d0
+           cdg_dw(ilev,iphase)   = 0.0d0
            ! absorption/scattering coefficients:
-           cKsa(ilr1,hydrometeor_phase,1) = 0.0d0
-           cKsa(ilr1,hydrometeor_phase,2) = 0.0d0
-           cKsa(ilr1,hydrometeor_phase,3) = 0.0d0
-        end do ! hydrometeor_phase
-        cabs_total(ilr1) = 0.0d0
-        cscat_cloud(ilr1) = 0.0d0
-     end do ! ilr1
+           cKsa(ilev,iphase,1) = 0.0d0
+           cKsa(ilev,iphase,2) = 0.0d0
+           cKsa(ilev,iphase,3) = 0.0d0
+        end do ! iphase
+        cabs_total(ilev) = 0.0d0
+        cscat_cloud(ilev) = 0.0d0
+     end do ! ilev
 
      ! Initialize Jacobian over stream angles, K. Zhang 12/07/15
-     do ilr1 = 1, nlr1
+     do ilev = 1, nlev
         do j = 1, nangover2
            do jud = 1, 2
-              dTb_dT_streams(ilr1, j, jud) = 0.0d0
-              dTb_dp_streams(ilr1, j, jud) = 0.0d0
-              dTb_dq_streams(ilr1, j, jud) = 0.0d0
-              do hydrometeor_phase = 1, nphase
-                 dTb_dw_streams(ilr1, j, hydrometeor_phase, jud) = 0.0d0
+              dTb_dT_streams(ilev, j, jud) = 0.0d0
+              dTb_dp_streams(ilev, j, jud) = 0.0d0
+              dTb_dq_streams(ilev, j, jud) = 0.0d0
+              do iphase = 1, nphase
+                 dTb_dw_streams(ilev, j, iphase, jud) = 0.0d0
               end do
            end do
         end do
      end do
      
-    ! Initialize passband quadrature end   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! step through frequencies in channel - start !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! Initialize passband quadrature end
+    ! step through frequencies in channel - start
     do ifreq = 1, num_freqs
       frequency = passband_freq(ifreq)
       ! Passband quadrature over passband frequencies using trapezoid rule
@@ -161,10 +173,6 @@ subroutine calc_fbw_temp_weight_scat( Tbo, tau, &
         quadweight = 1.0d0
       end if
       quadweight = quadweight / norm
-
-      !write(debugout,*) "quadweight = ",quadweight
-      !call mexPrintf(debugout//achar(10))
-
       ! Compute weighting vector quadrature over passband frequencies using trapezoid rule
       call calc_mon_temp_weight_scat( ifreq, Tb_inp, tau, tb_pl_inp, tb_mn_inp, dtb_pl_inp, dtb_mn_inp, Tbo_streams_inp )
 
@@ -175,25 +183,25 @@ subroutine calc_fbw_temp_weight_scat( Tbo, tau, &
       
       ! calculate Geophysical/Radiation Jacobian at streams angle, K. Zhang, 12/04/2015
       ! jud stands for upwelling or downwelling
-      do ilr1 = 1, nlr1
+      do ilev = 1, nlev
          do j = 1, nangover2
             do jud = 1, 2
-               dTb_dT_streams(ilr1,j,jud) = dTb_dT_streams(ilr1,j,jud) + quadweight * dTb_dT(ilr1,j,jud)
-               dTb_dp_streams(ilr1,j,jud) = dTb_dp_streams(ilr1,j,jud) + quadweight * dTb_dp(ilr1,j,jud)
-               dTb_dq_streams(ilr1,j,jud) = dTb_dq_streams(ilr1,j,jud) + quadweight * dTb_dq(ilr1,j,jud)
-               do hydrometeor_phase = 1,nphase
-                  dTb_dw_streams(ilr1,j,hydrometeor_phase,jud) = dTb_dw_streams(ilr1,j,hydrometeor_phase,jud) &
-                                                                  + quadweight * dTb_dw(ilr1,j,hydrometeor_phase,jud)
+               dTb_dT_streams(ilev,j,jud) = dTb_dT_streams(ilev,j,jud) + quadweight * dTb_dT(ilev,j,jud)
+               dTb_dp_streams(ilev,j,jud) = dTb_dp_streams(ilev,j,jud) + quadweight * dTb_dp(ilev,j,jud)
+               dTb_dq_streams(ilev,j,jud) = dTb_dq_streams(ilev,j,jud) + quadweight * dTb_dq(ilev,j,jud)
+               do iphase = 1,nphase
+                  dTb_dw_streams(ilev,j,iphase,jud) = dTb_dw_streams(ilev,j,iphase,jud) &
+                                                                  + quadweight * dTb_dw(ilev,j,iphase,jud)
                end do
             end do
          end do
       end do
 
       ! calculate Jacobian at observation angle
-      do ilr1 = 0, nlr1
+      do ilev = 0, nlev
         do k = 1, nvar
-          dtb_pl(ilr1,1,k) = dtb_pl_inp(ilr1,k)
-          dtb_mn(ilr1,1,k) = dtb_mn_inp(ilr1,k)
+          dtb_pl(ilev,1,k) = dtb_pl_inp(ilev,k)
+          dtb_mn(ilev,1,k) = dtb_mn_inp(ilev,k)
         end do
       end do
       call GeoJacobian()
@@ -207,85 +215,76 @@ subroutine calc_fbw_temp_weight_scat( Tbo, tau, &
 
       ! passband quadrature
       Tbo = Tbo + quadweight * Tb_inp
-        do ilr1 = 0, nlr1
+        do ilev = 0, nlev
           ! Brightness temperatures
-          cTb(ilr1,1)    = cTb(ilr1,1)    + quadweight * tb_pl_inp(ilr1)
-          cTb(ilr1,2)    = cTb(ilr1,2)    + quadweight * tb_mn_inp(ilr1)
+          cTb(ilev,1)    = cTb(ilev,1)    + quadweight * tb_pl_inp(ilev)
+          cTb(ilev,2)    = cTb(ilev,2)    + quadweight * tb_mn_inp(ilev)
         end do
-        do ilr1 = 1, nlr1
+        do ilev = 1, nlev
           do jud = 1, 2
             ! Geophysical/Radiation Jacobian
-            cdTb_dT(ilr1,jud)     = cdTb_dT(ilr1,jud)     + quadweight * dTb_dT(ilr1,1,jud)
-            cdTb_dp(ilr1,jud)     = cdTb_dp(ilr1,jud)     + quadweight * dTb_dp(ilr1,1,jud)
-            cdTb_dq(ilr1,jud)     = cdTb_dq(ilr1,jud)     + quadweight * dTb_dq(ilr1,1,jud)
-            do hydrometeor_phase = 1, nphase
-              cdTb_dw(ilr1,hydrometeor_phase,jud) = cdTb_dw(ilr1,hydrometeor_phase,jud) &
-                                                         + quadweight * dTb_dw(ilr1,1,hydrometeor_phase,jud)
+            cdTb_dT(ilev,jud)     = cdTb_dT(ilev,jud)     + quadweight * dTb_dT(ilev,1,jud)
+            cdTb_dp(ilev,jud)     = cdTb_dp(ilev,jud)     + quadweight * dTb_dp(ilev,1,jud)
+            cdTb_dq(ilev,jud)     = cdTb_dq(ilev,jud)     + quadweight * dTb_dq(ilev,1,jud)
+            do iphase = 1, nphase
+              cdTb_dw(ilev,iphase,jud) = cdTb_dw(ilev,iphase,jud) &
+                                                         + quadweight * dTb_dw(ilev,1,iphase,jud)
             end do 
             ! Radiation Jacobian
-            cdTbdTr(ilr1,jud)     = cdTbdTr(ilr1,jud)     + quadweight * dTbdTr(ilr1,1,jud)
-            cdTbdKa(ilr1,jud)     = cdTbdKa(ilr1,jud)     + quadweight * dTbdKa(ilr1,1,jud)
-            cdTbdKsliq(ilr1,jud)  = cdTbdKsliq(ilr1,jud)  + quadweight * dTbdKsliq(ilr1,1,jud)
-            cdTbdgliq(ilr1,jud)   = cdTbdgliq(ilr1,jud)   + quadweight * dTbdgliq(ilr1,1,jud)
-            cdTbdKsrn(ilr1,jud)   = cdTbdKsrn(ilr1,jud)   + quadweight * dTbdKsrn(ilr1,1,jud)
-            cdTbdgrn(ilr1,jud)    = cdTbdgrn(ilr1,jud)    + quadweight * dTbdgrn(ilr1,1,jud)
-            cdTbdKsice(ilr1,jud)  = cdTbdKsice(ilr1,jud)  + quadweight * dTbdKsice(ilr1,1,jud)
-            cdTbdgice(ilr1,jud)   = cdTbdgice(ilr1,jud)   + quadweight * dTbdgice(ilr1,1,jud)
-            cdTbdKssnow(ilr1,jud) = cdTbdKssnow(ilr1,jud) + quadweight * dTbdKssnow(ilr1,1,jud)
-            cdTbdgsnow(ilr1,jud)  = cdTbdgsnow(ilr1,jud)  + quadweight * dTbdgsnow(ilr1,1,jud)
-            cdTbdKsgrpl(ilr1,jud) = cdTbdKsgrpl(ilr1,jud) + quadweight * dTbdKsgrpl(ilr1,1,jud)
-            cdTbdggrpl(ilr1,jud)  = cdTbdggrpl(ilr1,jud)  + quadweight * dTbdggrpl(ilr1,1,jud)
+            cdTbdTr(ilev,jud)     = cdTbdTr(ilev,jud)     + quadweight * dTbdTr(ilev,1,jud)
+            cdTbdKa(ilev,jud)     = cdTbdKa(ilev,jud)     + quadweight * dTbdKa(ilev,1,jud)
+            cdTbdKsliq(ilev,jud)  = cdTbdKsliq(ilev,jud)  + quadweight * dTbdKsliq(ilev,1,jud)
+            cdTbdgliq(ilev,jud)   = cdTbdgliq(ilev,jud)   + quadweight * dTbdgliq(ilev,1,jud)
+            cdTbdKsrn(ilev,jud)   = cdTbdKsrn(ilev,jud)   + quadweight * dTbdKsrn(ilev,1,jud)
+            cdTbdgrn(ilev,jud)    = cdTbdgrn(ilev,jud)    + quadweight * dTbdgrn(ilev,1,jud)
+            cdTbdKsice(ilev,jud)  = cdTbdKsice(ilev,jud)  + quadweight * dTbdKsice(ilev,1,jud)
+            cdTbdgice(ilev,jud)   = cdTbdgice(ilev,jud)   + quadweight * dTbdgice(ilev,1,jud)
+            cdTbdKssnow(ilev,jud) = cdTbdKssnow(ilev,jud) + quadweight * dTbdKssnow(ilev,1,jud)
+            cdTbdgsnow(ilev,jud)  = cdTbdgsnow(ilev,jud)  + quadweight * dTbdgsnow(ilev,1,jud)
+            cdTbdKsgrpl(ilev,jud) = cdTbdKsgrpl(ilev,jud) + quadweight * dTbdKsgrpl(ilev,1,jud)
+            cdTbdggrpl(ilev,jud)  = cdTbdggrpl(ilev,jud)  + quadweight * dTbdggrpl(ilev,1,jud)
           end do ! jud
-        end do ! ilr1
-      do ilr1 = 1, nlr1
+        end do ! ilev
+      do ilev = 1, nlev
         ! Geophysical Jacobian
-        cdKab_dT(ilr1) = cdKab_dT(ilr1) + quadweight * dKab_dT(ilr1)
-        cdKab_dp(ilr1) = cdKab_dp(ilr1) + quadweight * dKab_dp(ilr1)
-        cdKab_dq(ilr1) = cdKab_dq(ilr1) + quadweight * dKab_dq(ilr1)
-        do hydrometeor_phase = 1, nphase
-          cdKsc_dT(ilr1,hydrometeor_phase) = cdKsc_dT(ilr1,hydrometeor_phase) &
-                                           + quadweight * dKsc_dT(ilr1,hydrometeor_phase)
-          cdg_dT(ilr1,hydrometeor_phase)   = cdg_dT(ilr1,hydrometeor_phase)   &
-                                           + quadweight * dg_dT(ilr1,hydrometeor_phase)
-          cdKab_dw(ilr1,hydrometeor_phase) = cdKab_dw(ilr1,hydrometeor_phase) &
-                                           + quadweight * dKab_dw(ilr1,hydrometeor_phase)
-          cdKsc_dw(ilr1,hydrometeor_phase) = cdKsc_dw(ilr1,hydrometeor_phase) &
-                                           + quadweight * dKsc_dw(ilr1,hydrometeor_phase)
-          cdg_dw(ilr1,hydrometeor_phase)   = cdg_dw(ilr1,hydrometeor_phase)   &
-                                           + quadweight * dg_dw(ilr1,hydrometeor_phase)
+        cdKab_dT(ilev) = cdKab_dT(ilev) + quadweight * dKab_dT(ilev)
+        cdKab_dp(ilev) = cdKab_dp(ilev) + quadweight * dKab_dp(ilev)
+        cdKab_dq(ilev) = cdKab_dq(ilev) + quadweight * dKab_dq(ilev)
+        do iphase = 1, nphase
+          cdKsc_dT(ilev,iphase) = cdKsc_dT(ilev,iphase) + quadweight * dKsc_dT(ilev,iphase)
+          cdg_dT(ilev,iphase)   = cdg_dT(ilev,iphase)   + quadweight * dg_dT(ilev,iphase)
+          cdKab_dw(ilev,iphase) = cdKab_dw(ilev,iphase) + quadweight * dKab_dw(ilev,iphase)
+          cdKsc_dw(ilev,iphase) = cdKsc_dw(ilev,iphase) + quadweight * dKsc_dw(ilev,iphase)
+          cdg_dw(ilev,iphase)   = cdg_dw(ilev,iphase)   + quadweight * dg_dw(ilev,iphase)
+
         ! absorption/scattering coefficients:
-          cKsa(ilr1,hydrometeor_phase,1) = cKsa(ilr1,hydrometeor_phase,1) &
-                                         + quadweight * hydro_prof(ilr1,hydrometeor_phase)%cloudab
-          cKsa(ilr1,hydrometeor_phase,2) = cKsa(ilr1,hydrometeor_phase,2) &
-                                         + quadweight * hydro_prof(ilr1,hydrometeor_phase)%cloudsc
-          cKsa(ilr1,hydrometeor_phase,3) = cKsa(ilr1,hydrometeor_phase,3) &
-                                         + quadweight * hydro_prof(ilr1,hydrometeor_phase)%cloudg
-        end do ! hydrometeor_phase
-        cabs_total(ilr1) = cabs_total(ilr1) &
-                         + quadweight * abs_total1(ilr1)
-        cscat_cloud(ilr1) = cscat_cloud(ilr1) &
-                          + quadweight * scat_cloud1(ilr1)
-      end do ! ilr1
+          cKsa(ilev,iphase,1) = cKsa(ilev,iphase,1) + quadweight * hydro_prof(ilev,iphase)%cloudab
+          cKsa(ilev,iphase,2) = cKsa(ilev,iphase,2) + quadweight * hydro_prof(ilev,iphase)%cloudsc
+          cKsa(ilev,iphase,3) = cKsa(ilev,iphase,3) + quadweight * hydro_prof(ilev,iphase)%cloudg
+        end do ! iphase
+        cabs_total(ilev) = cabs_total(ilev) + quadweight * abs_total1(ilev)
+        cscat_cloud(ilev) = cscat_cloud(ilev) + quadweight * scat_cloud1(ilev)
+      end do ! ilev
     end do ! ifreq
 
-    ! step through frequencies in channel - end   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ! brigthness temperature and Jacobian profiles for stream angles - start
-    do ilr1 = 0, nlr1
-       Tb_obs(ilr1,1) = cTb(ilr1,1)
-       Tb_obs(ilr1,2) = cTb(ilr1,2)
+    ! step through frequencies in channel - end
+    ! brightness temperature and Jacobian profiles for stream angles - start
+    do ilev = 0, nlev
+       Tb_obs(ilev,1) = cTb(ilev,1)
+       Tb_obs(ilev,2) = cTb(ilev,2)
     end do
-    do ilr1 = 1, nlr1
-       dTb_dT_obs(ilr1,1) = cdTb_dT(ilr1,1)
-       dTb_dp_obs(ilr1,1) = cdTb_dp(ilr1,1)
-       dTb_dq_obs(ilr1,1) = cdTb_dq(ilr1,1)
-       dTb_dT_obs(ilr1,2) = cdTb_dT(ilr1,2)
-       dTb_dp_obs(ilr1,2) = cdTb_dp(ilr1,2)
-       dTb_dq_obs(ilr1,2) = cdTb_dq(ilr1,2)
-       do hydrometeor_phase = 1, nphase
-          dTb_dw_obs(ilr1,hydrometeor_phase,1) = cdTb_dw(ilr1,hydrometeor_phase,1)
-          dTb_dw_obs(ilr1,hydrometeor_phase,2) = cdTb_dw(ilr1,hydrometeor_phase,2)
+    do ilev = 1, nlev
+       dTb_dT_obs(ilev,1) = cdTb_dT(ilev,1)
+       dTb_dp_obs(ilev,1) = cdTb_dp(ilev,1)
+       dTb_dq_obs(ilev,1) = cdTb_dq(ilev,1)
+       dTb_dT_obs(ilev,2) = cdTb_dT(ilev,2)
+       dTb_dp_obs(ilev,2) = cdTb_dp(ilev,2)
+       dTb_dq_obs(ilev,2) = cdTb_dq(ilev,2)
+       do iphase = 1, nphase
+          dTb_dw_obs(ilev,iphase,1) = cdTb_dw(ilev,iphase,1)
+          dTb_dw_obs(ilev,iphase,2) = cdTb_dw(ilev,iphase,2)
        end do
-    end do ! ilr1
-    ! brigthness temperature and Jacobian profiles for stream angles - end
+    end do ! ilev
+    ! brightness temperature and Jacobian profiles for stream angles - end
   end if ! num_freqs
 end subroutine calc_fbw_temp_weight_scat

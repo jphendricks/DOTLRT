@@ -28,23 +28,23 @@ use dotlrt_variables
                  cos_theta_d_k, theta_k_max, norm,sec_exp,two_pi, int_v,int_h, &
                  int_d, v_dot_q_s, v_dot_p_s
     double complex :: gamv, gamh, term1, term2
-    surf_inp%vr(iang) = 0.0d0
-    surf_inp%hr(iang) = 0.0d0                                                                           
+    surf%vref(iang) = 0.0d0
+    surf%href(iang) = 0.0d0                                                                           
     if( freq      .ge.   1.0d0 .and. freq      .le. 1000.0d0 .and. &
-        surf_inp%surf_temp      .ge. 200.0d0 .and. surf_inp%surf_temp      .le.  350.0d0 .and. &
-        surf_inp%salinity       .ge.   0.0d0 .and. surf_inp%salinity       .le.    1.0d0 .and. &
-        surf_inp%theta(iang)   .ge.   0.0d0 .and. surf_inp%theta(iang)   .le.   90.0d0 .and. &
+        surf%temp      .ge. 200.0d0 .and. surf%temp      .le.  350.0d0 .and. &
+        surf%sal       .ge.   0.0d0 .and. surf%sal       .le.    1.0d0 .and. &
+        surf%theta(iang)   .ge.   0.0d0 .and. surf%theta(iang)   .le.   90.0d0 .and. &
         slope_var .ge.   0.0d0 .and. slope_var .le.    0.5d0 ) then
         if( slope_var .ge. 1.0d-4 ) then
             ! facetted ocean surface
             two_pi = 2.0d0 * pi
-            sin_theta_i = dsin(surf_inp%theta(iang)*pi/180.0d0)
-            cos_theta_i = dcos(surf_inp%theta(iang)*pi/180.0d0)
+            sin_theta_i = dsin(surf%theta(iang)*pi/180.0d0)
+            cos_theta_i = dcos(surf%theta(iang)*pi/180.0d0)
             d_phi_k = two_pi/dble(az_max)
             theta_k_max = datan(slope_stds*dsqrt(slope_var))
             d_theta_k = theta_k_max/dble(el_max)
-            surf_inp%vr(iang) = 0.0d0
-            surf_inp%hr(iang) = 0.0d0                                                                           
+            surf%vref(iang) = 0.0d0
+            surf%href(iang) = 0.0d0                                                                           
             norm = 0.0d0
             ! Integrate over theta: use trapezoidal rule out to "slope_stds" slope standard deviations}
             do j = 0, el_max
@@ -61,11 +61,11 @@ use dotlrt_variables
                     cos_phi_k = dcos(phi_k)
                     cos_theta_d_k = sin_theta_i * sin_theta_k * cos_phi_k + cos_theta_i * cos_theta_k
                     if( cos_theta_d_k .gt. 0.0d0 ) then
-                        term1 = surf_inp%dielectric + cos_theta_d_k * cos_theta_d_k -1.0d0
+                        term1 = surf%diel + cos_theta_d_k * cos_theta_d_k -1.0d0
                         term1 = cdsqrt(term1)
                         term2 = cos_theta_d_k
                         gamh = (term2-term1) / (term2+term1)
-                        term2 = surf_inp%dielectric * term2
+                        term2 = surf%diel * term2
                         gamv = (term2-term1) / (term2+term1)
                         rv_k = gamv * conjg(gamv)
                         rh_k = gamh * conjg(gamh)
@@ -83,27 +83,27 @@ use dotlrt_variables
                 end do
                 sec_exp = dexp(-(sin_theta_k/cos_theta_k)**2/(2.0d0*slope_var))/(cos_theta_k)**2
                 if( j .eq. 0 .or. j .eq. el_max ) THEN
-                    surf_inp%vr(iang) = surf_inp%vr(iang)+int_v*sec_exp/2.0d0
-                    surf_inp%hr(iang) = surf_inp%hr(iang)+int_h*sec_exp/2.0d0
+                    surf%vref(iang) = surf%vref(iang)+int_v*sec_exp/2.0d0
+                    surf%href(iang) = surf%href(iang)+int_h*sec_exp/2.0d0
                     norm = norm+int_d*sec_exp/2.0d0
                 else
-                    surf_inp%vr(iang) = surf_inp%vr(iang)+int_v*sec_exp
-                    surf_inp%hr(iang) = surf_inp%hr(iang)+int_h*sec_exp
+                    surf%vref(iang) = surf%vref(iang)+int_v*sec_exp
+                    surf%href(iang) = surf%href(iang)+int_h*sec_exp
                     norm = norm+int_d*sec_exp
                 end if
             end do
-            surf_inp%vr(iang) = surf_inp%vr(iang) / norm
-            surf_inp%hr(iang) = surf_inp%hr(iang) / norm
+            surf%vref(iang) = surf%vref(iang) / norm
+            surf%href(iang) = surf%href(iang) / norm
         else
             ! specular ocean surface}
-            cos_theta_i = dcos(surf_inp%theta(iang)*pi/180.0d0)
-            term1 = cdsqrt(surf_inp%dielectric + cos_theta_i * cos_theta_i - 1.0d0)
+            cos_theta_i = dcos(surf%theta(iang)*pi/180.0d0)
+            term1 = cdsqrt(surf%diel + cos_theta_i * cos_theta_i - 1.0d0)
             term2 = cos_theta_i
             gamh = (term2-term1) / (term2+term1)
-            term2 = surf_inp%dielectric * term2
+            term2 = surf%diel * term2
             gamv = (term2-term1) / (term2+term1)
-            surf_inp%vr(iang) = gamv * conjg(gamv)
-            surf_inp%hr(iang) = gamh * conjg(gamh)
+            surf%vref(iang) = gamv * conjg(gamv)
+            surf%href(iang) = gamh * conjg(gamh)
         end if
     end if
 end subroutine kirchoff_ocean_refl

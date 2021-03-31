@@ -2,35 +2,27 @@
 SUBROUTINE HG_phmat()
 !=======================================================
 ! The Henyey-Greenstein (HG) scattering phase matrix is abreviated as HGph.
-! This subroutine calculates HG phase matrix for a set of angles:
-!   teta(i), teta(j) (which are in degrees:  0 <= teta(i) <= 180,
-!   i=1,..,nteta)  and for _ng values of asymmetry parameter _g:
-!   g(1),...,g(ng)  ( |g| < 1 ).
-!                 
+! This subroutine calculates HG phase matrix for a set of quadrature angles,
 !       HGph(k,i,j)=(1-g^2)/(2*pi)*INT(from x=0 to x=pi) dx
 !       [1+g^2+2*g*cos(t1)*cos(t2)+2*g*sin(t1)*sin(t2)*cos(x)]^(-3/2)
-! where t1=teta(i)*pi/180, t2=teta(j)*pi/180, and g=HGg(k)
-!
+! where t1=quad_ang(i)*pi/180, t2=quad_ang(j)*pi/180, and g=HGg(k)
 ! It also calculates a derivative of the phase matrix with respect 
 ! to parameter _g:
-!
 !               dHGph(k,i,j)= d[HGph(k,i,j)]/dg
 !
 ! -------------------   INPUT ------------------------
-!   nteta        ( I)    number of angles
-!   teta(nteta)  (DP)    array of angles (in deg) for which phase
-!                        matrix and its derivative will be calculated
-!    ng          ( I)    number of HG parameters to be calculated
+!    nhg          ( I)    number of HG parameters to be calculated
 !  HGg(ng)       (DP)    array of values of parameter _g
-!
 ! -------------------  OUTPUT ------------------------
-!  HGph(ng,nteta,nteta)  (DP)  array of HG phase matrix
-! dHGph(ng,nteta,nteta)  (DP)  array of the appropriate derivatives
+!  HGph(ng,nstream,nstream)  (DP)  array of HG phase matrix
+! dHGph(ng,nstream,nstream)  (DP)  array of the appropriate derivatives
 !                              of HG phase matrix
 !-------------------------------------------------------
 ! History
 !   9/26/202 Kevin Schaefer deleted unused variables
 !  10/17/2020 Kevin Schaefer moved quadrature angle assignment to configure
+!  12/12/2020 Kevin Schaefer moved nhg assignment to dotlrt_variables
+!  12/13/2020 Kevin Schaefer moved sin/cosine quad angles to configure
 !-------------------------------------------------------
 
 use dotlrt_variables
@@ -39,7 +31,6 @@ IMPLICIT NONE
 integer i
 integer j
 integer k
-integer nteta
 real(8) g
 real(8) t1
 real(8) t2
@@ -49,8 +40,6 @@ real(8) kl
 real(8) kappa
 real(8) kappa_sq
 real(8) dkappa_sq_dg
-real(8) ct(nang)
-real(8) st(nang)
 real(8) xrf
 real(8) yrf
 real(8) zrf
@@ -58,19 +47,11 @@ real(8) rf
 real(8) rd
 external rf, rd
 
-  nteta = nang
-  DO i=1,nteta
-    ct(i)=DCOS(teta(i)*pi/180.0d0)
-    st(i)=DSIN(teta(i)*pi/180.0d0)
-  END DO
-
-  ng = 101
-  do k = 1, ng
-    HGg(k)= (2.0d0*k-ng-1.0d0)/dble(ng)
+  do k = 1, nhg
+    HGg(k)= (2.0d0*k-nhg-1.0d0)/dble(nhg)
   end do
 
-
-DO k=1,ng
+DO k=1,nhg
  g=HGg(k)
 
  IF( DABS(g) >= 1) THEN
@@ -78,14 +59,14 @@ DO k=1,ng
   STOP
  END IF
 
- DO i=1,nteta
-  DO j=i,nteta
+ DO i=1,nstream
+  DO j=i,nstream
 
    IF( g >= 0.d0 ) THEN
 
-    t1=1+g*g+2*g*(ct(i)*ct(j)+st(i)*st(j))
-    t2=1+g*g+2*g*(ct(i)*ct(j)-st(i)*st(j))
-    kappa_sq=4*g*st(i)*st(j)/t1
+    t1=1+g*g+2*g*(cos_ang(i)*cos_ang(j)+sin_ang(i)*sin_ang(j))
+    t2=1+g*g+2*g*(cos_ang(i)*cos_ang(j)-sin_ang(i)*sin_ang(j))
+    kappa_sq=4*g*sin_ang(i)*sin_ang(j)/t1
     kappa = DSQRT(kappa_sq)
     xrf = 0.0d0
     yrf = 1.0d0 - kappa_sq
@@ -96,7 +77,7 @@ DO k=1,ng
     HGph(k,i,j)=1.0d0/pi*(1-g*g)/dsqrt(t1)/t2*el 
     HGph(k,j,i)=HGph(k,i,j)
 
-    dkappa_sq_dg=4*st(i)*st(j)*(t1-2*g*(g+ct(i)*ct(j)+st(i)*st(j)))/t1/t1
+    dkappa_sq_dg=4*sin_ang(i)*sin_ang(j)*(t1-2*g*(g+cos_ang(i)*cos_ang(j)+sin_ang(i)*sin_ang(j)))/t1/t1
 
     IF( kappa > 0.01d0) THEN
 
@@ -111,8 +92,8 @@ DO k=1,ng
     END IF
 
    dHGph(k,i,j) = (-2*g/(1-g*g)                                        &
-                   -  (g+ct(i)*ct(j)+st(i)*st(j))/t1                   &
-                   -2*(g+ct(i)*ct(j)-st(i)*st(j))/t2                   &
+                   -  (g+cos_ang(i)*cos_ang(j)+sin_ang(i)*sin_ang(j))/t1                   &
+                   -2*(g+cos_ang(i)*cos_ang(j)-sin_ang(i)*sin_ang(j))/t2                   &
                    +t3/el*dkappa_sq_dg/2             )*HGph(k,i,j)
 
    dHGph(k,j,i)=dHGph(k,i,j)
@@ -121,9 +102,9 @@ DO k=1,ng
     ELSE   ! g < 0
 !----------------------   
 
-    t1=1+g*g+2*g*(ct(i)*ct(j)-st(i)*st(j))
-    t2=1+g*g+2*g*(ct(i)*ct(j)+st(i)*st(j))
-    kappa_sq=4*DABS(g)*st(i)*st(j)/t1
+    t1=1+g*g+2*g*(cos_ang(i)*cos_ang(j)-sin_ang(i)*sin_ang(j))
+    t2=1+g*g+2*g*(cos_ang(i)*cos_ang(j)+sin_ang(i)*sin_ang(j))
+    kappa_sq=4*DABS(g)*sin_ang(i)*sin_ang(j)/t1
     kappa   =DSQRT(kappa_sq)
     xrf = 0.0d0
     yrf = 1.0d0 - kappa_sq
@@ -133,7 +114,7 @@ DO k=1,ng
     HGph(k,i,j)=1.0d0/pi*(1-g*g)/dsqrt(t1)/t2*el
     HGph(k,j,i)=HGph(k,i,j)
 
-    dkappa_sq_dg=4*st(i)*st(j)*(t1-2*g*(g+ct(i)*ct(j)-st(i)*st(j)))/t1/t1
+    dkappa_sq_dg=4*sin_ang(i)*sin_ang(j)*(t1-2*g*(g+cos_ang(i)*cos_ang(j)-sin_ang(i)*sin_ang(j)))/t1/t1
 
     IF( kappa > 0.01d0) THEN
 
@@ -148,8 +129,8 @@ DO k=1,ng
     END IF
 
    dHGph(k,i,j) =-( 2*g/(1-g*g)                                        &
-                   +  (g+ct(i)*ct(j)-st(i)*st(j))/t1                   &
-                   +2*(g+ct(i)*ct(j)+st(i)*st(j))/t2                   &
+                   +  (g+cos_ang(i)*cos_ang(j)-sin_ang(i)*sin_ang(j))/t1                   &
+                   +2*(g+cos_ang(i)*cos_ang(j)+sin_ang(i)*sin_ang(j))/t2                   &
                    +t3/el*dkappa_sq_dg/2             )*HGph(k,i,j)
 
    dHGph(k,j,i)=dHGph(k,i,j)

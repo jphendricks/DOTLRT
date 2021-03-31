@@ -28,10 +28,10 @@ subroutine get_instr_spec( )
   open(unit=20, file=trim(file_instr), form='formatted', status='old')
 
 ! read number of channels
-  read(20,*) nchannel  ! number of channels
+  read(20,*) nchan  ! number of channels
 
 ! read in all channel specs
-  do ichan=1,nchannel
+  do ichan=1,nchan
     read(20,*) temp,junk
     instr_spec(ichan)%lo_freq   = temp(1)
     instr_spec(ichan)%if1_freq  = temp(2)
@@ -76,6 +76,4 @@ subroutine extract_channel(ichan )
   channel%num       = instr_spec(ichan)%num 
   channel%name      = instr_spec(ichan)%name 
   
-  if(flag_print_full) print*, 'Channel: ',ichan, channel%lo_freq, channel%bandwidth, channel%dtrms
-
 end subroutine extract_channel

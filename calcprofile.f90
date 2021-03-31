@@ -15,7 +15,7 @@ subroutine calcprofile_d()
 !         ron.richter@noaa.gov NOAA/ETL SET
 !         FORTRAN 90 Portland Group Compiler on Red Hat Linux
 !     5 - Differentiated and derivatives were tested by Reg Hill Aug. 2003
-!     6 - The logical variable "a0_is_constant" was inserted by Reg Hill 8/28/03 to identify cases for
+!     6 - The logical variable "a0_const" was inserted by Reg Hill 8/28/03 to identify cases for
 !         which a0 is constant because a great savings of computer time is obtained for that case.
 !         The savings is in subroutine HYDROMETEOR_MASTER_5PH_D
 !-------------------------------------------------------------------
@@ -40,7 +40,7 @@ subroutine calcprofile_d()
             atm(index)%clw_k0 = dk0_dw * atm(index)%clw_dens
             atm(index)%clw_a0 = 0.01d0
             atm(index)%dclw_a0_dw = 0.0d0
-            a0_is_constant(index,1) = .true.
+            a0_const(index,1) = .true.
         else
             atm(index)%clw_p  = 0.0d0
             atm(index)%clw_q  = 0.0d0
@@ -48,7 +48,7 @@ subroutine calcprofile_d()
             atm(index)%clw_a0 = 0.0d0
             atm(index)%dclw_k0_dw = 0.0d0
             atm(index)%dclw_a0_dw = 0.0d0
-            a0_is_constant(index,1) = .true.
+            a0_const(index,1) = .true.
         end if
         
         if( atm(index)%rain_dens .ne.  0.0d0 ) then
@@ -67,7 +67,7 @@ subroutine calcprofile_d()
       !      atm(index)%drain_a0_dw = 0.250d0 * (atm(index)%rain_a0)
             ! dk0_dw(index,2) = 0.d0
             atm(index)%drain_k0_dw = 0.0d0
-            a0_is_constant(index,2) = .false.
+            a0_const(index,2) = .false.
 
             !write(debugout,*) "rain:a0,k0=", atm(index)%rain_a0, atm(index)%rain_k0
             !all mexPrintf(debugout//achar(10))
@@ -87,7 +87,7 @@ subroutine calcprofile_d()
 			! da0_dw(index,2) = 0.d0  ;  dk0_dw (index,2) = 0.d0
             atm(index)%drain_k0_dw = 0.0d0
             atm(index)%drain_a0_dw = 0.0d0
-            a0_is_constant(index,2) = .true.
+            a0_const(index,2) = .true.
         end if
         
         if( atm(index)%ice_dens .ne. 0.0d0 ) then
@@ -107,7 +107,7 @@ subroutine calcprofile_d()
             atm(index)%ice_a0 =  0.01d0
          ! da0_dw(index,3) = 0.d0
             atm(index)%dice_a0_dw = 0.d0
-         a0_is_constant(index,3) = .true.
+         a0_const(index,3) = .true.
 
             !tests
             !loud_w_dens(1) = (1.0d0-1.0d-6) * atm(index)%ice_dens
@@ -124,7 +124,7 @@ subroutine calcprofile_d()
          ! da0_dw(index,3) = 0.d0  ;  dk0_dw(index,3) = 0.d0
             atm(index)%dice_k0_dw = 0.0d0
             atm(index)%dice_a0_dw = 0.0d0
-            a0_is_constant(index,3) = .true.
+            a0_const(index,3) = .true.
         end if
         
         if( atm(index)%snow_dens .ne. 0.0d0 ) then
@@ -143,7 +143,7 @@ subroutine calcprofile_d()
             ! da0_dw(index,4) = 0.25d0* (atm(index)%snow_a0)/(atm(index)%snow_dens)
             atm(index)%dsnow_a0_dw=0.25d0*(atm(index)%snow_a0)/(atm(index)%snow_dens)
          !   atm(index)%dsnow_a0_dw = 0.25d0* (atm(index)%snow_a0)
-            a0_is_constant(index,4) = .false.
+            a0_const(index,4) = .false.
 
             !tests
             !loud_w_dens(1) = (1.0d0-1.0d-6) * atm(index)%snow_dens
@@ -160,7 +160,7 @@ subroutine calcprofile_d()
             ! da0_dw(index,4) = 0.d0  ;  dk0_dw(index,4) = 0.d0
             atm(index)%dsnow_k0_dw = 0.0d0
             atm(index)%dsnow_a0_dw = 0.0d0
-           a0_is_constant(index,4) = .true.
+           a0_const(index,4) = .true.
         end if
         
         if( atm(index)%grpl_dens .ne. 0.0d0 ) then
@@ -176,7 +176,7 @@ subroutine calcprofile_d()
           ! da0_dw(index,5) = 0.25d0 *(atm(index)%grpl_a0)/(atm(index)%grpl_dens)
             atm(index)%dgrpl_a0_dw=0.25d0*(atm(index)%grpl_a0)/(atm(index)%grpl_dens)
 !            atm(index)%dgrpl_a0_dw = 0.25d0 *(atm(index)%grpl_a0)
-         a0_is_constant(index,5) = .false.
+         a0_const(index,5) = .false.
 
             !write(debugout,*) "grp:a0,k0=", atm(index)%grpl_a0, atm(index)%grpl_k0
             !all mexPrintf(debugout//achar(10))
@@ -196,7 +196,7 @@ subroutine calcprofile_d()
            ! da0_dw(index,5) = 0.d0 ; dk0_dw(index,5) = 0.d0
             atm(index)%dgrpl_k0_dw = 0.0d0
             atm(index)%dgrpl_a0_dw = 0.0d0
-           a0_is_constant(index,5) = .true.
+           a0_const(index,5) = .true.
         end if
     end do 
     return

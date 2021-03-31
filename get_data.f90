@@ -34,11 +34,11 @@ character*50 subroutine ! subroutine name
 
 !
 ! Open file
-  status = nf90_open(file_wrf, NF90_NOWRITE, ncdfID)
+  status = nf90_open(file_in, NF90_NOWRITE, ncdfID)
   if (status /= nf90_noerr) call handle_err(status, subroutine, 1)
 
 !-------------------------------------------------------------------------------
-! All required WRF inputsd
+! All required WRF inputs
 !-------------------------------------------------------------------------------
 write(*,*) "Reading required WRF output"
 
@@ -75,7 +75,7 @@ write(*,*) "Reading required WRF output"
 ! Terrain Height
   if(flag_print_full) write(*,*) "    Terrian Height"
   varname='HGT'
-  call get_surface_map(ncdfID, varname, nlon, nlat, ntime, HGT)
+  call get_surface_map(ncdfID, varname, nlon, nlat, ntime, height_ter)
 
 !  pressure perturbation
   if(flag_print_full) write(*,*) "    Pressure Perturbation"
@@ -162,6 +162,7 @@ write(*,*) "Reading required WRF output"
     varname='XLONG'
     call get_surface_map(ncdfID, varname, nlon, nlat, ntime, XLONG)
   endif
+
 !-------------------------------------------------------------------------------
 ! get ancillary WRF output
 !-------------------------------------------------------------------------------
@@ -184,7 +185,6 @@ write(*,*) "Reading required WRF output"
     call get_surface_map(ncdfID, varname, nlon, nlat, ntime, T2)
   endif
 
-
   status = nf90_close(ncdfID  )
   if (status /= nf90_noerr) call handle_err(status, subroutine, 2)
 
@@ -199,7 +199,7 @@ write(*,*) "Reading required WRF output"
 !   lakemask 1 = lake, 0 = non-lake
 ! combined:
 !   2 = land, 1 = lake, 0 = ocean
-  if(flag_print_full) write(*,*) "    Create Land/Lake/Ocean Mask"
+  if(flag_print_full) write(*,*) "    Create land Mask"
   landmask = landmask*2 + lakemask
   deallocate(lakemask)
 
@@ -216,20 +216,20 @@ write(*,*) "Reading required WRF output"
   do ilev = 1,nlev_max
     do ilat = 1,nlat
       do ilon = 1,nlon
-        height(ilon,ilat,ilev) = ((PH(ilon,ilat,ilev)+PHB(ilon,ilat,ilev))/grav-HGT(ilon,ilat))/1000.d0
+        height_mid(ilon,ilat,ilev) = ((PH(ilon,ilat,ilev)+PHB(ilon,ilat,ilev))/grav-height_ter(ilon,ilat))/1000.d0
       enddo
     enddo
   enddo
   deallocate(PH)
   deallocate(PHB)
-  deallocate(HGT)
+  deallocate(height_ter)
 
 ! calculate temperature from potential temperature
   if(flag_print_full) write(*,*) "    Calculate temperature from potential temperature"
   do ilev = 1,nlev_max
     do ilat = 1,nlat
       do ilon = 1,nlon
-        temp(ilon,ilat,ilev) = (T(ilon,ilat,ilev)+base_pot_temp)*(press(ilon,ilat,ilev)*100/press_ref)**gamma
+        temp(ilon,ilat,ilev) = (T(ilon,ilat,ilev)+base_pot)*(press(ilon,ilat,ilev)*100/press_ref)**gamma
       enddo
     enddo
   enddo

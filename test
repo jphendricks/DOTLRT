@@ -1,0 +1,37 @@
+v2.0
+ Execution time Setup (s):   11.515000
+ Channel:           12   160.31000000000000        10.000000000000000       0.10000000000000001
+   269.11075367610783        269.11075367610783
+ Execution time DOTLRT (s):  0.14000000
+
+v2.1
+ Execution time Setup (s):   22.260000
+ Channel:           12   160.31000000000000        10.000000000000000       0.10000000000000001
+   269.09067477771316        269.09067477771316
+ Execution time DOTLRT (s):  0.35299999
+ 
+v2.1 no bounds check
+ Execution time Setup (s):   18.004000
+ Channel:           12   160.31000000000000        10.000000000000000       0.10000000000000001
+   269.09067477771316        269.09067477771316
+ Execution time DOTLRT (s):  0.31900001
+ 
+ 
+ Execution time Setup (s):   11.506000
+ Channel:           12   160.31000000000000        10.000000000000000       0.10000000000000001
+ Execution time surf (s):  0.13699999
+   269.09067477771316        269.09067477771316
+ Execution time DOTLRT (s):  0.27599999
+ 
+v2.1 surf ref tables outside loops
+  Execution time Setup (s):   14.613000
+ Channel:           12   160.31000000000000
+   269.09067477771316        269.09067477771316
+ Execution time DOTLRT (s):  0.14000000
+ 
+v2.1 surf ref tables outside loops, no bounds check
+ Execution time Setup (s):   13.151000
+ Channel:           12   160.31000000000000
+   269.09067477771316        269.09067477771316
+ Execution time DOTLRT (s):  9.49999988E-02
+ 
