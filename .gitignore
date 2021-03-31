@@ -1,0 +1,6 @@
+# Remove generated module 
+
+*.mod
+
+# Remove generated object files
+*.o
