@@ -71,7 +71,6 @@ real(8) dsurf_reflec(nangover2)
 allocate( a0(nlev,nangover2,nangover2), b0(nlev,nangover2,nangover2) )
 allocate( da0(nlev,nangover2,nangover2,nvar), db0(nlev,nangover2,nangover2,nvar) )
 
-call system_clock(time_start)
 
          dt_srf = 0.d0
           dt_cb = 0.d0
@@ -85,9 +84,6 @@ call system_clock(time_start)
     t1(i) = DSQRT(quad_wts(i)/cos_ang(i))
     t2(i) = DSQRT(quad_wts(i)*cos_ang(i))
   END DO
-name='initialize'
-call ex_time(1, name)
-call system_clock(time_start)
   
   DO ilev=1,nlev
     DO i=1,nangover2
@@ -174,9 +170,6 @@ call system_clock(time_start)
       end do ! iphase
     END DO   ! loop over i
   END DO  ! loop over layers
-name='1st_layer_loop'
-call ex_time(2, name)
-call system_clock(time_start)
   
   r=0.d0
   dr=0.d0
@@ -204,14 +197,8 @@ call system_clock(time_start)
       end do
     END IF
   END DO
-name='Loop_ang'
-call ex_time(3, name)
-call system_clock(time_start)
 
   CALL core95 (nlev,nangover2,h,a0,b0,f,r,u,v,da0,db0,df,du,dv,obs_lev,nvar,LP)
-name='core95'
-call ex_time(4, name)
-call system_clock(time_start)
   
   DO ilev = 0,nlev
     DO i=1,nangover2
@@ -230,9 +217,7 @@ call system_clock(time_start)
       END DO
     END DO
   END DO
-name='last_lay_loop'
-call ex_time(5, name)
-call system_clock(time_start)
+
 deallocate(a0)
 deallocate(b0)
 deallocate(da0)

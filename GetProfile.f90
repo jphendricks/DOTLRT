@@ -1,13 +1,11 @@
 !
 !====================================================================
-subroutine hydro_layer_geometry(profile)
+subroutine mean_height_hydro_layer(profile, h_ave, h_std)
 !====================================================================
-! calculates detailed statistics of hydrometeor layer
+! calculates mean and standard deviation of hydrometeor layer
 !
 ! History:
 !  11/4/2020 Kevin Schaefer created routine
-!  1/21/2021 Kevin Schaefer added htop, hbot, hmax, hdel, ave, max, min
-!  1/24/2021 Kevin Schaefer changed name to hydro_layer_geometry
 !--------------------------------------------------------------------
   use dotlrt_variables
   use profiles
@@ -16,73 +14,49 @@ subroutine hydro_layer_geometry(profile)
 ! inputs
   real(8) profile(nlev) ! (g/m3) generic hydrometeor profile
 
+! output
+  real(8) h_ave    ! (km) mean height of hydrometeor layer
+  real(8) h_std    ! (km) height standard deviation of hydrometeor layer
+
 ! internal variables  
   integer ilev     ! (-) level index
   integer indx_top ! (-) level index
   integer indx_bot ! (-) level index
-  real(8) var      ! (varies) generic variance
+  real(8) h_var    ! (km2) height variance of hydrometeor layer
   real(8) nlayer   ! (-) number of layers
-  real(8) tot      ! (varies) generic total
 
-! find bottom of hydrometeor layer
+! find bottom level index
   do ilev = 1, nlev
     indx_bot=ilev
     if(profile(ilev)/=0.d0) exit
   end do
-  geom%h_bot=atm(indx_bot)%hgt_bot
 
-! find top of hydrometeor layer
+! find top level index
   do ilev = nlev,1,-1
     indx_top=ilev
     if(profile(ilev)/=0.d0) exit
   end do
-  geom%h_top=atm(indx_top)%hgt_top
-  
-! calculate thickness of hydrometeor layer
-  geom%h_del=geom%h_top-geom%h_bot
-
-! hydrometeor min and max in layer
-  geom%min=minval(profile(indx_bot:indx_top))
-  geom%max=maxval(profile(indx_bot:indx_top))
-
-! hydrometeor density average in layer
-  tot=0.d0
-  do ilev = indx_bot,indx_top
-    tot = tot + profile(ilev)
-  end do
   nlayer=dble(indx_top-indx_bot+1)
-  geom%ave=tot/nlayer
+!  print*, indx_bot, indx_top, nlayer
 
-! hydrometeor density standard deviation in layer
-  var=0.d0
+! calculate mean height  of hydrometeor layer
+  h_ave=0.d0
   do ilev = indx_bot,indx_top
-    var=var+(profile(ilev)-geom%ave)*(profile(ilev)-geom%ave)
+    h_ave=h_ave+atm(ilev)%hgt
   end do
-  var=var/nlayer
-  geom%std=sqrt(var)
+  h_ave=h_ave/nlayer
 
-! calculate height of maximum of hydrometeor value
-  geom%h_max=atm(indx_bot)%hgt
+! calculate variance and standard deviation  of hydrometeor layer
+  h_var=0.d0
   do ilev = indx_bot,indx_top
-    if (geom%max == profile(ilev)) geom%h_max=atm(ilev)%hgt
+    h_var=h_var+(atm(ilev)%hgt-h_ave)*(atm(ilev)%hgt-h_ave)
   end do
+  h_var=h_var/nlayer
+  h_std=sqrt(h_var)
+!  print*, h_ave, h_var, h_std
 
-! calculate mean height of hydrometeor layer
-  geom%h_ave=0.d0
-  do ilev = indx_bot,indx_top
-    geom%h_ave=geom%h_ave+atm(ilev)%hgt
-  end do
-  geom%h_ave=geom%h_ave/nlayer
 
-! calculate variance and standard deviation of height in hydrometeor layer
-  var=0.d0
-  do ilev = indx_bot,indx_top
-    var=var+(atm(ilev)%hgt-geom%h_ave)*(atm(ilev)%hgt-geom%h_ave)
-  end do
-  var=var/nlayer
-  geom%h_std=sqrt(var)
-
-end subroutine hydro_layer_geometry
+end subroutine mean_height_hydro_layer
 !
 !====================================================================
 subroutine construct_reduced_dim_atm_profile()
@@ -114,7 +88,7 @@ subroutine construct_reduced_dim_atm_profile()
 ! atm(ilev)%snow_dens   ! (g m-3) snow mixing ratio
 ! atm(ilev)%grpl_dens   ! (g m-3) graupel mixing ratio
 
-! calculate layer thicknesses
+! layer thickness calculations
   do ilev = 1, nlev
     if (ilev==1) then
       atm(ilev)%hgt_bot=0.d0
@@ -127,56 +101,39 @@ subroutine construct_reduced_dim_atm_profile()
     !print*, atm(ilev)%hgt_bot,atm(ilev)%hgt, atm(ilev)%hgt_top, atm(ilev)%hgt_del
   end do
 
-! calculate total hydrometeor density
+! column total calculations
+  atm_reduced%clw_tot  = 0.d0
+  atm_reduced%rain_tot = 0.d0
+  atm_reduced%ice_tot  = 0.d0
+  atm_reduced%snow_tot = 0.d0
+  atm_reduced%grpl_tot = 0.d0
   do ilev = 1, nlev
-    atm(ilev)%hydro_dens = atm(ilev)%clw_dens
-    atm(ilev)%hydro_dens = atm(ilev)%hydro_dens + atm(ilev)%rain_dens
-    atm(ilev)%hydro_dens = atm(ilev)%hydro_dens + atm(ilev)%ice_dens
-    atm(ilev)%hydro_dens = atm(ilev)%hydro_dens + atm(ilev)%snow_dens
-    atm(ilev)%hydro_dens = atm(ilev)%hydro_dens + atm(ilev)%grpl_dens
+    atm_reduced%clw_tot  = atm_reduced%clw_tot  + atm(ilev)%hgt_del*atm(ilev)%clw_dens
+    atm_reduced%rain_tot = atm_reduced%rain_tot + atm(ilev)%hgt_del*atm(ilev)%rain_dens
+    atm_reduced%ice_tot  = atm_reduced%ice_tot  + atm(ilev)%hgt_del*atm(ilev)%ice_dens
+    atm_reduced%snow_tot = atm_reduced%snow_tot + atm(ilev)%hgt_del*atm(ilev)%snow_dens
+    atm_reduced%grpl_tot = atm_reduced%grpl_tot + atm(ilev)%hgt_del*atm(ilev)%grpl_dens
   end do
+  !print*, atm_reduced%clw_tot, atm_reduced%rain_tot, atm_reduced%ice_tot, atm_reduced%snow_tot, atm_reduced%grpl_tot
 
-! calculate column total hydrometeors
-  reduced%clw%tot   = 0.d0
-  reduced%rain%tot  = 0.d0
-  reduced%ice%tot   = 0.d0
-  reduced%snow%tot  = 0.d0
-  reduced%grpl%tot  = 0.d0
-  reduced%hydro%tot = 0.d0
-  do ilev = 1, nlev
-    reduced%clw%tot   = reduced%clw%tot   + atm(ilev)%hgt_del*atm(ilev)%clw_dens
-    reduced%rain%tot  = reduced%rain%tot  + atm(ilev)%hgt_del*atm(ilev)%rain_dens
-    reduced%ice%tot   = reduced%ice%tot   + atm(ilev)%hgt_del*atm(ilev)%ice_dens
-    reduced%snow%tot  = reduced%snow%tot  + atm(ilev)%hgt_del*atm(ilev)%snow_dens
-    reduced%grpl%tot  = reduced%grpl%tot  + atm(ilev)%hgt_del*atm(ilev)%grpl_dens
-    reduced%hydro%tot = reduced%hydro%tot + atm(ilev)%hgt_del*atm(ilev)%hydro_dens
-  end do
+! Mean height and standard deviation of hydrometeor layers
+  atm_reduced%clw_h_ave  = 0.d0
+  atm_reduced%rain_h_ave = 0.d0
+  atm_reduced%ice_h_ave  = 0.d0
+  atm_reduced%snow_h_ave = 0.d0
+  atm_reduced%grpl_h_ave = 0.d0
 
-! calculate the geometry of each hydrometeor layer
-  if(reduced%clw%tot/=0.d0) then
-    call hydro_layer_geometry(atm(:)%clw_dens)
-    reduced%clw=geom
-  endif
-  if(reduced%rain%tot/=0.d0) then
-    call hydro_layer_geometry(atm(:)%rain_dens)
-    reduced%rain=geom
-  endif
-  if(reduced%ice%tot/=0.d0) then
-    call hydro_layer_geometry(atm(:)%ice_dens)
-    reduced%ice=geom
-  endif
-  if(reduced%snow%tot/=0.d0) then
-    call hydro_layer_geometry(atm(:)%snow_dens)
-    reduced%snow=geom
-  endif
-  if(reduced%grpl%tot/=0.d0) then
-    call hydro_layer_geometry(atm(:)%grpl_dens)
-    reduced%grpl=geom
-  endif
-  if(reduced%hydro%tot/=0.d0) then
-    call hydro_layer_geometry(atm(:)%hydro_dens)
-    reduced%hydro=geom
-  endif
+  atm_reduced%clw_h_std  = 0.d0
+  atm_reduced%rain_h_std = 0.d0
+  atm_reduced%ice_h_std  = 0.d0
+  atm_reduced%snow_h_std = 0.d0
+  atm_reduced%grpl_h_std = 0.d0
+
+  if(atm_reduced%clw_tot/=0.d0)  call mean_height_hydro_layer(atm(:)%clw_dens,  atm_reduced%clw_h_ave,  atm_reduced%clw_h_std)
+  if(atm_reduced%rain_tot/=0.d0) call mean_height_hydro_layer(atm(:)%rain_dens, atm_reduced%rain_h_ave, atm_reduced%rain_h_std)
+  if(atm_reduced%ice_tot/=0.d0)  call mean_height_hydro_layer(atm(:)%ice_dens,  atm_reduced%ice_h_ave,  atm_reduced%ice_h_std)
+  if(atm_reduced%snow_tot/=0.d0) call mean_height_hydro_layer(atm(:)%snow_dens, atm_reduced%snow_h_ave, atm_reduced%snow_h_std)
+  if(atm_reduced%grpl_tot/=0.d0) call mean_height_hydro_layer(atm(:)%grpl_dens, atm_reduced%grpl_h_ave, atm_reduced%grpl_h_std)
 
 end subroutine construct_reduced_dim_atm_profile
 !
@@ -200,6 +157,7 @@ subroutine construct_atmospheric_profile(ichan,ilon,ilat)
 !
 ! internal variables  
   integer ilev  ! (-) level index
+  integer i
 !
 ! variable key
 ! height(ilon, ilat, nlev) ! (km) height above sea level
@@ -236,6 +194,19 @@ subroutine construct_atmospheric_profile(ichan,ilon,ilat)
   surf%vref=sref_ver(ilon,ilat,ichan,:)
   surf%temp = TSK(ilon, ilat)
 
+  if(ilat==292 .and. ilon==397) then
+    write(300, *) ilat, ilon, nlev
+    write(300, '(74F20.12)') (press(ilon, ilat, i), i=1,nlev)
+    write(300, '(74F20.12)') (temp(ilon, ilat, i), i=1,nlev)
+    write(300, '(74E20.12)') (QVAPOR(ilon, ilat, i), i=1,nlev)
+    write(300, '(74E20.12)') (QCLOUD(ilon, ilat, i), i=1,nlev)
+    write(300, '(74E20.12)') (QRAIN(ilon, ilat, i), i=1,nlev)
+    write(300, '(74E20.12)') (QICE(ilon, ilat, i), i=1,nlev)
+    write(300, '(74E20.12)') (QSNOW(ilon, ilat, i), i=1,nlev)
+    write(300, '(74E20.12)') (QGRAUP(ilon, ilat, i), i=1,nlev)
+    call flush(300)
+  end if
+
   call construct_reduced_dim_atm_profile()
 
 end subroutine Construct_atmospheric_profile
@@ -251,7 +222,6 @@ subroutine read_text_profile()
 !  9/18/2020  Kevin Schaefer created routine
 !  10/16/2020 Kevin Schaefer deleted all arguments duplicated in variables module
 !  10/16/2020 Kevin Schaefer added assignment to profile variable tree
-!  1/24/2021  Kevin Schaefer added reduced dimension call
 !--------------------------------------------------------------------
   use dotlrt_variables
   use profiles
@@ -305,8 +275,6 @@ subroutine read_text_profile()
     atm(ilev)%snow_dens   = atminp(ilev,8) ! (g/m^3)
     atm(ilev)%grpl_dens   = atminp(ilev,9) ! (g/m^3)
   end do
-
-  call construct_reduced_dim_atm_profile()
 
 ! dellaocate
   deallocate(atminp)

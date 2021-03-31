@@ -182,12 +182,6 @@ implicit none
     call construct_surf_ref_table()
   endif
 
-! execution time diagnostics
-  print_ex = .true.
-  nseg=20
-  time_seg=0.d0
-  num_call=0.d0
-
 ! Allocate brightness temperature and jacobian output variables
   allocate(Tb_obs_mat(0:nlev,2))
   allocate(dTb_dT_obs_mat(nlev,2))

@@ -185,9 +185,11 @@ end subroutine write_atm_profile
   subname='write_tb_channel'
 
 ! create file name
-  filename = trim(out_path)//'Tb.nc'
+!  filename = trim(out_path)//'Tb.nc'
 !  if(flag_print_full) print*, '    ', trim(filename)
-  
+  filename = trim(file_out)
+  if(flag_print_full) print*, '    ', trim(filename) 
+ 
 ! open file
   status=nf90_open(trim(filename),nf90_write,filid)
   if(status/=nf90_noerr) then
@@ -257,7 +259,8 @@ end subroutine write_atm_profile
   subname='create_tb_file'
 !
 ! create file
-  filename = trim(out_path)//'Tb.nc'
+!  filename = trim(out_path)//'Tb.nc'
+  filename = trim(file_out)
   if(flag_print_full) print*, '    ', trim(filename)
 
   status = nf90_create( trim(filename), cmode=or(nf90_clobber,nf90_64bit_offset), ncid=filid)
@@ -490,7 +493,8 @@ end subroutine write_atm_profile
   subname='create_jac_file'
 !
 ! create file
-  write( filename, '(a,i2.2,a)' ) trim(out_path)//'Jacobian_', ichan, '.nc'
+!  write( filename, '(a,i2.2,a)' ) trim(out_path)//'Jacobian_', ichan, '.nc'
+  write( filename, '(a,i2.2,a)' ) trim(file_jac_prefix)//'_', ichan, '.nc'
   if(flag_print_full) print*, '    ', trim(filename)
 
   status = nf90_create( trim(filename), cmode=or(nf90_clobber,nf90_64bit_offset), ncid=filid)

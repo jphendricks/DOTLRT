@@ -31,7 +31,7 @@ subroutine calc_tot_ext(freq)
   real(8) dabh2o_t, dabh2o_v, dabh2o_p
   real(8) do2abs_t, do2abs_v,do2abs_p
   real(8), external  :: o2abs, absn2, abh2o
-
+  
   do level = 1, nlev
     gas_prof(level)%absn2 = absn2(atm(level)%temp, &
                                   atm(level)%press,freq, &
@@ -81,6 +81,9 @@ subroutine calc_tot_ext(freq)
     hydro_prof(level,phase)%dcloudg_dk0 = dg(2)
     hydro_prof(level,phase)%dcloudg_da0 = dg(3)
 
+    !write(debugout,*) "liquid: abs,sc,g=", abs_cloud_liq, scat_cloud_liq, g_cloud_liq
+    !call mexPrintf(debugout//achar(10))
+
     phase = 2 ! rain
     call hydrometeor_master_5ph_d( freq, phase, &
                                    atm(level)%temp, &
@@ -103,6 +106,9 @@ subroutine calc_tot_ext(freq)
     hydro_prof(level,phase)%dcloudg_dt = dg(1)
     hydro_prof(level,phase)%dcloudg_dk0 = dg(2)
     hydro_prof(level,phase)%dcloudg_da0 = dg(3)
+
+    !write(debugout,*) "liquid: abs,sc,g=", abs_cloud_rn, scat_cloud_rn, g_cloud_rn
+    !call mexPrintf(debugout//achar(10))
 
     phase = 3 ! ice
     call hydrometeor_master_5ph_d( freq, phase, &

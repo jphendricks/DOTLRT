@@ -13,7 +13,6 @@ module dotlrt_variables
 !  11/3/2020  Kevin Schaefer added hydromet cluster variables
 !  12/1/2020  Kevin Schaefer added permmitivity of free space as constant
 !  12/12/2020 Kevin Schaefer removed all but one nlev variable
-!  1/24/2021  Kevin Schaefer restructured reduced dimension branch
 ! --------------------------------------------------------------
 
 implicit none
@@ -38,9 +37,11 @@ character(20) ocean_mod  ! (-) ocean model type
                          ! 'ITRA'    ITRA reflectivity model
 
 ! file names
-character*250 file_in     ! (-) path to input atm profile
+character*250 file_in     ! (-) input atm profile file
 character*250 file_instr  ! (-) path to instrument spec file
 character*250 file_var    ! (-) path to output variable definition file
+character*250 file_out    ! (-) output TB filename
+character*250 file_jac_prefix ! (-) Jacobian file prefix
 character*250 out_path    ! (-) path to output directory
 
 ! output control variables
@@ -51,18 +52,6 @@ logical save_sing_prof ! (-) save single atmospheric profile as text file
 logical save_sing_rad  ! (-) save single atmospheric radiation output as text file
 integer save_ilon      ! (-) longitude index of profile to save
 integer save_ilat      ! (-) latitude index of profile to save
-
-! execution time diagnostic variables
-integer time_rate   ! conversion between count and clock time
-integer time_start  ! time count at stat
-integer time_stop   ! time count at endreal(8)
-logical print_ex    ! (-) flag to print execution times
-integer nseg        ! (-) number of code segments
-real(8) time_del          ! (s) delta time for individual call
-real(8) time_seg(20)      ! (s) execution times for code segments
-real(8) num_call(20)      ! (-) execution times for code segments
-character*40 seg_name(20) ! (-) code segment names
-character*40 name         ! (-) code segment name
 
 ! dimension parameters
 integer, parameter :: max_nlev = 75           ! (-) Max number of input press levels to define atmos. state
@@ -239,7 +228,6 @@ type profile_type
     real(8) ice_dens    ! (g/m3) cloud ice density
     real(8) snow_dens   ! (g/m3) cloud snow density
     real(8) grpl_dens   ! (g/m3) cloud graupel density
-    real(8) hydro_dens  ! (g/m3) total density of all hydrometeors
 
     ! derivative of k0 and a0 with respect to water density
                         ! at each level for each phase of water
@@ -272,31 +260,26 @@ type profile_type
 end type profile_type
 type(profile_type) atm(max_nlev)
 
-! reduced dimension and cloud geometry branch
-type cloud_geometry_type
-    real(8) tot     ! (g/m2) total column hydrometeor
-    real(8) min     ! (g/m3) minimum hydrometeor value in layer
-    real(8) max     ! (g/m3) maximum hydrometeor value in layer
-    real(8) ave     ! (g/m3) average hydrometeor value in layer
-    real(8) std     ! (g/m3) standard deviation hydrometeor value in layer
-    real(8) h_ave   ! (km) average height of layer
-    real(8) h_std   ! (km) height standard deviation of layer
-    real(8) h_top   ! (km) top of layer
-    real(8) h_bot   ! (km) bottom of layer
-    real(8) h_del   ! (km) thickness of layer
-    real(8) h_max   ! (km) height of max value in layer
-end type cloud_geometry_type
-    type(cloud_geometry_type) geom
+type reduced_profile_type
+    real(8) clw_tot     ! (g/m2) total column cloud liquid water
+    real(8) rain_tot    ! (g/m2) total column rain
+    real(8) ice_tot     ! (g/m2) total column ice
+    real(8) snow_tot    ! (g/m2) total column snow
+    real(8) grpl_tot    ! (g/m2) total column graupel
 
-type atm_reduced_type
-    type(cloud_geometry_type) clw
-    type(cloud_geometry_type) rain
-    type(cloud_geometry_type) ice
-    type(cloud_geometry_type) snow
-    type(cloud_geometry_type) grpl
-    type(cloud_geometry_type) hydro
-end type atm_reduced_type
-    type(atm_reduced_type) reduced
+    real(8) clw_h_ave   ! (km) average height cloud liquid water
+    real(8) rain_h_ave  ! (km) average height rain
+    real(8) ice_h_ave   ! (km) average height ice
+    real(8) snow_h_ave  ! (km) average height snow
+    real(8) grpl_h_ave  ! (km) average height graupel
+
+    real(8) clw_h_std   ! (km) height standard deviation cloud liquid water
+    real(8) rain_h_std  ! (km) height standard deviation rain
+    real(8) ice_h_std   ! (km) height standard deviation ice
+    real(8) snow_h_std  ! (km) height standard deviation snow
+    real(8) grpl_h_std  ! (km) height standard deviation graupel
+end type reduced_profile_type
+type(reduced_profile_type) atm_reduced
 
 ! surface characteristics branch
 type surface_charateristics

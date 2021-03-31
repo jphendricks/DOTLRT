@@ -49,7 +49,7 @@ allocate(dTb_dw_streams(nlev,nangover2,nphase,updown))
 
 ! model hydrometeor distribution parameters
   call calcprofile_d()
-
+      
 do jpol = 1, npol ! 1 = horizontal, 2 = vertical polarization
   call calc_fbw_temp_weight_scat( Tbo_mat(jpol), tau, Tb_obs, dTb_dT_obs, dTb_dp_obs, dTb_dq_obs, dTb_dw_obs, &
     Tbo_streams, dTb_dT_streams, dTb_dp_streams, dTb_dq_streams, dTb_dw_streams)
@@ -100,29 +100,3 @@ deallocate(dTb_dq_streams)
 deallocate(dTb_dw_streams)
 
 end ! program mrt
-
-!========================================================================================
-subroutine ex_time(num_segment, id_segment)
-!========================================================================================
-! History:
-!  1/27/2021 Kevin Schaefer created routine
-! ---------------------------------------------------------------------------------------
-
-use dotlrt_variables
-use dotlrt_output
-
-implicit none
-
-! input variables
-integer num_segment
-character*40 id_segment
-
-! calculate execution time
-  call system_clock(time_stop,time_rate) ! stop counting
-  time_del= real(time_stop-time_start)/real(time_rate)
-  time_seg(num_segment) = time_seg(num_segment)+time_del
-  num_call(num_segment)=num_call(num_segment)+1
-  seg_name(num_segment)= trim(id_segment)
-  nseg=num_segment
-
-end subroutine ex_time
