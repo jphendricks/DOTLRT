@@ -3,6 +3,7 @@
 !   x, y, and z must be nonnegative, and at most one can be zero.
 !   TINY must be at least 5 times the machine underflow limit.
 !   BIG must be at most one-fifth of the machine overflow limit.
+! 9/26/2020 Kevin Schaefer changed pause to stop in error statement
       real(8) FUNCTION rf(x,y,z)
       implicit none
       real(8) x,y,z,ERRTOL,TINY,BIG,THIRD,C1,C2,C3,C4
@@ -10,7 +11,7 @@
                 C1=1.0d0/24.0d0,C2=.1d0,C3=3.0d0/44.0d0,C4=1.0d0/14.0d0)
       REAL(8) alamb,ave,delx,dely,delz,e2,e3,sqrtx,sqrty,sqrtz,xt,yt,zt
       if( min(x,y,z) .lt. 0.0d0 .or. min(x+y,x+z,y+z) .lt. TINY .or. &
-          max(x,y,z) .gt. BIG) pause 'invalid arguments in rf'
+          max(x,y,z) .gt. BIG) stop 'invalid arguments in rf'
       xt=x
       yt=y
       zt=z

@@ -1,62 +1,39 @@
-
-! Subroutines md_inv32.f90 and dlinrg.f90 are at the bottom of this file.
-
- SUBROUTINE core95 (nlr,nang,h,a0,b0,f,r,u,v,da0,db0,df,dr,du0,dv0     &
-                   ,obs_lev,nvar,LP)
-!  This subroutine solves radiative transfer equation,
-!       specifics are below the list of modifications.
-!   Written and modified by Alex Voronovich, Alexander.Voronovich@noaa.gov
-!---------------------------------------------------------------------
+!====================================================================
+ SUBROUTINE core95 (nlr,nang,h,a0,b0,f,r,u,v,da0,db0,df,du0,dv0,obs_lev,nvar,LP)
+!====================================================================
+! This subroutine solves radiative transfer equation,
+! specifics are below the list of modifications.
+! Written and modified by Alex Voronovich, Alexander.Voronovich@noaa.gov
 !
+! Histoy:
+!   9/26/2020 Kevin Schaefer deleted unused variables, arguments, and tabs
+!---------------------------------------------------------------------
 !           MODIFICATION  05/15/03
-!
 !   Subroutine CORE95.F90 is renamed subroutine DTB32.F90 from ACCEL6
-!
 !---------------------------------------------------------------------
-!
 !           MODIFICATION  05/08/03
-!
 !   Symmetries of matrices _t, _r (i.e., p1 and p2), _rup, _rdn and
 !   the relations:
-!
 !            S11^T=S22  , S12^T=S12 , S21^T=S21
-!
 !   are taken into account
-!
 !---------------------------------------------------------------------
-!
 !           MODIFICATION  04/28/03
-!
 !  In the first loop over _ilr acceleration due to symmetry of some matrices
 !  is taken into account
-!
 !  Subroutine md_inv9 => md_inv31    - includes argument lama12    
-!
 !---------------------------------------------------------------------
-!
 !           MODIFICATION  3/4/03
-!
 !  It is taken into account if _rup, _rdn operators are diagonal  
-!
 !---------------------------------------------------------------------
-!
 !           MODIFICATION  2/14/03
-!
 !  Diagonal perturbations are treated differently  
-!
 !---------------------------------------------------------------------
-!
 !           MODIFICATION  1/31/03
-!
 !  Logical matrix input argument LP(0:nlr,nvar+3)  (layers' profile)
 !  is added. Its _ilr row contains the following information:
-!
 !  To calculate _u,_v  ;  To calculate _du,_dv  ; Is it diagonal layer;
 !  Is it diagonal layer with respect to _ivar-th parameter variation
-!
 !  Diagonal layers are treated differently
-!
-!
 !----------------------------------------------------------------------
 !
 !  This subroutine solves radiative transfer equation taken in the form:
@@ -120,7 +97,7 @@ DOUBLE PRECISION, DIMENSION(  nlr  ,nang,nang), INTENT( IN) ::  a0, b0
 DOUBLE PRECISION, DIMENSION(  nlr  ,nang,nang,nvar)                   &
                                               , INTENT( IN) :: da0,db0 
 
-DOUBLE PRECISION, DIMENSION(nang,nang)        , INTENT( IN) ::   r,dr
+DOUBLE PRECISION, DIMENSION(nang,nang)        , INTENT( IN) ::   r
 LOGICAL         , DIMENSION(0:nlr,nvar+3)     , INTENT( IN) :: LP
 
 DOUBLE PRECISION, DIMENSION(0:nlr,nang)       , INTENT(OUT) :: u,v
@@ -163,16 +140,19 @@ LOGICAL, DIMENSION(0:nlr) :: rup_d,rdn_d,s_d
 LOGICAL                   :: a_d
 integer alloc_err
 
-INTEGER :: i,j
-character*120 debugout
-
 EXTERNAL md_inv32
 
-
-allocate(a(nlr,nang,nang),b(nlr,nang,nang),am1(nlr,nang,nang), &
-         p1(nlr,nang,nang),p2(nlr,nang,nang),q(nlr,nang,nang))
-allocate(da(nlr,nang,nang,nvar),db(nlr,nang,nang,nvar), &
-         dp1(nlr,nang,nang,nvar),dp2(nlr,nang,nang,nvar))
+! allocate variables
+  allocate(a(nlr,nang,nang))
+  allocate(b(nlr,nang,nang))
+  allocate(am1(nlr,nang,nang))
+  allocate(p1(nlr,nang,nang))
+  allocate(p2(nlr,nang,nang))
+  allocate(q(nlr,nang,nang))
+  allocate(da(nlr,nang,nang,nvar))
+  allocate(db(nlr,nang,nang,nvar))
+  allocate(dp1(nlr,nang,nang,nvar))
+  allocate(dp2(nlr,nang,nang,nvar))
 
 !-------------------------------------------------------------
  
@@ -333,158 +313,158 @@ DO ilr=1,nlr   ! the first loop over _ilr
 
         t3=MATMUL(TRANSPOSE(ma),b(ilr,:,:))
 
-		DO n=1,nang
-		    DO m=n,nang
-				s1=0.d0
-				s2=0.d0
-				DO k=1,nang
-					s1=s1+ma(n,k)/lama(k)*ma(m,k)
-					s2=s2+t3(n,k)        *ma(k,m)
-				END DO
-				am1(ilr,n,m)=s1
-				am1(ilr,m,n)=s1
-				t1(n,m)=s2
-				t1(m,n)=s2
-			END DO
-		 END DO
+      DO n=1,nang
+          DO m=n,nang
+            s1=0.d0
+            s2=0.d0
+            DO k=1,nang
+               s1=s1+ma(n,k)/lama(k)*ma(m,k)
+               s2=s2+t3(n,k)        *ma(k,m)
+            END DO
+            am1(ilr,n,m)=s1
+            am1(ilr,m,n)=s1
+            t1(n,m)=s2
+            t1(m,n)=s2
+         END DO
+       END DO
 
 
-		 !   t1=MATMUL(t3,ma)=MATMUL(MATMUL(TRANSPOSE(ma),b(ilr,:,:)),ma)
+       !   t1=MATMUL(t3,ma)=MATMUL(MATMUL(TRANSPOSE(ma),b(ilr,:,:)),ma)
 
-		 t0=t1*lama12nm
-		 w2=t1/lama12nm/2
+       t0=t1*lama12nm
+       w2=t1/lama12nm/2
 
-		 DO ivar=1,nvar
+       DO ivar=1,nvar
 
-			DO n=1,nang
-				DO m=n,nang
-					w3(n,m)=dlama(n,ivar)*lama(m)+lama(n)*dlama(m,ivar)
-					w3(m,n)=w3(n,m)
-				END DO
-			END DO
+         DO n=1,nang
+            DO m=n,nang
+               w3(n,m)=dlama(n,ivar)*lama(m)+lama(n)*dlama(m,ivar)
+               w3(m,n)=w3(n,m)
+            END DO
+         END DO
 
-			!---------------------------------------------------------------
-			IF( .NOT. LP(ilr,ivar+3) ) THEN ! non-diagonal perturbation
-			!---------------------------------------------------------------
-				t2= MATMUL(db(ilr,:,:,ivar),ma)
-				DO n=1,nang
-					DO m=n,nang
-						s1=0.d0
-						DO k=1,nang
-							s1=s1+ma(k,n)*t2(k,m)
-						END DO
-						t1(n,m)=s1
-						t1(m,n)=s1
-					END DO
-				END DO
-			!     t1= MATMUL(MATMUL(TRANSPOSE(ma),db(ilr,:,:,ivar)),ma)
-			!---------------------------------------------------------------
-			ELSE                            !     diagonal perturbation
-			!---------------------------------------------------------------
-				DO n=1,nang
-					DO m=n,nang
-						s1=0.d0
-						DO k=1,nang
-							s1=s1+ma(k,n)*db(ilr,k,k,ivar)*ma(k,m)
-						END DO
-						t1(n,m)=s1
-						t1(m,n)=s1
-					END DO
-				END DO
-			!---------------------------------------------------------------
-			END IF         ! end of diagonal/non-diagonal perturbation
-			!---------------------------------------------------------------
+         !---------------------------------------------------------------
+         IF( .NOT. LP(ilr,ivar+3) ) THEN ! non-diagonal perturbation
+         !---------------------------------------------------------------
+            t2= MATMUL(db(ilr,:,:,ivar),ma)
+            DO n=1,nang
+               DO m=n,nang
+                  s1=0.d0
+                  DO k=1,nang
+                     s1=s1+ma(k,n)*t2(k,m)
+                  END DO
+                  t1(n,m)=s1
+                  t1(m,n)=s1
+               END DO
+            END DO
+         !     t1= MATMUL(MATMUL(TRANSPOSE(ma),db(ilr,:,:,ivar)),ma)
+         !---------------------------------------------------------------
+         ELSE                            !     diagonal perturbation
+         !---------------------------------------------------------------
+            DO n=1,nang
+               DO m=n,nang
+                  s1=0.d0
+                  DO k=1,nang
+                     s1=s1+ma(k,n)*db(ilr,k,k,ivar)*ma(k,m)
+                  END DO
+                  t1(n,m)=s1
+                  t1(m,n)=s1
+               END DO
+            END DO
+         !---------------------------------------------------------------
+         END IF         ! end of diagonal/non-diagonal perturbation
+         !---------------------------------------------------------------
 
-			t2=MATMUL(t3,dma(:,:,ivar))
+         t2=MATMUL(t3,dma(:,:,ivar))
 
-			dt0(:,:,ivar)=lama12nm*(t2+TRANSPOSE(t2)+t1)+w3*w2             
+         dt0(:,:,ivar)=lama12nm*(t2+TRANSPOSE(t2)+t1)+w3*w2             
 
-		 END DO  ! ivar
-	 !---------------------------------------------------------
-	 END IF                 ! end of non-diagonal case: part 1
-	 !---------------------------------------------------------
+       END DO  ! ivar
+    !---------------------------------------------------------
+    END IF                 ! end of non-diagonal case: part 1
+    !---------------------------------------------------------
 
-	 !---------------------------------------------------------
-	 IF( LP(ilr,3) ) THEN                 !   diag case: part 1
+    !---------------------------------------------------------
+    IF( LP(ilr,3) ) THEN                 !   diag case: part 1
      !---------------------------------------------------------
-		DO ivar=1,nvar
-			!-----------------------------------------------------------------
-			IF( .NOT. LP(ilr,ivar+3) ) THEN  ! non-diagonal perturbation	
-			!-----------------------------------------------------------------
-				DO n=1,nang   
-					dlama(n,ivar)=da(ilr,n,n,ivar)
-					dma(n,n,ivar)=0.d0
-					DO m=n+1,nang
-						dma(n,m,ivar)= da(ilr,n,m,ivar)/(lama(m)-lama(n))
-						dma(m,n,ivar)=   -dma(n,m,ivar)
-					END DO
-				END DO
-			!-----------------------------------------------------------------
-			ELSE                             !     diagonal perturbation
-			!-----------------------------------------------------------------
-				DO n=1,nang
-					dlama(n,ivar)=da(ilr,n,n,ivar)
-				END DO
-			!-----------------------------------------------------------------
-			END IF           ! end of diagonal/non-diagonal perturbation
-			!-----------------------------------------------------------------
-		END DO   ! ivar
+      DO ivar=1,nvar
+         !-----------------------------------------------------------------
+         IF( .NOT. LP(ilr,ivar+3) ) THEN  ! non-diagonal perturbation   
+         !-----------------------------------------------------------------
+            DO n=1,nang   
+               dlama(n,ivar)=da(ilr,n,n,ivar)
+               dma(n,n,ivar)=0.d0
+               DO m=n+1,nang
+                  dma(n,m,ivar)= da(ilr,n,m,ivar)/(lama(m)-lama(n))
+                  dma(m,n,ivar)=   -dma(n,m,ivar)
+               END DO
+            END DO
+         !-----------------------------------------------------------------
+         ELSE                             !     diagonal perturbation
+         !-----------------------------------------------------------------
+            DO n=1,nang
+               dlama(n,ivar)=da(ilr,n,n,ivar)
+            END DO
+         !-----------------------------------------------------------------
+         END IF           ! end of diagonal/non-diagonal perturbation
+         !-----------------------------------------------------------------
+      END DO   ! ivar
 
-		! blw
-		t0 = 0.0d0
-		! blw
-		DO n=1,nang
-			t0(n,n)=b(ilr,n,n)*lama(n)
-		END DO
+      ! blw
+      t0 = 0.0d0
+      ! blw
+      DO n=1,nang
+         t0(n,n)=b(ilr,n,n)*lama(n)
+      END DO
 
-		DO ivar=1,nvar
-			!-----------------------------------------------------------------
-			IF( .NOT. LP(ilr,ivar+3) ) THEN  ! non-diagonal perturbation
-			!-----------------------------------------------------------------
-				DO n=1,nang
-					DO m=n,nang
-						dt0(n,m,ivar)=( dma(m,n,ivar)*b(ilr,m,m)+b(ilr,n,n)*dma(n,m,ivar) &
-							+db(ilr,n,m,ivar))*lama12nm(n,m)
-						dt0(m,n,ivar)=dt0(n,m,ivar)
-					END DO
-					dt0(n,n,ivar)=dt0(n,n,ivar)+dlama(n,ivar)*b(ilr,n,n)
-				END DO
-			!-----------------------------------------------------------------
-			ELSE                             !     diagonal perturbation
-			!-----------------------------------------------------------------     
-				! blw
-				dt0(:,:,ivar) = 0.0d0
-				! blw
-				DO n=1,nang
-					dt0(n,n,ivar)=db(ilr,n,n,ivar)*lama(n)+dlama(n,ivar)*b(ilr,n,n)
-				END DO
-			!-----------------------------------------------------------------
-			END IF           ! end of diagonal/non-diagonal perturbation
-			!-----------------------------------------------------------------
-		END DO   ! ivar
-		!--------------------------------------------------------
+      DO ivar=1,nvar
+         !-----------------------------------------------------------------
+         IF( .NOT. LP(ilr,ivar+3) ) THEN  ! non-diagonal perturbation
+         !-----------------------------------------------------------------
+            DO n=1,nang
+               DO m=n,nang
+                  dt0(n,m,ivar)=( dma(m,n,ivar)*b(ilr,m,m)+b(ilr,n,n)*dma(n,m,ivar) &
+                     +db(ilr,n,m,ivar))*lama12nm(n,m)
+                  dt0(m,n,ivar)=dt0(n,m,ivar)
+               END DO
+               dt0(n,n,ivar)=dt0(n,n,ivar)+dlama(n,ivar)*b(ilr,n,n)
+            END DO
+         !-----------------------------------------------------------------
+         ELSE                             !     diagonal perturbation
+         !-----------------------------------------------------------------     
+            ! blw
+            dt0(:,:,ivar) = 0.0d0
+            ! blw
+            DO n=1,nang
+               dt0(n,n,ivar)=db(ilr,n,n,ivar)*lama(n)+dlama(n,ivar)*b(ilr,n,n)
+            END DO
+         !-----------------------------------------------------------------
+         END IF           ! end of diagonal/non-diagonal perturbation
+         !-----------------------------------------------------------------
+      END DO   ! ivar
+      !--------------------------------------------------------
 
-	END IF                     ! end of diagonal case: part 1
-	!--------------------------------------------------------
+   END IF                     ! end of diagonal case: part 1
+   !--------------------------------------------------------
 
-	!--------------------------------------------------------
-	IF(LP(ilr,3)) THEN  !                diagonal case
-	!--------------------------------------------------------
-		DO n=1,nang
-			lamab(n)=t0(n,n)        !kz, Eqn. 46??
-		END DO
-	!--------------------------------------------------------
-	ELSE                !            non-diagonal case
-	!--------------------------------------------------------
-	!!  CALL DEVCSF(nang,t0,nang,lamab,mab,nang)
-		call jacobi(t0,nang,nang,lamab,mab,nrot)
-	!--------------------------------------------------------
-	END IF              ! diagonal / non-diagonal case
-	!--------------------------------------------------------
+   !--------------------------------------------------------
+   IF(LP(ilr,3)) THEN  !                diagonal case
+   !--------------------------------------------------------
+      DO n=1,nang
+         lamab(n)=t0(n,n)        !kz, Eqn. 46??
+      END DO
+   !--------------------------------------------------------
+   ELSE                !            non-diagonal case
+   !--------------------------------------------------------
+   !!  CALL DEVCSF(nang,t0,nang,lamab,mab,nang)
+      call jacobi(t0,nang,nang,lamab,mab,nrot)
+   !--------------------------------------------------------
+   END IF              ! diagonal / non-diagonal case
+   !--------------------------------------------------------
 
-	!--------------------------------------------------------
-	IF( .NOT. LP(ilr,3) ) THEN  ! non-giagonal case: part 2
-	!--------------------------------------------------------
+   !--------------------------------------------------------
+   IF( .NOT. LP(ilr,3) ) THEN  ! non-giagonal case: part 2
+   !--------------------------------------------------------
    DO ivar=1,nvar
     t1=MATMUL(dt0(:,:,ivar),mab)
     DO n=1,nang
@@ -631,7 +611,7 @@ CALL md_inv32 (nang, h(ilr), lama, ma, lamab, mab, lama12, t1, t2             &
    DO n=1,nang
     t0(n,n)= t0(n,n)+1.d0
    END DO
-   CALL dlinrg(nang,t0,nang,t1,nang)
+   CALL dlinrg(nang,t0,t1)
      q(ilr,:,:)=t1                         ! q(ilr) = (1-p2*t)**(-1)
 
 !   rup(ilr,:,:)=p2(ilr,:,:)+MATMUL(t2,MATMUL(q(ilr,:,:),p1(ilr,:,:)) )
@@ -677,7 +657,8 @@ CALL md_inv32 (nang, h(ilr), lama, ma, lamab, mab, lama12, t1, t2             &
     END DO
     t0(n,n)=t0(n,n)+1.d0
    END DO
-   CALL dlinrg(nang,t0,nang,t1,nang)
+
+   CALL dlinrg(nang,t0,t1)
    q(ilr,:,:)=t1
    t2=MATMUL(rup(ilr-1,:,:),t1)
    DO n=1,nang
@@ -970,7 +951,8 @@ END DO         !  end of the first _ilr loop
 !!    t0(n,n)=1+t0(n,n)
     t0(n,n) = 1.0d0 + t0(n,n)
   END DO
-  CALL dlinrg(nang,t0,nang,t1,nang)
+
+  CALL dlinrg(nang,t0,t1)
   t2=MATMUL(p1(ilr,:,:),t1)
 
 !  rdn(ilr-1,:,:)=p2(ilr,:,:)+MATMUL(MATMUL(t2,rdn(ilr,:,:)),p1(ilr,:,:))
@@ -999,7 +981,7 @@ END DO         !  end of the first _ilr loop
 !!   t0(n,n)=1+t0(n,n)
    t0(n,n) = 1.0d0 + t0(n,n)
   END DO
-  CALL dlinrg(nang,t0,nang,t1,nang)
+  CALL dlinrg(nang,t0,t1)
   t2=MATMUL(p1(ilr,:,:),t1)
   DO n=1,nang
    DO m=n,nang
@@ -1034,7 +1016,7 @@ END DO         !  end of the first _ilr loop
 !!   t0(n,n)=1+t0(n,n)
    t0(n,n) = 1.0d0 + t0(n,n)
   END DO
-  CALL dlinrg(nang,t0,nang,t1,nang)
+  CALL dlinrg(nang,t0,t1)
   DO n=1,nang
    DO m=1,nang
     t2(n,m)=p1(ilr,n,n)*t1(n,m)
@@ -1130,8 +1112,8 @@ DO ilr=oblv+2,nlr  ! the first half of the forth _ilr loop: top layers
   t0(n,n) = 1.0d0 + t0(n,n)
   w0(n,n) = 1.0d0 + w0(n,n)
  END DO
- CALL dlinrg(nang,t0,nang,t1,nang)   ! t1= (1-s12*r)**(-1)
- CALL dlinrg(nang,w0,nang,w1,nang)   ! w1= (1-r*s12)**(-1)
+ CALL dlinrg(nang,t0,t1)   ! t1= (1-s12*r)**(-1)
+ CALL dlinrg(nang,w0,w1)   ! w1= (1-r*s12)**(-1)
   t2=MATMUL(t1,s11(ilr-1,:,:))
   w2=MATMUL(w1, p1(ilr  ,:,:))
 
@@ -1175,8 +1157,8 @@ DO ilr=oblv+2,nlr  ! the first half of the forth _ilr loop: top layers
      t0(n,n) = 1.0d0 + t0(n,n)
      w0(n,n) = 1.0d0 + w0(n,n)
     END DO
-    CALL dlinrg(nang,t0,nang,t1,nang)   ! t1= (1-s12*r)**(-1)
-    CALL dlinrg(nang,w0,nang,w1,nang)   ! w1= (1-r*s12)**(-1)
+    CALL dlinrg(nang,t0,t1)   ! t1= (1-s12*r)**(-1)
+    CALL dlinrg(nang,w0,w1)   ! w1= (1-r*s12)**(-1)
     t2=MATMUL(p1(ilr,:,:),t1)
     w2=MATMUL(w1,p1(ilr,:,:))
     t3=MATMUL(p2(ilr,:,:),t1)
@@ -1242,8 +1224,8 @@ DO ilr=oblv+2,nlr  ! the first half of the forth _ilr loop: top layers
     t0(n,n) = 1.0d0 + t0(n,n)
     w0(n,n) = 1.0d0 + w0(n,n)
    END DO
-   CALL dlinrg(nang,t0,nang,t1,nang)   ! t1= (1-s12*r)**(-1)
-   CALL dlinrg(nang,w0,nang,w1,nang)   ! w1= (1-r*s12)**(-1)
+   CALL dlinrg(nang,t0,t1)   ! t1= (1-s12*r)**(-1)
+   CALL dlinrg(nang,w0,w1)   ! w1= (1-r*s12)**(-1)
    t2=MATMUL(t1,s11(ilr-1,:,:))
    w2=MATMUL(s22(ilr-1,:,:),w1)
    w3=MATMUL(s12(ilr-1,:,:),w1)
@@ -1354,8 +1336,8 @@ DO ilr=oblv-1,1,-1      !        the second half of the forth _ilr loop
   t0(n,n)=t0(n,n)+1.d0
   w0(n,n)=w0(n,n)+1.d0
  END DO
- CALL dlinrg(nang,t0,nang,t1,nang)   ! t1= (1-s21*r)**(-1)
- CALL dlinrg(nang,w0,nang,w1,nang)   ! w1= (1-r*s21)**(-1)
+ CALL dlinrg(nang,t0,t1)   ! t1= (1-s21*r)**(-1)
+ CALL dlinrg(nang,w0,w1)   ! w1= (1-r*s21)**(-1)
  t2=MATMUL(t1,s22(ilr,:,:))
  w2=MATMUL(w1, p1(ilr,:,:))
 
@@ -1401,8 +1383,8 @@ DO ilr=oblv-1,1,-1      !        the second half of the forth _ilr loop
      t0(n,n) = t0(n,n) + 1.0d0
      w0(n,n) = w0(n,n) + 1.0d0
     END DO
-   CALL dlinrg(nang,t0,nang,t1,nang)   ! t1= (1-s21*r)**(-1)
-   CALL dlinrg(nang,w0,nang,w1,nang)   ! w1= (1-r*s21)**(-1)
+   CALL dlinrg(nang,t0,t1)   ! t1= (1-s21*r)**(-1)
+   CALL dlinrg(nang,w0,w1)   ! w1= (1-r*s21)**(-1)
    w2=MATMUL(w1,p1(ilr,:,:))
    t2=MATMUL(p1(ilr,:,:),t1)
    t3=MATMUL(p2(ilr,:,:),t1)
@@ -1469,8 +1451,8 @@ DO ilr=oblv-1,1,-1      !        the second half of the forth _ilr loop
     t0(n,n) = 1.0d0 + t0(n,n)
     w0(n,n) = 1.0d0 + w0(n,n)
    END DO
-   CALL dlinrg(nang,t0,nang,t1,nang)   ! t1= (1-s21*r)**(-1)
-   CALL dlinrg(nang,w0,nang,w1,nang)   ! w1= (1-r*s21)**(-1)
+   CALL dlinrg(nang,t0,t1)   ! t1= (1-s21*r)**(-1)
+   CALL dlinrg(nang,w0,w1)   ! w1= (1-r*s21)**(-1)
    t2=MATMUL(t1,s22(ilr,:,:))
    w2=MATMUL(s11(ilr,:,:),w1)
    w3=MATMUL(s21(ilr,:,:),w1)
@@ -1798,8 +1780,8 @@ END DO                ! end of the second half of the forth _ilr loop
          y1(n)=b1(n)-w1(n,n)*b2(n)
    END DO
   ELSE
-   CALL dlinrg(nang,a11,nang,a11m1,nang)
-   CALL dlinrg(nang,a22,nang,a22m1,nang)
+   CALL dlinrg(nang,a11,a11m1)
+   CALL dlinrg(nang,a22,a22m1)
    w0=MATMUL(a21,a11m1)
    w1=MATMUL(a12,a22m1)
    t0=a22-MATMUL(w0,a12)
@@ -1859,8 +1841,8 @@ END DO                ! end of the second half of the forth _ilr loop
     w1(n,n) = 1.0d0 /(a11(n,n)-a21(n,n)*a12(n,n)/a22(n,n))
    END DO
   ELSE
-   CALL dlinrg(nang,t0,nang,w0,nang)  ! w0=(a22-a21*a11**(-1)*a12)**(-1)
-   CALL dlinrg(nang,t1,nang,w1,nang)  ! w1=(a11-a12*a22**(-1)*a21)**(-1)
+   CALL dlinrg(nang,t0,w0)  ! w0=(a22-a21*a11**(-1)*a12)**(-1)
+   CALL dlinrg(nang,t1,w1)  ! w1=(a11-a12*a22**(-1)*a21)**(-1)
   END IF
 
 !---------------------------------------------------------------------
@@ -1958,7 +1940,7 @@ END DO   ! ivar
       t0(n,n)=t0(n,n)+1.d0
      END DO
 
-     CALL dlinrg(nang,t0,nang,t1,nang)  ! t1=(1-S12*R)**(-1)
+     CALL dlinrg(nang,t0,t1)  ! t1=(1-S12*R)**(-1)
 
      DO ivar=1,nvar
       du0(ilr,:,ivar)=MATMUL(t1,MATMUL(s11(ilr,:,:),dz3(ilr,:,ivar)))
@@ -1974,7 +1956,7 @@ END DO   ! ivar
       t0(n,n)=t0(n,n)+1.d0
      END DO
 
-     CALL dlinrg(nang,t0,nang,t1,nang)  ! t1=(1-S12*R)**(-1)
+     CALL dlinrg(nang,t0,t1)  ! t1=(1-S12*R)**(-1)
 
      DO ivar=1,nvar
       du0(ilr,:,ivar)=MATMUL(t1,MATMUL(s11(ilr,:,:),dz3(ilr,:,ivar)))
@@ -1997,7 +1979,7 @@ END DO   ! ivar
      t0(n,n)=t0(n,n)+1.d0
     END DO
 
-    CALL dlinrg(nang,t0,nang,t1,nang)  ! t1=(1-S12*R)**(-1)
+    CALL dlinrg(nang,t0,t1)  ! t1=(1-S12*R)**(-1)
 
     DO ivar=1,nvar
      DO n=1,nang
@@ -2048,7 +2030,7 @@ END DO   ! ivar
       w0(n,n)=w0(n,n)+1.d0
      END DO
 
-     CALL dlinrg(nang,w0,nang,w1,nang)  ! w1=(1-S21*R)**(-1)
+     CALL dlinrg(nang,w0,w1)  ! w1=(1-S21*R)**(-1)
 
      DO ivar=1,nvar
        dv0(ilr,:,ivar)=MATMUL(w1,MATMUL(s22(ilr-1,:,:),dz2(ilr-1,:,ivar)))
@@ -2064,7 +2046,7 @@ END DO   ! ivar
       w0(n,n)=w0(n,n)+1.d0
      END DO
 
-     CALL dlinrg(nang,w0,nang,w1,nang)  ! w1=(1-S21*R)**(-1)
+     CALL dlinrg(nang,w0,w1)  ! w1=(1-S21*R)**(-1)
 
      DO ivar=1,nvar
       dv0(ilr,:,ivar)=MATMUL(w1,MATMUL(s22(ilr-1,:,:),dz2(ilr-1,:,ivar)))
@@ -2086,7 +2068,7 @@ END DO   ! ivar
      w0(n,n)=w0(n,n)+1.d0
     END DO
 
-    CALL dlinrg(nang,w0,nang,w1,nang)  ! w1=(1-S21*R)**(-1)
+    CALL dlinrg(nang,w0,w1)  ! w1=(1-S21*R)**(-1)
 
     DO ivar=1,nvar
      DO n=1,nang
@@ -2117,8 +2099,17 @@ END DO   ! ivar
 
 !----------------------------------------------------------
 
-deallocate(a,b,am1,p1,p2,q,stat=alloc_err)
-deallocate(da,db,dp1,dp2,stat=alloc_err)
+! deallocate variables
+deallocate(a,stat=alloc_err)
+deallocate(b,stat=alloc_err)
+deallocate(am1,stat=alloc_err)
+deallocate(p1,stat=alloc_err)
+deallocate(p2,stat=alloc_err)
+deallocate(q,stat=alloc_err)
+deallocate(da,stat=alloc_err)
+deallocate(db,stat=alloc_err)
+deallocate(dp1,stat=alloc_err)
+deallocate(dp2,stat=alloc_err)
 
 END SUBROUTINE core95
 
@@ -2389,8 +2380,8 @@ DOUBLE PRECISION :: s1,s2
 !-------------------------------
 
 
-  CALL dlinrg(nang, a,nang,am1,nang)
-  CALL dlinrg(nang,b1,nang,bm1,nang)
+  CALL dlinrg(nang, a,am1)
+  CALL dlinrg(nang,b1,bm1)
 
 
    DO ivar=1,nvar
@@ -2484,13 +2475,19 @@ DOUBLE PRECISION :: s1,s2
    p2= p2+ p1
   dp2=dp2+dp1
 
-!-------------------------------------------------------------
 END SUBROUTINE  md_inv32
 
-subroutine dlinrg(n,a,nn,ainv,nnn)
+!=============================================================
+subroutine dlinrg(n,a,ainv)
+!=============================================================
 ! Organizes input to gaussj, calls gaussj
+!
+! History:
+!   9/26/2020 Kevin Schaefer deleted unused variables and arguments
+!-------------------------------------------------------------
 implicit none
-integer*4 n, nn, nnn, np, m, mp, j
+
+integer*4 n, np, m, mp, j
 real*8, dimension(n,n) :: a, ainv, aa
 real*8, dimension(n)   :: b
     np = n

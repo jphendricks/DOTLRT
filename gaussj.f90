@@ -1,16 +1,23 @@
+!====================================================================================
+      SUBROUTINE gaussj(a,n,np,b,m,mp)
+!====================================================================================
 !  (C) Copr. 1986-92 Numerical Recipes Software "1"7%A2.
 !   This subroutine performs linear equation solution by Gauss-Jordan elimination.
 !   'a'is an NxN input coefficient matrix.
 !   'b' is an NxM input matrix containing M right-hand-side vectors.
 !    On output, 'a' is replaced by its matrix inverse, and 'b' is replaced
 !    by the corresponding set of solution vectors.
-      SUBROUTINE gaussj(a,n,np,b,m,mp)
+!
+! history:
+! 9/26/2020 Kevin Schaefer changes pause to stop in error messages
+!------------------------------------------------------------------------------------
       implicit none
       INTEGER m,mp,n,np,NMAX
       REAL(8) a(np,np),b(np,mp)
       PARAMETER (NMAX=50)
       INTEGER i,icol,irow,j,k,l,ll,indxc(NMAX),indxr(NMAX),ipiv(NMAX)
       REAL(8) big,dum,pivinv
+
       do 11 j=1,n
         ipiv(j)=0
 11    continue
@@ -26,7 +33,7 @@
                   icol=k
                 endif
               else if (ipiv(k).gt.1) then
-                pause 'singular matrix in gaussj'
+                stop 'a singular matrix in gaussj'
               endif
 12          continue
           endif
@@ -46,7 +53,7 @@
         endif
         indxr(i)=irow
         indxc(i)=icol
-        if (a(icol,icol).eq.0.0d0) pause 'singular matrix in gaussj'
+        if (a(icol,icol).eq.0.0d0) stop 'b singular matrix in gaussj'
         pivinv=1.0d0/a(icol,icol)
         a(icol,icol)=1.0d0
         do 16 l=1,n

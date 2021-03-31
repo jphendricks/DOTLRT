@@ -1,4 +1,6 @@
-! get_instr_spec.f90
+!============================================================================
+subroutine get_instr_spec( )
+!============================================================================
 ! This routine:
 !     1 - reads instrument specification file containing parameters:
 !         a - number of channels
@@ -7,33 +9,73 @@
 !         d - noise parameters
 !     2 - computes instrument noise covariance matrix assuming
 !         channels are non-overlapping.
-subroutine get_instr_spec( instrspec )
-use variables
+!
+! history:
+!  10/17/2020 Kevin schaefer switched to reading an instrument file
+!----------------------------------------------------------------------------
+  use dotlrt_variables
   implicit none
-  integer i, j
-  real(8) instrspec(5)
-    instr_spec%num_channels = 1
-    do i = 1, instr_spec%num_channels
-      instr_spec%chan(i)%lo_freq    = instrspec(1)
-      instr_spec%chan(i)%if1_freq   = instrspec(2)
-      instr_spec%chan(i)%if2_freq   = instrspec(3)
-      instr_spec%chan(i)%bandwidth  = instrspec(4)
-      instr_spec%chan(i)%dtrms      = instrspec(5)
-      instr_spec%chan(i)%chan_desig = 1
 
-      instr_spec%chan(i)%if1_freq   = instr_spec%chan(i)%if1_freq  / 1000.0d0 
-      instr_spec%chan(i)%if2_freq   = instr_spec%chan(i)%if2_freq  / 1000.0d0 
-      instr_spec%chan(i)%bandwidth  = instr_spec%chan(i)%bandwidth / 1000.0d0 
-    end do
-    instr_spec%text = ' '
-    do i=1,instr_spec%num_channels
-        do j=1,instr_spec%num_channels
-            instr_noise_cov_matrix(i,j) = 0.0d0
-        end do
-    end do
-    do i=1,instr_spec%num_channels
-        instr_noise_cov_matrix(i,i) = instr_spec%chan(i)%dtrms &
-                                    * instr_spec%chan(i)%dtrms
-    end do
-    instr_spec%inf=.true.
+! internal variables
+  character*250 junk ! junk variable for reading
+  integer ichan   ! (-) channel index
+  real(8) temp(6) ! (-) temporary read variable
+
+! print message
+  print*, 'Read Instrument Specifications'
+
+! open instrument file
+  open(unit=20, file=trim(file_instr), form='formatted', status='old')
+
+! read number of channels
+  read(20,*) nchannel  ! number of channels
+
+! read in all channel specs
+  do ichan=1,nchannel
+    read(20,*) temp,junk
+    instr_spec(ichan)%lo_freq   = temp(1)
+    instr_spec(ichan)%if1_freq  = temp(2)
+    instr_spec(ichan)%if2_freq  = temp(3)
+    instr_spec(ichan)%bandwidth = temp(4)
+    instr_spec(ichan)%dtrms     = temp(5)
+    instr_spec(ichan)%desig     = temp(6)
+    instr_spec(ichan)%num       = ichan
+    instr_spec(ichan)%name      = trim(junk)
+
+    instr_spec(ichan)%if1_freq   = instr_spec(ichan)%if1_freq  / 1000.0d0 
+    instr_spec(ichan)%if2_freq   = instr_spec(ichan)%if2_freq  / 1000.0d0 
+    instr_spec(ichan)%bandwidth  = instr_spec(ichan)%bandwidth / 1000.0d0 
+  enddo
+!
+! close instrument file
+  close(unit=20)
+
 end subroutine get_instr_spec
+
+!============================================================================
+subroutine extract_channel(ichan )
+!============================================================================
+! extracts a single channel from the full instrument specification file
+!
+! history:
+!  10/17/2020 Kevin schaefer created routine
+!----------------------------------------------------------------------------
+  use dotlrt_variables
+  implicit none
+
+! input
+  integer, intent(in) :: ichan   ! (-) channel index
+
+! copy variable tree
+  channel%lo_freq   = instr_spec(ichan)%lo_freq
+  channel%if1_freq  = instr_spec(ichan)%if1_freq
+  channel%if2_freq  = instr_spec(ichan)%if2_freq
+  channel%bandwidth = instr_spec(ichan)%bandwidth
+  channel%dtrms     = instr_spec(ichan)%dtrms
+  channel%desig     = instr_spec(ichan)%desig 
+  channel%num       = instr_spec(ichan)%num 
+  channel%name      = instr_spec(ichan)%name 
+  
+  if(flag_print_full) print*, 'Channel: ',ichan, channel%lo_freq, channel%bandwidth, channel%dtrms
+
+end subroutine extract_channel

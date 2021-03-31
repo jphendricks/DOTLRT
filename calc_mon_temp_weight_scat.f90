@@ -1,4 +1,6 @@
-! calc_mon_temp_weight_scat.f90
+!========================================================================
+SUBROUTINE calc_mon_temp_weight_scat( ifreq, Tb_inp, tau, tb_pl_inp, tb_mn_inp, dtb_pl_inp, dtb_mn_inp, Tbo_streams_inp) 
+!========================================================================
 ! This routine:
 !     1 - Calculates vertical and horizontal polarization monochromatic
 !         temperature weighting vectors for absorbing and scattering
@@ -20,12 +22,15 @@
 !         FORTRAN 90 Portland Group Compiler on Red Hat Linux
 !     3 - Modified 31 July 2003 by Bob Weber
 !         FORTRAN 90 COMPAQ Compiler on Windows 2000 / XP
-SUBROUTINE calc_mon_temp_weight_scat( Tb_inp, tau, tb_pl_inp, tb_mn_inp, dtb_pl_inp, dtb_mn_inp, Tbo_streams_inp) !  frequency,
-  use variables
+!     9/26/2020 Kevin Schaefer deleted unused variables
+!-----------------------------------------------------------------------
+  use dotlrt_variables
   implicit none
+
+  integer ifreq  ! frequency index
   real(8), dimension(2) :: tau
-  real(8) tb_pl_inp(0:atm_inp%num_levels), tb_mn_inp(0:atm_inp%num_levels)
-  real(8) dtb_pl_inp(0:atm_inp%num_levels,nvar), dtb_mn_inp(0:atm_inp%num_levels,nvar)
+  real(8) tb_pl_inp(0:nlev), tb_mn_inp(0:nlev)
+  real(8) dtb_pl_inp(0:nlev,nvar), dtb_mn_inp(0:nlev,nvar)
   real(8) Tbo_streams_inp(nangover2)
 
   integer last_angle, next_angle, jud, k
@@ -62,28 +67,8 @@ SUBROUTINE calc_mon_temp_weight_scat( Tb_inp, tau, tb_pl_inp, tb_mn_inp, dtb_pl_
   INTEGER next_level                 ! level_type {next level of atmospheric input data}
   INTEGER last_level                 ! level_type {last level of atmospheric input data}
   REAL(8) llw, nlw                    ! level interpolation weights}
-  REAL(8) vr                          ! vertical surface reflectivity}
-  REAL(8) hr                          ! horizontal surface reflectivity}
   REAL(8) law,naw                     ! angle interpolation weights}
-  REAL(8) tauhd                       ! atmospheric opacity from "height" increasing downwards}
-  REAL(8) dtauhd                      ! atmospheric opacity from "height" increment}
-  REAL(8) tausu                       ! atmospheric opacity from "surface" increasing upwards}
-  REAL(8) dtausu                      ! atmospheric opacity from "surface" increment}
-  REAL(8) trans_sh_v                  ! transmittance to "height" from "surface" including reflection loss for vertical}
-  REAL(8) trans_sh_h                  ! transmittance to "height" from "surface" including reflection loss for horizontal}
-  REAL(8) tau_diff                    ! opacity difference}
-  REAL(8) accum                       ! General accumulator}
-  INTEGER iter_order                  ! Smallint
-  REAL(8) max_albedo                  ! Double
-  INTEGER max_iter_order              ! LongInt
-  real(8)                 :: lat 
-  real(8)                 :: lng 
   real(8)                 :: frequency
-  REAL(8) term11,term12,term21,term22 ! Double
-  REAL(8) theta_index,theta_p_index   ! Double
-  REAL(8) temp_exp                    ! Double
-  REAL(8) max_weight_incr             ! Double
-  REAL(8) weight_error_to_comp_est    ! Double
   real(8) dabsn2_t, dabsn2_p
   real(8) dabh2o_t, dabh2o_v, dabh2o_p
   real(8) do2abs_t, do2abs_v,do2abs_p
@@ -92,15 +77,13 @@ SUBROUTINE calc_mon_temp_weight_scat( Tb_inp, tau, tb_pl_inp, tb_mn_inp, dtb_pl_
   real(8), DIMENSION(3) :: dhab, dhsc, dg
   REAL(8), external :: o2abs, absn2, abh2o
 
-  character*120 debugout
-
-  if( atm_inp%num_levels .le. 0 ) then
+  if( nlev .le. 0 ) then
     print*,' number of levels = 0 '
     return
   end if
 
   ! check for valid direction of propagation
-  theta = dabs(inp_theta)
+  theta = dabs(obs_theta)
   do while( theta .gt. 180.0d0 )
     theta = theta - 180.0d0
   end do
@@ -109,12 +92,12 @@ SUBROUTINE calc_mon_temp_weight_scat( Tb_inp, tau, tb_pl_inp, tb_mn_inp, dtb_pl_
     return
   end if
   ! linear interpolation coefficients for angle - start
-    if( inp_theta <= 90.0d0 ) then      ! upwelling - looking down
+    if( obs_theta <= 90.0d0 ) then      ! upwelling - looking down
       jud = 1
-    else if( inp_theta > 90.0d0 ) then  ! downwelling - looking up
+    else if( obs_theta > 90.0d0 ) then  ! downwelling - looking up
       jud = 2
     end if
-    theta_obs = inp_theta
+    theta_obs = obs_theta
     ! Check for valid angle
     if( jud == 1 ) then
       if( theta_obs .lt. teta(1) ) theta_obs = teta(1)
@@ -144,7 +127,7 @@ SUBROUTINE calc_mon_temp_weight_scat( Tb_inp, tau, tb_pl_inp, tb_mn_inp, dtb_pl_
     end if
     naw = 1.0d0 - law
 
-    !write(debugout,*) "inp_theta = ",inp_theta
+    !write(debugout,*) "obs_theta = ",obs_theta
     !call mexPrintf(debugout//achar(10))
     !write(debugout,*) "theta_obs = ",theta_obs, teta(next_angle), teta(last_angle)
     !call mexPrintf(debugout//achar(10))
@@ -155,47 +138,47 @@ SUBROUTINE calc_mon_temp_weight_scat( Tb_inp, tau, tb_pl_inp, tb_mn_inp, dtb_pl_
 
     ! linear interpolation coefficients for angle - end
  
-    frequency = passband_freq(nfreq)
+    frequency = passband_freq(ifreq)
     call cpu_time(times(1))
 
     ! calculate absorption, scattering, extinction, and albedo profiles at levels
     call calc_tot_ext(frequency)
 
     ! check for valid observation height
-    height = inp_height
+    height = obs_height
     if( height < 0.0d0 ) height = 0.0d0
-    if( height < ( atm_inp%prof(1)%height + 0.0001d0 ) ) then
-        height = ( atm_inp%prof(1)%height + 0.0001d0 )
+    if( height < ( atm(1)%hgt + 0.0001d0 ) ) then
+        height = ( atm(1)%hgt + 0.0001d0 )
     end if
-    if( height > ( atm_inp%prof(atm_inp%num_levels)%height - 0.0001d0 ) ) then
-        height = ( atm_inp%prof(atm_inp%num_levels)%height - 0.0001d0 )
+    if( height > ( atm(nlev)%hgt - 0.0001d0 ) ) then
+        height = ( atm(nlev)%hgt - 0.0001d0 )
     end if
 
     ! determine level boundaries at height
     next_level = 2
-    do while( ( atm_inp%prof(next_level)%height < height ) .and. &
-              ( next_level < atm_inp%num_levels ) )
+    do while( ( atm(next_level)%hgt < height ) .and. &
+              ( next_level < nlev ) )
                 next_level = next_level + 1
     end do
     last_level = next_level-1
     ! observation level at or above observation height
-    !  0 <= obs_lev <= atm_inp%num_levels
+    !  0 <= obs_lev <= nlev
     obs_lev  = next_level
     obs_lev1 = obs_lev * m1
 
     ! calculate absorption, scattering, extinction, and albedo at height - start
     ! linear interpolation coefficients for height
-      llw = (atm_inp%prof(next_level)%height - height)                          &
-          / (atm_inp%prof(next_level)%height - atm_inp%prof(last_level)%height)
+      llw = (atm(next_level)%hgt - height)                          &
+          / (atm(next_level)%hgt - atm(last_level)%hgt)
       nlw = 1.0d0 - llw
       
     ! interpolate to height temperature, pressure, water vapor
-      temp = llw * atm_inp%prof(last_level)%temperature      &
-           + nlw * atm_inp%prof(next_level)%temperature
-      pressure = exp( llw * log(atm_inp%prof(last_level)%pressure)  &
-                    + nlw * log(atm_inp%prof(next_level)%pressure) )
-      vapor_density = llw * atm_inp%prof(last_level)%vapor_density  &
-                    + nlw * atm_inp%prof(next_level)%vapor_density
+      temp = llw * atm(last_level)%temperature      &
+           + nlw * atm(next_level)%temperature
+      pressure = exp( llw * log(atm(last_level)%pressure)  &
+                    + nlw * log(atm(next_level)%pressure) )
+      vapor_density = llw * atm(last_level)%vapor_dens  &
+                    + nlw * atm(next_level)%vapor_dens
     ! gaseous absorption at height
       cabs_o2 = o2abs( temp, pressure, vapor_density, frequency, do2abs_t, do2abs_v,do2abs_p ) &
               + absn2( temp, pressure, frequency, dabsn2_t, dabsn2_p )
@@ -207,28 +190,28 @@ SUBROUTINE calc_mon_temp_weight_scat( Tb_inp, tau, tb_pl_inp, tb_mn_inp, dtb_pl_
       lq  = 0.0d0
       lk0 = 0.0d0
       la0 = 0.0d0
-      if( (atm_inp%prof(last_level)%cloud_liq_k0 .gt. 0.0d0) .and. &
-          (atm_inp%prof(next_level)%cloud_liq_k0 .gt. 0.0d0)) then
-        lp  = llw * atm_inp%prof(last_level)%cloud_liq_p &
-            + nlw * atm_inp%prof(next_level)%cloud_liq_p
-        lq  = llw * atm_inp%prof(last_level)%cloud_liq_q &
-            + nlw * atm_inp%prof(next_level)%cloud_liq_q
-        lk0 = llw * atm_inp%prof(last_level)%cloud_liq_k0 &
-            + nlw * atm_inp%prof(next_level)%cloud_liq_k0
-        la0 = llw * atm_inp%prof(last_level)%cloud_liq_a0 &
-            + nlw * atm_inp%prof(next_level)%cloud_liq_a0
+      if( (atm(last_level)%clw_k0 .gt. 0.0d0) .and. &
+          (atm(next_level)%clw_k0 .gt. 0.0d0)) then
+        lp  = llw * atm(last_level)%clw_p &
+            + nlw * atm(next_level)%clw_p
+        lq  = llw * atm(last_level)%clw_q &
+            + nlw * atm(next_level)%clw_q
+        lk0 = llw * atm(last_level)%clw_k0 &
+            + nlw * atm(next_level)%clw_k0
+        la0 = llw * atm(last_level)%clw_a0 &
+            + nlw * atm(next_level)%clw_a0
       else
-        if( atm_inp%prof(last_level)%cloud_liq_k0 .gt. 0.0d0 ) then
-          lp  = atm_inp%prof(last_level)%cloud_liq_p
-          lq  = atm_inp%prof(last_level)%cloud_liq_q
-          lk0 = llw * atm_inp%prof(last_level)%cloud_liq_k0
-          la0 = atm_inp%prof(last_level)%cloud_liq_a0
+        if( atm(last_level)%clw_k0 .gt. 0.0d0 ) then
+          lp  = atm(last_level)%clw_p
+          lq  = atm(last_level)%clw_q
+          lk0 = llw * atm(last_level)%clw_k0
+          la0 = atm(last_level)%clw_a0
         end if
-        if( atm_inp%prof(next_level)%cloud_liq_k0 .gt. 0.0d0 ) then
-          lp  = atm_inp%prof(next_level)%cloud_liq_p
-          lq  = atm_inp%prof(next_level)%cloud_liq_q
-          lk0 = nlw * atm_inp%prof(next_level)%cloud_liq_k0
-          la0 = atm_inp%prof(next_level)%cloud_liq_a0
+        if( atm(next_level)%clw_k0 .gt. 0.0d0 ) then
+          lp  = atm(next_level)%clw_p
+          lq  = atm(next_level)%clw_q
+          lk0 = nlw * atm(next_level)%clw_k0
+          la0 = atm(next_level)%clw_a0
         end if
       end if
       call hydrometeor_master_5ph_d( frequency, phase, temp, lp, lq, lk0, la0, &
@@ -252,28 +235,28 @@ SUBROUTINE calc_mon_temp_weight_scat( Tb_inp, tau, tb_pl_inp, tb_mn_inp, dtb_pl_
       iq  = 0.0d0
       ik0 = 0.0d0
       ia0 = 0.0d0
-      if( (atm_inp%prof(last_level)%cloud_rn_k0 .gt. 0.0d0) .and. &
-          (atm_inp%prof(next_level)%cloud_rn_k0 .gt. 0.0d0)) then
-        ip  = llw * atm_inp%prof(last_level)%cloud_rn_p &
-            + nlw * atm_inp%prof(next_level)%cloud_rn_p
-        iq  = llw * atm_inp%prof(last_level)%cloud_rn_q &
-            + nlw * atm_inp%prof(next_level)%cloud_rn_q
-        ik0 = llw * atm_inp%prof(last_level)%cloud_rn_k0 &
-            + nlw * atm_inp%prof(next_level)%cloud_rn_k0
-        ia0 = llw * atm_inp%prof(last_level)%cloud_rn_a0 &
-            + nlw * atm_inp%prof(next_level)%cloud_rn_a0
+      if( (atm(last_level)%rain_k0 .gt. 0.0d0) .and. &
+          (atm(next_level)%rain_k0 .gt. 0.0d0)) then
+        ip  = llw * atm(last_level)%rain_p &
+            + nlw * atm(next_level)%rain_p
+        iq  = llw * atm(last_level)%rain_q &
+            + nlw * atm(next_level)%rain_q
+        ik0 = llw * atm(last_level)%rain_k0 &
+            + nlw * atm(next_level)%rain_k0
+        ia0 = llw * atm(last_level)%rain_a0 &
+            + nlw * atm(next_level)%rain_a0
       else
-        if( atm_inp%prof(last_level)%cloud_rn_k0 .gt. 0.0d0 ) then
-          ip  = atm_inp%prof(last_level)%cloud_rn_p
-          iq  = atm_inp%prof(last_level)%cloud_rn_q
-          ik0 = llw * atm_inp%prof(last_level)%cloud_rn_k0
-          ia0 = atm_inp%prof(last_level)%cloud_rn_a0
+        if( atm(last_level)%rain_k0 .gt. 0.0d0 ) then
+          ip  = atm(last_level)%rain_p
+          iq  = atm(last_level)%rain_q
+          ik0 = llw * atm(last_level)%rain_k0
+          ia0 = atm(last_level)%rain_a0
         end if
-        if(atm_inp%prof(next_level)%cloud_rn_k0 .GT. 0) THEN
-          ip  = atm_inp%prof(next_level)%cloud_rn_p
-          iq  = atm_inp%prof(next_level)%cloud_rn_q
-          ik0 = nlw * atm_inp%prof(next_level)%cloud_rn_k0
-          ia0 = atm_inp%prof(next_level)%cloud_rn_a0
+        if(atm(next_level)%rain_k0 .GT. 0) THEN
+          ip  = atm(next_level)%rain_p
+          iq  = atm(next_level)%rain_q
+          ik0 = nlw * atm(next_level)%rain_k0
+          ia0 = atm(next_level)%rain_a0
         end if
       end if
       call hydrometeor_master_5ph_d( frequency, phase, temp, ip, iq, ik0, ia0, &
@@ -297,28 +280,28 @@ SUBROUTINE calc_mon_temp_weight_scat( Tb_inp, tau, tb_pl_inp, tb_mn_inp, dtb_pl_
       iq  = 0.0d0
       ik0 = 0.0d0
       ia0 = 0.0d0
-      if( (atm_inp%prof(last_level)%cloud_ice_k0 .gt. 0.0d0 ) .and. &
-          (atm_inp%prof(next_level)%cloud_ice_k0 .gt. 0.0d0) ) then
-        ip  = llw * atm_inp%prof(last_level)%cloud_ice_p &
-            + nlw * atm_inp%prof(next_level)%cloud_ice_p
-        iq  = llw * atm_inp%prof(last_level)%cloud_ice_q &
-            + nlw * atm_inp%prof(next_level)%cloud_ice_q
-        ik0 = llw * atm_inp%prof(last_level)%cloud_ice_k0 &
-            + nlw * atm_inp%prof(next_level)%cloud_ice_k0
-        ia0 = llw * atm_inp%prof(last_level)%cloud_ice_a0 &
-            + nlw * atm_inp%prof(next_level)%cloud_ice_a0
+      if( (atm(last_level)%ice_k0 .gt. 0.0d0 ) .and. &
+          (atm(next_level)%ice_k0 .gt. 0.0d0) ) then
+        ip  = llw * atm(last_level)%ice_p &
+            + nlw * atm(next_level)%ice_p
+        iq  = llw * atm(last_level)%ice_q &
+            + nlw * atm(next_level)%ice_q
+        ik0 = llw * atm(last_level)%ice_k0 &
+            + nlw * atm(next_level)%ice_k0
+        ia0 = llw * atm(last_level)%ice_a0 &
+            + nlw * atm(next_level)%ice_a0
       else
-        if( atm_inp%prof(last_level)%cloud_ice_k0 .gt. 0.0d0 ) then
-          ip  = atm_inp%prof(last_level)%cloud_ice_p
-          iq  = atm_inp%prof(last_level)%cloud_ice_q
-          ik0 = llw * atm_inp%prof(last_level)%cloud_ice_k0
-          ia0 = atm_inp%prof(last_level)%cloud_ice_a0
+        if( atm(last_level)%ice_k0 .gt. 0.0d0 ) then
+          ip  = atm(last_level)%ice_p
+          iq  = atm(last_level)%ice_q
+          ik0 = llw * atm(last_level)%ice_k0
+          ia0 = atm(last_level)%ice_a0
         end if
-        if( atm_inp%prof(next_level)%cloud_ice_k0 .gt. 0.0d0 ) then
-          ip  = atm_inp%prof(next_level)%cloud_ice_p
-          iq  = atm_inp%prof(next_level)%cloud_ice_q
-          ik0 = nlw * atm_inp%prof(next_level)%cloud_ice_k0
-          ia0 = atm_inp%prof(next_level)%cloud_ice_a0
+        if( atm(next_level)%ice_k0 .gt. 0.0d0 ) then
+          ip  = atm(next_level)%ice_p
+          iq  = atm(next_level)%ice_q
+          ik0 = nlw * atm(next_level)%ice_k0
+          ia0 = atm(next_level)%ice_a0
         end if
       end if
       call hydrometeor_master_5ph_d( frequency, phase, temp, ip, iq, ik0, ia0, &
@@ -342,28 +325,28 @@ SUBROUTINE calc_mon_temp_weight_scat( Tb_inp, tau, tb_pl_inp, tb_mn_inp, dtb_pl_
       iq  = 0.0d0
       ik0 = 0.0d0
       ia0 = 0.0d0
-      if( (atm_inp%prof(last_level)%cloud_snow_k0 .gt. 0.0d0) .and. &
-          (atm_inp%prof(next_level)%cloud_snow_k0 .gt. 0.0d0)) then
-        ip  = llw * atm_inp%prof(last_level)%cloud_snow_p &
-            + nlw * atm_inp%prof(next_level)%cloud_snow_p
-        iq  = llw * atm_inp%prof(last_level)%cloud_snow_q &
-            + nlw * atm_inp%prof(next_level)%cloud_snow_q
-        ik0 = llw * atm_inp%prof(last_level)%cloud_snow_k0 &
-            + nlw * atm_inp%prof(next_level)%cloud_snow_k0
-        ia0 = llw * atm_inp%prof(last_level)%cloud_snow_a0 &
-            + nlw * atm_inp%prof(next_level)%cloud_snow_a0
+      if( (atm(last_level)%snow_k0 .gt. 0.0d0) .and. &
+          (atm(next_level)%snow_k0 .gt. 0.0d0)) then
+        ip  = llw * atm(last_level)%snow_p &
+            + nlw * atm(next_level)%snow_p
+        iq  = llw * atm(last_level)%snow_q &
+            + nlw * atm(next_level)%snow_q
+        ik0 = llw * atm(last_level)%snow_k0 &
+            + nlw * atm(next_level)%snow_k0
+        ia0 = llw * atm(last_level)%snow_a0 &
+            + nlw * atm(next_level)%snow_a0
       else
-        IF (atm_inp%prof(last_level)%cloud_snow_k0 .gt. 0.0d0) THEN
-          ip  = atm_inp%prof(last_level)%cloud_snow_p
-          iq  = atm_inp%prof(last_level)%cloud_snow_q
-          ik0 = llw * atm_inp%prof(last_level)%cloud_snow_k0
-          ia0 = atm_inp%prof(last_level)%cloud_snow_a0
+        IF (atm(last_level)%snow_k0 .gt. 0.0d0) THEN
+          ip  = atm(last_level)%snow_p
+          iq  = atm(last_level)%snow_q
+          ik0 = llw * atm(last_level)%snow_k0
+          ia0 = atm(last_level)%snow_a0
         END IF
-        if( atm_inp%prof(next_level)%cloud_snow_k0 .gt. 0.0d0) THEN
-          ip  = atm_inp%prof(next_level)%cloud_snow_p
-          iq  = atm_inp%prof(next_level)%cloud_snow_q
-          ik0 = nlw * atm_inp%prof(next_level)%cloud_snow_k0
-          ia0 = atm_inp%prof(next_level)%cloud_snow_a0
+        if( atm(next_level)%snow_k0 .gt. 0.0d0) THEN
+          ip  = atm(next_level)%snow_p
+          iq  = atm(next_level)%snow_q
+          ik0 = nlw * atm(next_level)%snow_k0
+          ia0 = atm(next_level)%snow_a0
         end if
       end if
       call hydrometeor_master_5ph_d( frequency, phase, temp, ip, iq, ik0, ia0, &
@@ -387,28 +370,28 @@ SUBROUTINE calc_mon_temp_weight_scat( Tb_inp, tau, tb_pl_inp, tb_mn_inp, dtb_pl_
       iq  = 0.0d0
       ik0 = 0.0d0
       ia0 = 0.0d0
-      if( (atm_inp%prof(last_level)%cloud_grpl_k0 .gt. 0.0d0) .and. &
-          (atm_inp%prof(next_level)%cloud_grpl_k0 .gt. 0.0d0)) THEN
-        ip  = llw * atm_inp%prof(last_level)%cloud_grpl_p &
-            + nlw * atm_inp%prof(next_level)%cloud_grpl_p
-        iq  = llw * atm_inp%prof(last_level)%cloud_grpl_q &
-            + nlw * atm_inp%prof(next_level)%cloud_grpl_q
-        ik0 = llw * atm_inp%prof(last_level)%cloud_grpl_k0 &
-            + nlw * atm_inp%prof(next_level)%cloud_grpl_k0
-        ia0 = llw * atm_inp%prof(last_level)%cloud_grpl_a0 &
-            + nlw * atm_inp%prof(next_level)%cloud_grpl_a0
+      if( (atm(last_level)%grpl_k0 .gt. 0.0d0) .and. &
+          (atm(next_level)%grpl_k0 .gt. 0.0d0)) THEN
+        ip  = llw * atm(last_level)%grpl_p &
+            + nlw * atm(next_level)%grpl_p
+        iq  = llw * atm(last_level)%grpl_q &
+            + nlw * atm(next_level)%grpl_q
+        ik0 = llw * atm(last_level)%grpl_k0 &
+            + nlw * atm(next_level)%grpl_k0
+        ia0 = llw * atm(last_level)%grpl_a0 &
+            + nlw * atm(next_level)%grpl_a0
       else
-        if( atm_inp%prof(last_level)%cloud_grpl_k0 .gt. 0.0d0) then
-          ip  = atm_inp%prof(last_level)%cloud_grpl_p
-          iq  = atm_inp%prof(last_level)%cloud_grpl_q
-          ik0 = llw * atm_inp%prof(last_level)%cloud_grpl_k0
-          ia0 = atm_inp%prof(last_level)%cloud_grpl_a0
+        if( atm(last_level)%grpl_k0 .gt. 0.0d0) then
+          ip  = atm(last_level)%grpl_p
+          iq  = atm(last_level)%grpl_q
+          ik0 = llw * atm(last_level)%grpl_k0
+          ia0 = atm(last_level)%grpl_a0
         end if
-        if( atm_inp%prof(next_level)%cloud_grpl_k0 .gt. 0.0d0) then
-          ip  = atm_inp%prof(next_level)%cloud_grpl_p
-          iq  = atm_inp%prof(next_level)%cloud_grpl_q
-          ik0 = nlw * atm_inp%prof(next_level)%cloud_grpl_k0
-          ia0 = atm_inp%prof(next_level)%cloud_grpl_a0
+        if( atm(next_level)%grpl_k0 .gt. 0.0d0) then
+          ip  = atm(next_level)%grpl_p
+          iq  = atm(next_level)%grpl_q
+          ik0 = nlw * atm(next_level)%grpl_k0
+          ia0 = atm(next_level)%grpl_a0
         end if
       end if
       call hydrometeor_master_5ph_d( frequency, phase, temp, ip, iq, ik0, ia0, &
@@ -437,21 +420,21 @@ SUBROUTINE calc_mon_temp_weight_scat( Tb_inp, tau, tb_pl_inp, tb_mn_inp, dtb_pl_
       albedo = scat_tot / ext_tot
   ! calculate absorption, scattering, extinction, and albedo at height - end
   ! calculate opacity - start
-    ! tau(1) = opacity from inp_height downward to surface at inp_theta
-    ! tau(2) = opacity from inp_height upward              at inp_theta
-    tau(1) = atm_inp%prof(1)%ext_tot * atm_inp%prof(1)%height ! opacity of first layer
+    ! tau(1) = opacity from obs_height downward to surface at obs_theta
+    ! tau(2) = opacity from obs_height upward              at obs_theta
+    tau(1) = atm(1)%ext_tot * atm(1)%hgt ! opacity of first layer
     do j = 2, last_level
-      tau(1) = tau(1) + atm_inp%prof(j)%ext_tot &
-                      * ( atm_inp%prof(j)%height- atm_inp%prof(j-1)%height )
+      tau(1) = tau(1) + atm(j)%ext_tot &
+                      * ( atm(j)%hgt- atm(j-1)%hgt )
     end do
     tau(2) = tau(1) ! opacity from surface up to last level
-    tau(1) = tau(1) + ext_tot * ( inp_height - atm_inp%prof(last_level)%height )
-    do j = next_level, atm_inp%num_levels
-      tau(2) = tau(2) + atm_inp%prof(j)%ext_tot &
-                      * ( atm_inp%prof(j)%height- atm_inp%prof(j-1)%height )
+    tau(1) = tau(1) + ext_tot * ( obs_height - atm(last_level)%hgt )
+    do j = next_level, nlev
+      tau(2) = tau(2) + atm(j)%ext_tot &
+                      * ( atm(j)%hgt- atm(j-1)%hgt )
     end do
     tau(2) = tau(2) - tau(1)
-    cos_observ_angle = cos( inp_theta * pi / 180.0d0 )
+    cos_observ_angle = cos( obs_theta * pi / 180.0d0 )
     if( dabs(cos_observ_angle) > 0.0d0 ) then
       tau(1) = tau(1) / dabs(cos_observ_angle)
       tau(2) = tau(2) / dabs(cos_observ_angle)
@@ -474,15 +457,15 @@ SUBROUTINE calc_mon_temp_weight_scat( Tb_inp, tau, tb_pl_inp, tb_mn_inp, dtb_pl_
                       + nlw * tb_mn(next_level,last_angle) ) &
               + naw * ( llw * tb_mn(last_level,next_angle)   &
                       + nlw * tb_mn(next_level,next_angle) )
-    if( inp_theta <= 90.0d0 ) then      ! upwelling - looking down
+    if( obs_theta <= 90.0d0 ) then      ! upwelling - looking down
       Tb_inp = Tbplinp
-    else if( inp_theta > 90.0d0 ) then  ! downwelling - looking up
+    else if( obs_theta > 90.0d0 ) then  ! downwelling - looking up
       Tb_inp = Tbmninp
     end if
 
     ! interpolate to height brightness temperatures, 08/21/2015, by K.Zhang
     do j = 1, nangover2
-       if(inp_theta <= 90.0d0) then    ! upwelling - looking down
+       if(obs_theta <= 90.0d0) then    ! upwelling - looking down
           Tbo_streams_inp(j) = llw * tb_pl(last_level,j) + nlw * tb_pl(next_level,j)
        else                            ! downwelling - looking up
           Tbo_streams_inp(j) = llw * tb_mn(last_level,j) + nlw * tb_mn(next_level,j)
@@ -490,7 +473,7 @@ SUBROUTINE calc_mon_temp_weight_scat( Tb_inp, tau, tb_pl_inp, tb_mn_inp, dtb_pl_
     end do
 
     ! interpolate profiles to observation angle
-    do j = 0, atm_inp%num_levels
+    do j = 0, nlev
       tb_pl_inp(j) = law * tb_pl(j,last_angle) + naw * tb_pl(j,next_angle)
       tb_mn_inp(j) = law * tb_mn(j,last_angle) + naw * tb_mn(j,next_angle)
       do k = 1, nvar

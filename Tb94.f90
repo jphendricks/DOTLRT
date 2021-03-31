@@ -1,9 +1,11 @@
-
+!======================================================
 SUBROUTINE  tb94()
-
-!------------------------------------------------------
-!                         Modification 04/24/03
+!======================================================
 !
+! History:
+! 9/26/20 Kevin Schaefer deleted unused variables
+! 9/26/2020 Kevin Schaefer deleted unused arguments for core95 call
+! 04/24/03 Modifications
 !   Parameter _eps_err is introduced which determines max allowed 
 !   relative error in brightness temperature. It is used to calculate
 !   logical matrix LP which determines if the layer will be treated as
@@ -158,34 +160,27 @@ SUBROUTINE  tb94()
 !                                 parameter.
 !
 !------------------------------------------------------
-use variables
+use dotlrt_variables
 IMPLICIT NONE
 
-real(8), DIMENSION(  nlr1)               :: h
-!real(8), DIMENSION(  nlr1  ,nangover2,nangover2)      ::  a0, b0
-!real(8), DIMENSION(  nlr1  ,nangover2,nangover2,nvar) :: da0, db0
-real(8), allocatable      ::  a0(:,:,:), b0(:,:,:)
+real(8), DIMENSION(nlr1) :: h
+real(8), allocatable :: a0(:,:,:), b0(:,:,:)
 real(8), allocatable :: da0(:,:,:,:), db0(:,:,:,:)
-
-real(8), DIMENSION(0:nlr1+1,nangover2)        ::  f
-real(8), DIMENSION(0:nlr1+1,nangover2,nvar)   :: df
-real(8), DIMENSION(nangover2   ,nangover2)        :: r, dr
-real(8), DIMENSION(0:nlr1  ,nangover2)        ::  u, v
-real(8), DIMENSION(0:nlr1  ,nangover2,nvar)   :: du,dv
-real(8), DIMENSION(nangover2)      :: t1,t2,pt,dpt, pt_sc
-real(8), DIMENSION(nangover2,max_number_h2o_phases)      :: dpt_g, dpt_sc
-real(8), DIMENSION(nangover2,nangover2) :: at, bt,dat,dbt, at_sc, bt_sc
-real(8), DIMENSION(nangover2,nangover2,max_number_h2o_phases) :: dat_g, dbt_g, dat_sc, dbt_sc
-LOGICAL         , DIMENSION(0:nlr1,nvar+3) :: LP
-INTEGER :: i,j, ilr, ivar, hydrometeor_phase, jvar, jlr
-
+real(8), DIMENSION(0:nlr1+1,nangover2) ::  f
+real(8), DIMENSION(0:nlr1+1,nangover2,nvar) :: df
+real(8), DIMENSION(nangover2,nangover2) :: r, dr
+real(8), DIMENSION(0:nlr1,nangover2) ::  u, v
+real(8), DIMENSION(0:nlr1,nangover2,nvar) :: du,dv
+real(8), DIMENSION(nangover2) :: t1,t2,pt, pt_sc
+real(8), DIMENSION(nangover2,max_nphase):: dpt_g, dpt_sc
+real(8), DIMENSION(nangover2,nangover2) :: at, bt, at_sc, bt_sc
+real(8), DIMENSION(nangover2,nangover2,max_nphase) :: dat_g, dbt_g, dat_sc, dbt_sc
+LOGICAL, DIMENSION(0:nlr1,nvar+3) :: LP
+INTEGER :: i,j, ilr, ivar, iphase, jlr
 double precision dt_srf, dt_cb, t_srf
 real(8) albedo
 real(8), DIMENSION(nangover2) :: dsurf_reflec
-
 integer alloc_err
-
-character*120 debugout
 
 allocate( a0(nlr1,nangover2,nangover2), b0(nlr1,nangover2,nangover2) )
 allocate( da0(nlr1,nangover2,nangover2,nvar), db0(nlr1,nangover2,nangover2,nvar) )
@@ -222,37 +217,37 @@ allocate( da0(nlr1,nangover2,nangover2,nvar), db0(nlr1,nangover2,nangover2,nvar)
         bt_sc(i,j) = t1(i) * phasefb1_sc(ilr,i,j) * t1(j)
         at_sc(j,i) = at_sc(i,j)
         bt_sc(j,i) = bt_sc(i,j)
-        do hydrometeor_phase = 1, number_h2o_phases
-          dat_g(i,j,hydrometeor_phase)  = t1(i) * dphaseff1_g(ilr,i,j,hydrometeor_phase)  * t1(j)
-          dbt_g(i,j,hydrometeor_phase)  = t1(i) * dphasefb1_g(ilr,i,j,hydrometeor_phase)  * t1(j)
-          dat_sc(i,j,hydrometeor_phase) = t1(i) * dphaseff1_sc(ilr,i,j,hydrometeor_phase) * t1(j)
-          dbt_sc(i,j,hydrometeor_phase) = t1(i) * dphasefb1_sc(ilr,i,j,hydrometeor_phase) * t1(j)
-          dat_g(j,i,hydrometeor_phase)  = dat_g(i,j,hydrometeor_phase)
-          dbt_g(j,i,hydrometeor_phase)  = dbt_g(i,j,hydrometeor_phase)
-          dat_sc(j,i,hydrometeor_phase) = dat_sc(i,j,hydrometeor_phase)
-          dbt_sc(j,i,hydrometeor_phase) = dbt_sc(i,j,hydrometeor_phase)
-        end do ! hydrometeor_phase
+        do iphase = 1, nphase
+          dat_g(i,j,iphase)  = t1(i) * dphaseff1_g(ilr,i,j,iphase)  * t1(j)
+          dbt_g(i,j,iphase)  = t1(i) * dphasefb1_g(ilr,i,j,iphase)  * t1(j)
+          dat_sc(i,j,iphase) = t1(i) * dphaseff1_sc(ilr,i,j,iphase) * t1(j)
+          dbt_sc(i,j,iphase) = t1(i) * dphasefb1_sc(ilr,i,j,iphase) * t1(j)
+          dat_g(j,i,iphase)  = dat_g(i,j,iphase)
+          dbt_g(j,i,iphase)  = dbt_g(i,j,iphase)
+          dat_sc(j,i,iphase) = dat_sc(i,j,iphase)
+          dbt_sc(j,i,iphase) = dbt_sc(i,j,iphase)
+        end do ! iphase
       END DO
     END DO
 
     DO i = 1, nangover2
       pt(i)=0.d0
       pt_sc(i) = 0.0d0
-      do hydrometeor_phase = 1, number_h2o_phases
-        dpt_g(i,hydrometeor_phase)  = 0.0d0
-        dpt_sc(i,hydrometeor_phase) = 0.0d0
-      end do ! hydrometeor_phase
+      do iphase = 1, nphase
+        dpt_g(i,iphase)  = 0.0d0
+        dpt_sc(i,iphase) = 0.0d0
+      end do ! iphase
       DO j = 1, nangover2
         pt(i) =  pt(i) + ( at(j,i)+ bt(j,i))*t2(j)
         pt_sc(i) =  pt_sc(i) + ( at_sc(j,i)+ bt_sc(j,i))*t2(j)
-        do hydrometeor_phase = 1, number_h2o_phases
-          dpt_g(i,hydrometeor_phase)  =   dpt_g(i,hydrometeor_phase)              &
-                                      + ( dat_g(j,i,hydrometeor_phase)            &
-                                        + dbt_g(j,i,hydrometeor_phase) ) * t2(j)
-          dpt_sc(i,hydrometeor_phase) =   dpt_sc(i,hydrometeor_phase)             &
-                                      + ( dat_sc(j,i,hydrometeor_phase)           &
-                                        + dbt_sc(j,i,hydrometeor_phase) ) * t2(j)
-        end do ! hydrometeor_phase
+        do iphase = 1, nphase
+          dpt_g(i,iphase)  =   dpt_g(i,iphase)              &
+                                      + ( dat_g(j,i,iphase)            &
+                                        + dbt_g(j,i,iphase) ) * t2(j)
+          dpt_sc(i,iphase) =   dpt_sc(i,iphase)             &
+                                      + ( dat_sc(j,i,iphase)           &
+                                        + dbt_sc(j,i,iphase) ) * t2(j)
+        end do ! iphase
       END DO
    END DO
    
@@ -292,14 +287,14 @@ allocate( da0(nlr1,nangover2,nangover2,nvar), db0(nlr1,nangover2,nangover2,nvar)
         db0(ilr,i,j,1) = 0.d0
         da0(ilr,i,j,2) = 0.d0
         db0(ilr,i,j,2) = 0.d0
-        do hydrometeor_phase = 1, number_h2o_phases
-          ivar = 1 + 2 * hydrometeor_phase
-          da0(ilr,i,j,ivar) = - dat_sc(i,j,hydrometeor_phase)
-          db0(ilr,i,j,ivar) = - dbt_sc(i,j,hydrometeor_phase)
-          ivar = 2 + 2 * hydrometeor_phase
-          da0(ilr,i,j,ivar) = - dat_g(i,j,hydrometeor_phase)
-          db0(ilr,i,j,ivar) = - dbt_g(i,j,hydrometeor_phase)
-        end do ! hydrometeor_phase
+        do iphase = 1, nphase
+          ivar = 1 + 2 * iphase
+          da0(ilr,i,j,ivar) = - dat_sc(i,j,iphase)
+          db0(ilr,i,j,ivar) = - dbt_sc(i,j,iphase)
+          ivar = 2 + 2 * iphase
+          da0(ilr,i,j,ivar) = - dat_g(i,j,iphase)
+          db0(ilr,i,j,ivar) = - dbt_g(i,j,iphase)
+        end do ! iphase
         IF( i == j) THEN
           a0(ilr,i,i) = a0(ilr,i,i) + abs_total1(ilr) / cs(i) + pt_sc(i) / t2(i)
           !----general case---------------------------------------------------------------------
@@ -309,15 +304,15 @@ allocate( da0(nlr1,nangover2,nangover2,nvar), db0(nlr1,nangover2,nangover2,nvar)
           !----general case---------------------------------------------------------------------
           da0(ilr,i,i,2) =   da0(ilr,i,i,2)                            &
                          + ( dal_gas1(ilr) + dabs_cloud1(ilr) ) / cs(i)
-          do hydrometeor_phase = 1, number_h2o_phases
-            ivar = 1 + 2 * hydrometeor_phase
+          do iphase = 1, nphase
+            ivar = 1 + 2 * iphase
             da0(ilr,i,i,ivar) = da0(ilr,i,i,ivar)                &
                               + dscat_cloud1(ilr) * pt(i) / t2(i) ! this is why we need phase11
                                                                    ! without scat_cloud
-            ivar = 2 + 2 * hydrometeor_phase
+            ivar = 2 + 2 * iphase
             da0(ilr,i,i,ivar) = da0(ilr,i,i,ivar) &
-                              + dpt_g(i,hydrometeor_phase) / t2(i)
-          end do ! hydrometeor_phase
+                              + dpt_g(i,iphase) / t2(i)
+          end do ! iphase
         END IF    ! i == j
 
       END DO   !  loop over j
@@ -330,12 +325,12 @@ allocate( da0(nlr1,nangover2,nangover2,nvar), db0(nlr1,nangover2,nangover2,nvar)
       !----general case---------------------------------------------------
       df(ilr,i,1) = abs_total1(ilr) * dtemperature1(ilr) * t1(i)
       df(ilr,i,2) = ( dal_gas1(ilr) + dabs_cloud1(ilr) ) *  temperature1(ilr) * t1(i)
-      do hydrometeor_phase = 1, number_h2o_phases
-        ivar = 1 + 2 * hydrometeor_phase
+      do iphase = 1, nphase
+        ivar = 1 + 2 * iphase
         df(ilr,i,ivar) = 0.d0
-        ivar = 2 + 2 * hydrometeor_phase
+        ivar = 2 + 2 * iphase
         df(ilr,i,ivar) = 0.d0
-      end do ! hydrometeor_phase
+      end do ! iphase
     END DO   !  loop over i
   END DO  ! loop over layers ilr
   
@@ -430,8 +425,8 @@ allocate( da0(nlr1,nangover2,nangover2,nvar), db0(nlr1,nangover2,nangover2,nvar)
 !end do
 
 !-------------------------------------------------------------------- 
-  CALL core95 (nlr1,nangover2,h,a0,b0,f,r,u,v,da0,db0,df,dr,du,dv,obs_lev1,nvar,LP)
-!----------------------------------    
+  CALL core95 (nlr1,nangover2,h,a0,b0,f,r,u,v,da0,db0,df,du,dv,obs_lev1,nvar,LP)
+!-------------------------------------------------------------------- 
 
 !write(debugout,*) "u="
 !call mexPrintf(debugout//achar(10))

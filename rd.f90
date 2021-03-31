@@ -3,6 +3,7 @@
 !   x and y must be nonnegative, and at most one can be zero; z must be positive.
 !   TINY must be at least twice the negative 2/3 power of the machine underflow limit.
 !   BIG must be at most 0.1xERRTOL times the negative 2/3 power of the machine overflow limit.
+! 9/26/2020 Kevin Schaefer changed pause to stop in error statement
       real(8) function rd(x,y,z)
       implicit none
       REAL(8) x,y,z,ERRTOL,TINY,BIG,C1,C2,C3,C4,C5,C6
@@ -11,7 +12,7 @@
       REAL(8) alamb,ave,delx,dely,delz,ea,eb,ec,ed,ee,fac,sqrtx,sqrty, &
              sqrtz,sum,xt,yt,zt
       if( min(x,y) .lt. 0.0d0 .or. min(x+y,z) .lt. TINY .or. &
-          max(x,y,z) .gt. BIG) pause 'invalid arguments in rd'
+          max(x,y,z) .gt. BIG) stop 'invalid arguments in rd'
       xt=x
       yt=y
       zt=z

@@ -1,0 +1,90 @@
+$dotlrt_control
+  flag_print_full = .true.
+  flag_read_anc = .false.
+  ocean_mod = 'Fresnel'
+  prof_src = 'WRF'
+/
+
+$dotlrt_input_files
+  file_instr='/home/kevin/code/DOTLRTv2.0/inputs/Instr_Spec.instr'
+  file_single_in='/home/kevin/DOTLRT_fort_v1.5/inputs/atm_profile.txt'
+  file_wrf='/home/kevin/inputs/WRF_Output/wrfout_d02_2019-05-26_12_00_00'
+  file_var='/home/kevin/code/DOTLRTv2.0/inputs/var_def.txt'
+/
+
+$dotlrt_rad_tran_param
+  nstream = 16
+  nstream_surf = 8
+  obs_height = 500.
+  obs_theta = 25.
+  nsub_freq = 1
+/
+
+$dotlrt_grid_param
+  chan_strt = 12
+  chan_stop = 12
+  lon_strt = 100
+  lon_stop = 100
+  lat_strt = 200
+  lat_stop = 200
+  flag_reduce_nvar = .false.
+  new_nlev = 73
+/
+
+$dotlrt_output_control
+  out_path = '/home/kevin/code/DOTLRTv2.0/output/'
+  save_sing_prof = .false.
+  save_sing_rad = .false.
+  save_ilon = 100
+  save_ilat = 200
+  save_rad_file = .false.
+/
+
+===============================================================
+User's Guide
+===============================================================
+
+dotlrt_control
+  flag_print_full
+    .true.  = print all messages
+    .false. = print primary messages only
+  flag_read_anc
+    .true.  = read in all WRF data 
+    .false. = read only WRF data required as input
+  ocean_mod
+    Choice of surface reflectance model
+    'Fresnel'
+    'Wilheit'
+    'ITRA'
+  prof_src
+    Source of atmospheric profiles
+    'single' = single column text file
+    'WRF'    = WRF output netcdf file
+
+dotlrt_input_files
+  file_instr  = full path to instrument specification file
+  file_single = full path to single text atm profile
+  file_wrf    = full path to WRF output file
+
+dotlrt_rad_tran_param
+  nstream      ! (-) total number of stream angles
+  nstream_surf ! (-) number of angles for surface reflectivity
+  obs_height   ! (km) observation height
+  obs_theta    ! (deg) nadir angle
+  nsub_freq    ! (-) number of frequency points per sideband
+
+dotlrt_grid_param
+  chan_strt ! start index for channels (not the same as channel designation)
+  chan_stop ! stop index for channels (not the same as channel designation)
+  lon_strt  ! start index for longitude
+  lon_stop  ! stop index for longitude
+  lat_strt  ! start index for latitude
+  lat_stop  ! stop index for latitude
+
+dotlrt_output_control
+  out_path       ! path to output directory
+  save_sing_prof ! save a single atmospheric profile at (save_ilon, save_ilat)
+  save_sing_rad  ! save a single TOA radiation at (save_ilon, save_ilat)
+  save_ilon      ! lon index to save single point
+  save_ilat      ! lat index to save single point
+  save_rad_file  ! save a complete netcdf radiation output file

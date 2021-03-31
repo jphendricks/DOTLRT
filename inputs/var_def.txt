@@ -1,0 +1,13 @@
+Name            Units         Ndim  Dimension                        Description
+'XLAT'          '(deg)'       2     '(nlat,nlon)'                    'Grid cell latitude'
+'XLONG'         '(deg)'       2     '(nlat,nlon)'                    'Grid cell longitude'
+'Tbo'           '(K)'         3     '(nlat,nlon,npol)'               'Brightness temperature at top of atmosphere in inst direction'
+'Tbo_stream'    '(K)'         4     '(nlat,nlon,nstream,npol)'       'Brightness temperature at top of atmosphere in each stream direction'
+'dTb_dp_stream' '(K mb-1)'    5     '(nlat,nlon,nlev,nstream,npol)'  'Jacobian brightness temperature wrt pressure'
+'dTb_dT_stream' '(K K-1)'     5     '(nlat,nlon,nlev,nstream,npol)'  'Jacobian brightness temperature wrt air temperature'
+'dTb_dq_stream' '(K m3 g-1)'  5     '(nlat,nlon,nlev,nstream,npol)'  'Jacobian brightness temperature wrt absolute humidity'
+'dTb_dc_stream' '(K m3 g-1)'  5     '(nlat,nlon,nlev,nstream,npol)'  'Jacobian brightness temperature wrt cloud liquid water'
+'dTb_dr_stream' '(K m3 g-1)'  5     '(nlat,nlon,nlev,nstream,npol)'  'Jacobian brightness temperature wrt rain'
+'dTb_di_stream' '(K m3 g-1)'  5     '(nlat,nlon,nlev,nstream,npol)'  'Jacobian brightness temperature wrt ice'
+'dTb_ds_stream' '(K m3 g-1)'  5     '(nlat,nlon,nlev,nstream,npol)'  'Jacobian brightness temperature wrt snow'
+'dTb_dg_stream' '(K m3 g-1)'  5     '(nlat,nlon,nlev,nstream,npol)'  'Jacobian brightness temperature wrt graupel'

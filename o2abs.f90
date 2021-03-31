@@ -1,16 +1,7 @@
+!=============================================================================
+real(8) function o2abs(temperature, pressure, vapor_density, frequency, do2abs_t, do2abs_v,do2abs_p)
+!=============================================================================
 ! Real function o2abs  calculates the oxygen (o2) resonant and nonresonant absorption.
-!
-! See notes below for description
-! Converted June 2003 from Pascal to Fortran by
-! Ron Richter ETL SET 
-!
-! pwr 10/28/88
-! modified:  AJG 3/22/91 to allow for adjustment of:
-!            1, O2 linewidth temperature exponent XX
-!            2, 118 line strength
-!            3, O2-N2 low temperature exponent
-!            4, O2-N2 temperature exponent breakpoint
-!            AJG 4/3/91 to include non-overlapping SMMW lines
 !
 ! temperature (K)
 ! pressure (mb)
@@ -29,8 +20,18 @@
 ! m.k.: frequency of 773.8387 o2 abs line was changed to 773.8397GHz
 ! as a result of comparison between JPL online
 ! catalog and Rosenkranz abs line centers
-
-real(8) function o2abs(temperature, pressure, vapor_density, frequency, do2abs_t, do2abs_v,do2abs_p)
+!----------------------------------------------------------------------------
+! History:
+!   10/28/1988 pwr created routine
+!   3/22/1991 AJG allow for adjustment of:
+!            1, O2 linewidth temperature exponent XX
+!            2, 118 line strength
+!            3, O2-N2 low temperature exponent
+!            4, O2-N2 temperature exponent breakpoint
+!   4/3/1991 AJG include non-overlapping SMMW lines
+!   6/1/2003 Ron Richter converted from Pascal to Fortran
+!   9/26/2020 Kevin Schaefer deleted unused variables, tabs, unused code
+!----------------------------------------------------------------------------
   implicit none
   real(8) temperature, pressure, vapor_density, frequency
   real(8)  B,    PRESDA,    PRESWV,    TH,    DFNR,    SUM1,    DF
@@ -43,10 +44,7 @@ real(8) function o2abs(temperature, pressure, vapor_density, frequency, do2abs_t
   real(8) dSF1_v, dSF2_v, dDEN_v,                dY_v, dSTR_v 
   real(8) dSF1_p, dSF2_p, dDEN_p,                dY_p, dSTR_p   
   real(8)   denomSUM1, ddenomSUM1_t, ddenomSUM1_v, ddenomSUM1_p 
-  real(8) do2abs_t, do2abs_v, do2abs_p, dabh2o_t, dabh2o_v, dabh2o_p, dPVAP_t, dPVAP_v, dPVAP_p,&
-		 dPDA_t, dPDA_v, dPDA_p, dTIP3_t, dTIP3_v, dTIP3_p, dWFAC_t, dWFAC_v, dWFAC_p,&
-		 dWIDTH_t, dWIDTH_v, dWIDTH_p, dW2_t, dW2_v, dW2_p
-  real(8) dTI_t, dTI3_t, dTI1_t
+  real(8) do2abs_t, do2abs_v, do2abs_p
   real(8) wb300, XX, TN2, YY, AA, BB, CC, Fp04 ! these could be PARAMETERs
 
   real(8)  DF2,    AAA,    TH3,    THp2,    TH1,    TH16
@@ -125,12 +123,10 @@ real(8) function o2abs(temperature, pressure, vapor_density, frequency, do2abs_t
    PRESWV   = vapor_density * temperature / 217.0d0
   dPRESWV_t = vapor_density/217.0d0
   dPRESWV_v = temperature/217.0d0
-! dPRESWV_p = 0
 
    PRESDA   = pressure - PRESWV
   dPRESDA_t = - dPRESWV_t
   dPRESDA_v = - dPRESWV_v
-! dPRESDA_p = 1.
 
    TH   = 300.0d0 / temperature
   dTH_t = -TH/temperature
@@ -138,12 +134,9 @@ real(8) function o2abs(temperature, pressure, vapor_density, frequency, do2abs_t
    B   =   TH**XX
   dB_t = XX*B/TH*dTH_t  ! =XX*B/TH*( -TH/temperature)
 
-!  AAA   = AA * (  (pressure/1013.0d0)**BB) * (    TH**CC) ! note that AAA=1.d0
    AAA   = 1.d0
   dAAA_t = AA * (  (pressure/1013.0d0)**BB) * ( CC*TH**CC/TH*dTH_t ) ! note that dAAA_t=0.d0 because CC=0
-! dAAA_p = AA * ( BB*(pressure/1013.0d0)**(BB-1.d0) /1013.0d0 * (TH**CC) Note that dAAA_p=0.d0 because BB=0
   dAAA_p = AA *  (BB*(pressure/1013.0d0)**BB )/(pressure) * (TH**CC)
-! dAAA_v = 0
 
    TH1   = 1.0d0 - TH
   dTH1_t =       -dTH_t
@@ -164,10 +157,10 @@ real(8) function o2abs(temperature, pressure, vapor_density, frequency, do2abs_t
   Fp04 = 0.04191d0*frequency
   if (temperature < TN2) THEN
      G   = ((300.0d0/TN2)**XX) * ((TN2/temperature)**YY)
-	dG_t = G*(-YY/temperature)
+     dG_t = G*(-YY/temperature)
   else
      G   =  B
-	dG_t = dB_t
+     dG_t = dB_t
 
   end if
  DEN =   0.001d0 * (0.22d0 *   PRESDA   * B                  + 0.78d0 *   PRESDA   * G                  + 1.1d0 *   PRESWV   * TH)
@@ -187,7 +180,6 @@ dDFNR_p = wb300 * dDEN_p
  ddenomSUM1_v =                                            + TH * (2.d0*DFNR*dDFNR_v)
  ddenomSUM1_p =                                            + TH * (2.d0*DFNR*dDFNR_p)
 
-!SUM1 =   1.6d-17 * (frequency*frequency) *   DFNR  /(TH * (frequency*frequency + DFNR*DFNR))
  SUM1   = 1.6d-17 * (frequency*frequency) *   DFNR  / denomSUM1
 dSUM1_t = 1.6d-17 * (frequency*frequency) *( dDFNR_t/ denomSUM1 &
                                             - DFNR * ddenomSUM1_t  /denomSUM1**2 )
@@ -199,49 +191,40 @@ dSUM1_p = 1.6d-17 * (frequency*frequency) *( dDFNR_p/ denomSUM1&
 !dDFNR, ddenomSUM1, dTH_t, dDEN, dPRESDA, dB_t, dG_t, dPRESWV, are all correct. 
  
   do K = 1, 34 
-!   K2 = MOD(K,2)
     K2 = K / 2
     if ( (K2*2) /= K ) then
-!      BFAC = exp(6.89526d-3 * K * (K+1) * (1.0d0-TH))
        BFAC   = exp( K * (K+1) * TH16 )
-	  dBFAC_t = exp( K * (K+1) * TH16 )*(K * (K+1) * dTH16_t)
+       dBFAC_t = exp( K * (K+1) * TH16 )*(K * (K+1) * dTH16_t)
     end if
 
      DF   = w300(K) *  DEN
-	dDF_t = w300(K) * dDEN_t
-	dDF_v = w300(K) * dDEN_v
-	dDF_p = w300(K) * dDEN_p
+     dDF_t = w300(K) * dDEN_t
+     dDF_v = w300(K) * dDEN_v
+     dDF_p = w300(K) * dDEN_p
 
      DF2   =      DF *  DF
-	dDF2_t = 2.d0*DF * dDF_t
-	dDF2_v = 2.d0*DF * dDF_v
-	dDF2_p = 2.d0*DF * dDF_p
+     dDF2_t = 2.d0*DF * dDF_t
+     dDF2_v = 2.d0*DF * dDF_v
+     dDF2_p = 2.d0*DF * dDF_p
 
 
      Y    = DEN   * (U(K) + V(K) * TH)
-	dY_t = dDEN_t * (U(K) + V(K) * TH) + DEN * (V(K) * dTH_t)
+     dY_t = dDEN_t * (U(K) + V(K) * TH) + DEN * (V(K) * dTH_t)
     dY_v = dDEN_v * (U(K) + V(K) * TH)
     dY_p = dDEN_p * (U(K) + V(K) * TH)
 
      STR   = S300(K) *  BFAC !these 3 lines would be more efficient within an ELSE of the IF below
-	dSTR_t = S300(K) * dBFAC_t
-!   dSTR_v = 0
-	dSTR_p = 0.d0
+     dSTR_t = S300(K) * dBFAC_t
+     dSTR_p = 0.d0
 
     if (K == 1) then
-!      STR = STR * AA * ((pressure/1013.0d0)**BB) * (TH**CC)
        STR   =  STR   * AAA
-	  dSTR_t = dSTR_t * AAA + STR * dAAA_t
-!	  dSTR_v = 0
-	  dSTR_p =                STR * dAAA_p
+       dSTR_t = dSTR_t * AAA + STR * dAAA_t
+       dSTR_p =                STR * dAAA_p
     end if
 
-!    SF1 = (DF + (frequency - F(K))*Y)/((frequency - F(K))**2 + DF*DF)
-!    SF2 = (DF - (frequency + F(K))*Y)/((frequency + F(K))**2 + DF*DF)
     f1 = frequency - F(K)
     f2 = frequency + F(K)
-!    SF1 = (DF + f1*Y)/(f1*f1 + DF2)
-!    SF2 = (DF - f2*Y)/(f2*f2 + DF2)
      SF1   =    (DF   + f1* Y  )/(f1*f1 + DF2)
     dSF1_t = ( (dDF_t + f1*dY_t)*(f1*f1 + DF2) - (DF + f1*Y)*dDF2_t ) / ( f1*f1 + DF2 )**2
     dSF1_v = ( (dDF_v + f1*dY_v)*(f1*f1 + DF2) - (DF + f1*Y)*dDF2_v ) / ( f1*f1 + DF2 )**2
@@ -282,42 +265,32 @@ dSUM1_p = 1.6d-17 * (frequency*frequency) *( dDFNR_p/ denomSUM1&
     dDF2_t = 2.d0*DF * dDF_t
     dDF2_v = 2.d0*DF * dDF_v
     dDF2_p = 2.d0*DF * dDF_p
-	! the above DF derivatives have been verified
+     ! the above DF derivatives have been verified
 
 
-!    STR = DF*frequency/F0(K)*A1(K)   *TH3*EXP(A2(K)*TH1)
      STR =    frequency/F0(K)*A1(K) *    DF  *TH3*EXP(A2(K)*TH1)
     dSTR_t =  frequency/F0(K)*A1(K) * ( dDF_t*TH3*EXP(A2(K)*TH1) + DF*dTH3_t*EXP(A2(K)*TH1) +DF*TH3*EXP(A2(K)*TH1)*A2(K)*dTH1_t )
-   	dSTR_v =  frequency/F0(K)*A1(K) * ( dDF_v*TH3*EXP(A2(K)*TH1) + DF*dTH3_v*EXP(A2(K)*TH1) )
-	dSTR_p =  frequency/F0(K)*A1(K) * ( dDF_p*TH3*EXP(A2(K)*TH1) + DF*dTH3_p*EXP(A2(K)*TH1) )
+        dSTR_v =  frequency/F0(K)*A1(K) * ( dDF_v*TH3*EXP(A2(K)*TH1) + DF*dTH3_v*EXP(A2(K)*TH1) )
+     dSTR_p =  frequency/F0(K)*A1(K) * ( dDF_p*TH3*EXP(A2(K)*TH1) + DF*dTH3_p*EXP(A2(K)*TH1) )
 ! the above STR derivatives have been verified
 
-!    f1sq = (frequency - F(K))**2
-!    f2sq = (frequency + F(K))**2
     f1sq = (frequency - F0(K))**2
     f2sq = (frequency + F0(K))**2
-!    SF1   = 1.0d0/(((frequency-F0(K))*(frequency-F0(K))) + DF2)
      SF1   = 1.0d0   /(f1sq + DF2)
     dSF1_t = -dDF2_t /(f1sq + DF2)**2
     dSF1_v = -dDF2_v /(f1sq + DF2)**2
     dSF1_p = -dDF2_p /(f1sq + DF2)**2
 
-!    SF2   = 1.0d0  /(((frequency+F0(K))*(frequency+F0(K))) + DF2)
      SF2   = 1.0d0   /(f2sq + DF2)
     dSF2_t = -dDF2_t /(f2sq + DF2)**2
     dSF2_v = -dDF2_v /(f2sq + DF2)**2
     dSF2_p = -dDF2_p /(f2sq + DF2)**2
 ! the above SF2 derivatives have been verified
 
-!    SUM1   =  SUM1 + 0.04191d0*frequency*STR*(SF1+SF2) NOTE: Fp04 = 0.04191d0*frequency
-!     SUM1   =  SUM1   + Fp04 *   STR  *(SF1 + SF2)
-!    dSUM1_t = dSUM1_t + Fp04 *( dSTR_t*(SF1 + SF2) + STR*(dSF1_t + dSF2_t) )
-!    dSUM1_v = dSUM1_v + Fp04 *( dSTR_v*(SF1 + SF2) + STR*(dSF1_v + dSF2_v) )
-!    dSUM1_p = dSUM1_p + Fp04 *( dSTR_p*(SF1 + SF2) + STR*(dSF1_p + dSF2_p) )
-	 SUMAND   = Fp04 *   STR  *(SF1 + SF2)
-	dSUMAND_t = Fp04 *( dSTR_t*(SF1 + SF2) + STR*(dSF1_t + dSF2_t) )
-	dSUMAND_v = Fp04 *( dSTR_v*(SF1 + SF2) + STR*(dSF1_v + dSF2_v) )
-	dSUMAND_p = Fp04 *( dSTR_p*(SF1 + SF2) + STR*(dSF1_p + dSF2_p) )
+      SUMAND   = Fp04 *   STR  *(SF1 + SF2)
+     dSUMAND_t = Fp04 *( dSTR_t*(SF1 + SF2) + STR*(dSF1_t + dSF2_t) )
+     dSUMAND_v = Fp04 *( dSTR_v*(SF1 + SF2) + STR*(dSF1_v + dSF2_v) )
+     dSUMAND_p = Fp04 *( dSTR_p*(SF1 + SF2) + STR*(dSF1_p + dSF2_p) )
 ! the summand derivatives have been verified
 
      SUM1   =  SUM1   +  SUMAND

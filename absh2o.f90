@@ -1,8 +1,14 @@
-! (* version 10.1 2/17/91 AJG
-! rewritten for Pascal by MK, March 1997
-! adapted from version 10, pwr
-! differentiated and tested by R. Hill, Aug. 2003
+!=================================================================================
+real(8) function abh2o (temperature, pressure, RHO, frequency, dabh2o_t, dabh2o_v, dabh2o_p)
+!=================================================================================
+! calculates water vapor absorption coefficient
 ! assumes vvw line shape
+!
+! history:
+!   2/17/1991 AJG version 10.1
+!   3/1/1997 rewritten for Pascal by MK
+!   8/1/2003 adapted from version 10, pwr differentiated and tested by R. Hill
+!   9/26/2020 Kevin Schaefer deleted tabs
 
 !outputs:
 ! abh2o = absorption coeff. in the atmosphere due to water vapor (Nepers/km)
@@ -20,14 +26,13 @@
 ! updated in FREQUENZ V.41, pp. 31-36 (1987)
 ! includes 30 MPM H2O lines and appropriate continuum term for this line base
 ! 
-real(8) function abh2o (temperature, pressure, RHO, frequency, dabh2o_t, dabh2o_v, dabh2o_p)
 implicit none
   real(8) temperature, pressure, RHO, frequency
   real(8) f1, f2, TI1, TIP3, W2
   real(8) PVAP, PDA, TI, TI3, WFAC, SUM1, WIDTH, S
   real(8) dABH2O_t, dABH2O_v, dABH2O_p, dPVAP_t , dPVAP_v , dPVAP_p, dPDA_t, dPDA_v, dPDA_p,&
          dTIP3_t, dTIP3_v, dTIP3_p, dWFAC_t, dWFAC_v, dWFAC_p, dSUM1_t, dSUM1_v, dSUM1_p,&
-		 dWIDTH_t, dWIDTH_v, dWIDTH_p, dW2_t, dW2_v, dW2_p, dS_t, dS_v, dS_p, dTI1_t, dTI1_v, dTI1_p 
+       dWIDTH_t, dWIDTH_v, dWIDTH_p, dW2_t, dW2_v, dW2_p, dS_t, dS_v, dS_p, dTI1_t 
   real(8) dTI_t, dTI3_t
   integer I 
 !const
@@ -61,10 +66,10 @@ implicit none
 
   if (RHO <= 0) then
       abh2o = 0.0d0
-	  dabh2o_t = 0.0d0
-	  dabh2o_v = 0.0d0
-	  dabh2o_p = 0.0d0			      
-      return
+     dabh2o_t = 0.0d0
+     dabh2o_v = 0.0d0
+     dabh2o_p = 0.0d0
+           return
   end if
   PVAP = RHO * temperature / 217.0d0
   dPVAP_t = RHO  / 217.0d0
@@ -100,7 +105,7 @@ implicit none
    SUM1 =   frequency*( PVAP   * (1.13d-8 *  PDA   * TI**3           + 3.57d-7 *  PVAP   * TI**10.5d0 )  )
   dSUM1_t = frequency*(dPVAP_t * (1.13d-8 *  PDA   * TI**3           + 3.57d-7 *  PVAP   * TI**10.5d0 ) &
                      +  PVAP   * (1.13d-8 * dPDA_t * TI**3           + 3.57d-7 * dPVAP_t * TI**10.5d0 &
-					            + 1.13d-8 *  PDA * 3.0d0*TI**2*dTI_t + 3.57d-7 *  PVAP * 10.5d0*TI**9.5d0*dTI_t  ) )
+                        + 1.13d-8 *  PDA * 3.0d0*TI**2*dTI_t + 3.57d-7 *  PVAP * 10.5d0*TI**9.5d0*dTI_t  ) )
   dSUM1_v = frequency*(  dPVAP_v *  (1.13d-8 * PDA    * TI**3    + 3.57d-7 *  PVAP   * TI**10.5d0 ) &
                      +    PVAP   *  (1.13d-8 * dPDA_v * TI**3    + 3.57d-7 * dPVAP_v * TI**10.5d0 )  )
   dSUM1_p = frequency*(  dPVAP_p *  (1.13d-8 * PDA    * TI**3    + 3.57d-7 *  PVAP   * TI**10.5d0 ) &
@@ -123,26 +128,24 @@ implicit none
     f2 = (frequency + FL(I))
 !   S = S1(I) * PVAP * TI3 * Exp(B2(I) * (1.0d0 - TI))
      S   = S1(I) * TIP3 * Exp(B2(I) * TI1)
-	dS_t = S1(I)* Exp(B2(I) * TI1) *( dTIP3_t  + TIP3 *(B2(I) * dTI1_t) )
-	dS_v = S1(I)* Exp(B2(I) * TI1) *( dTIP3_v   )
-	dS_p = S1(I)* Exp(B2(I) * TI1) *( dTIP3_p   )  
+   dS_t = S1(I)* Exp(B2(I) * TI1) *( dTIP3_t  + TIP3 *(B2(I) * dTI1_t) )
+   dS_v = S1(I)* Exp(B2(I) * TI1) *( dTIP3_v   )
+   dS_p = S1(I)* Exp(B2(I) * TI1) *( dTIP3_p   )  
 
 
 !   SUM1 = SUM1 + S * (frequency /FL(I)) * (WIDTH /(f1*f1) + (WIDTH*WIDTH))  &
 !        + WIDTH/((f2*f2)+ (WIDTH*WIDTH))
 SUM1    =  SUM1   +  S   * ( frequency /FL(I)) * ( WIDTH   /(f1*f1 + W2)&
-	                                                 + WIDTH   /(f2*f2+ W2)  )
+                                                    + WIDTH   /(f2*f2+ W2)  )
 dSUM1_t = dSUM1_t + dS_t * ( frequency /FL(I)) *  (WIDTH   /(f1*f1 + W2) + WIDTH/(f2*f2+ W2)  ) &
-	              +  S   * ( frequency /FL(I)) * (((f1*f1 + W2)*dWIDTH_t - WIDTH*dW2_t )/(f1*f1 + W2)**2 &
-		                                        + ((f2*f2 + W2)*dWIDTH_t - WIDTH*dW2_t )/(f2*f2 + W2)**2  )
-					  ! (  dWIDTH_t /(f1*f1 + W2) - WIDTH*dW2_t / ((f1*f1 + W2)**2 ) &
-					  !                               + dWIDTH_t /(f2*f2 + W2) - WIDTH*dW2_t / ((f2*f2 + W2)**2 )  ) 
+                 +  S   * ( frequency /FL(I)) * (((f1*f1 + W2)*dWIDTH_t - WIDTH*dW2_t )/(f1*f1 + W2)**2 &
+                                              + ((f2*f2 + W2)*dWIDTH_t - WIDTH*dW2_t )/(f2*f2 + W2)**2  )
 dSUM1_v = dSUM1_v + dS_v * ( frequency /FL(I)) * (WIDTH /(f1*f1 + W2) + WIDTH/(f2*f2+ W2)  ) &
-	              +  S   * ( frequency /FL(I)) * (((f1*f1 + W2)*dWIDTH_v - WIDTH*dW2_v )/(f1*f1 + W2)**2 &
-			                                    + ((f2*f2 + W2)*dWIDTH_v - WIDTH*dW2_v )/(f2*f2 + W2)**2  )
+                 +  S   * ( frequency /FL(I)) * (((f1*f1 + W2)*dWIDTH_v - WIDTH*dW2_v )/(f1*f1 + W2)**2 &
+                                             + ((f2*f2 + W2)*dWIDTH_v - WIDTH*dW2_v )/(f2*f2 + W2)**2  )
 dSUM1_p = dSUM1_p + dS_p * ( frequency /FL(I)) * (WIDTH /(f1*f1 + W2) + WIDTH/(f2*f2+ W2)  ) &
-	              +  S   * ( frequency /FL(I)) * (((f1*f1 + W2)*dWIDTH_p - WIDTH*dW2_p )/(f1*f1 + W2)**2 &
-					                             + ((f2*f2 + W2)*dWIDTH_p - WIDTH*dW2_p )/(f2*f2 + W2)**2  )
+                 +  S   * ( frequency /FL(I)) * (((f1*f1 + W2)*dWIDTH_p - WIDTH*dW2_p )/(f1*f1 + W2)**2 &
+                                            + ((f2*f2 + W2)*dWIDTH_p - WIDTH*dW2_p )/(f2*f2 + W2)**2  )
 
   end do
 

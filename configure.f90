@@ -1,109 +1,192 @@
-! configure.f90
-! This routine establishesw configuration parameters for DOTLRTv1
-! 27 May 2005    Bob Weber
-subroutine configure( inpheight,         & ! observation height (AGL, km)
-                      inptheta,          & ! observation angle from nadir (degrees)
-                      numsbfreqs,        & ! number of frequency points per sideband
-                      instrspec,         &
-                      nstreams,          & ! number of streams (total, up and down)
-                      stream_angles,     & ! stream angles
-                      nsurfangles,       & ! number of angles for surface reflectivity
-                      surfinp,           & ! surface reflectivity (vertical, horizontal polarization)
-                      atm_inp_num_levels )
-  use variables
-  implicit none
-  integer numsbfreqs, atm_inp_num_levels
-  real(8) instrspec(5), theta_obs
-  real(8) inpheight, inptheta
-  integer kpts, kind, num_stream_angles
-  integer j, joc, nstreams, nsurfangles, next_angle, last_angle
-  real(8) endpts(2), alpha, beta, b(32), t(32), law, naw
-  real(8) stream_angles(nstreams)
-  real(8) surfinp(nsurfangles,3)
+!=================================================================================
+subroutine setup_all_outputs( )
+!=================================================================================
+! This routine sets static parameters for DOTLRTv1.5
+! and checks for bad inputs
+!
+! History:
+!  5/27/2005 Bob Weber created routine
+!  9/26/2020 Kevin Schaefer deleted unused variables
+!  10/15/2020 Kevin Schaefer deleted all arguments duplicated in variables module 
+!---------------------------------------------------------------------------------
+use dotlrt_variables
+use profiles
+use dotlrt_output
+implicit none
 
-  character*120 debugout
+! Local variables
+  logical bad
 
-  inp_height = inpheight
-  inp_theta = inptheta
+bad= .false.
 
-  atm_inp%num_levels = atm_inp_num_levels
-  nlr = atm_inp%num_levels
-  m1 = 1
-  nlr1 = nlr*m1
+!print message
+  print*, 'Set up all Outputs'
 
-!  write(debugout,*) "nlevels=",atm_inp_num_levels
-!  call mexPrintf(debugout//achar(10))
+! save single atmospheric profile
+  if (save_sing_prof) then
+    if(trim(prof_src)=='WRF') then
+      call write_text_profile()
+    else
+      print*, 'save_sing_prof only valid if prof_src = WRF'
+      stop
+    endif
+  endif
+
+! Set up output radiation files
+  call define_variables
+
+! set up output write arrays
+  if (save_rad_file) then
+    allocate(Tbo_wrt(nlon,nlat,npol))
+    allocate(Tbo_str_wrt(nlon,nlat,nstream_surf,npol))
+    allocate(dTb_dp_str_wrt(nlat,nlon,nlev,nstream_surf,npol)) ! Jacobian brightness temperature wrt pressure 
+    allocate(dTb_dT_str_wrt(nlat,nlon,nlev,nstream_surf,npol)) ! Jacobian brightness temperature wrt air temperature 
+    allocate(dTb_dq_str_wrt(nlat,nlon,nlev,nstream_surf,npol)) ! Jacobian brightness temperature wrt absolute humidity 
+    allocate(dTb_dc_str_wrt(nlat,nlon,nlev,nstream_surf,npol)) ! Jacobian brightness temperature wrt cloud liquid water 
+    allocate(dTb_dr_str_wrt(nlat,nlon,nlev,nstream_surf,npol)) ! Jacobian brightness temperature wrt rain 
+    allocate(dTb_di_str_wrt(nlat,nlon,nlev,nstream_surf,npol)) ! Jacobian brightness temperature wrt ice 
+    allocate(dTb_ds_str_wrt(nlat,nlon,nlev,nstream_surf,npol)) ! Jacobian brightness temperature wrt snow 
+    allocate(dTb_dg_str_wrt(nlat,nlon,nlev,nstream_surf,npol)) ! Jacobian brightness temperature wrt graupel 
+
+    Tbo_wrt = missing
+    Tbo_str_wrt = missing
+    dTb_dp_str_wrt = missing
+    dTb_dT_str_wrt = missing
+    dTb_dq_str_wrt = missing
+    dTb_dc_str_wrt = missing
+    dTb_dr_str_wrt = missing
+    dTb_di_str_wrt = missing
+    dTb_ds_str_wrt = missing
+    dTb_dg_str_wrt = missing
+  endif
+
+end subroutine setup_all_outputs
+
+!=================================================================================
+subroutine setup_all_inputs( )
+!=================================================================================
+! This routine sets static parameters for DOTLRTv1.5
+! and checks for bad inputs
+!
+! History:
+!  5/27/2005 Bob Weber created routine
+!  9/26/2020 Kevin Schaefer deleted unused variables
+!  10/15/2020 Kevin Schaefer deleted all arguments duplicated in variables module 
+!---------------------------------------------------------------------------------
+use dotlrt_variables
+use profiles
+use dotlrt_output
+implicit none
+
+! Local variables
+  integer kpts
+  integer kind
+  logical bad
+  integer j
+  real(8) endpts(2)
+  real(8) alpha
+  real(8) beta
+  real(8) b(32)
+  real(8) quad(32)
+
+!print message
+  print*, 'Set up all Inputs'
+
+! Read namel file
+  call read_namel_dotlrt
+! 
+! check source
+  bad=.true.
+  if (trim(prof_src) == 'single' ) bad = .false.
+  if (trim(prof_src) == 'WRF') bad = .false.
+  if (bad) then
+    print *, trim(prof_src)
+    stop 'incorrect prof_src'
+  endif
+
+! get number of levels
+  if (trim(prof_src) == 'single' ) then
+    open(unit=20, file=trim(file_single_in), form='formatted', status='old')
+    read(20,*) nlev
+    close(unit=20)
+    nlon=1
+    nlat=1
+  elseif (trim(prof_src) == 'WRF') then
+    call read_WRF_netcdf_dimensions(file_wrf)
+    if (lon_stop>nlon) lon_stop=nlon
+    if (lat_stop>nlat) lat_stop=nlat
+  endif
+
+! nlev checks
+  bad=.false.
+  if (lon_strt>nlon) bad = .true.
+  if (lon_stop>nlon) bad = .true.
+  if (lat_strt>nlat) bad = .true.
+  if (lat_stop>nlat) bad = .true.
+  if (bad) then
+    print*, 'bad grid parameters'
+    print*, 'lon_strt: ', lon_strt, 'lon_stop: ', lon_stop
+    print*, 'lat_strt: ', lat_strt, 'lat_stop: ', lat_stop
+    stop
+  endif
+
+! assign nlev 
+  if(flag_reduce_nvar) then
+    nlev=new_nlev
+    nlr = new_nlev
+    m1 = 1
+    nlr1 = nlr*m1
+  else
+    nlev=nlev_max
+    nlr = nlev_max
+    m1 = 1
+    nlr1 = nlr*m1
+  endif
   
-  ! instrument specification parameters input file:
-  call get_instr_spec( instrspec )
+! instrument specification parameters input file:
+  call get_instr_spec( )
 
-  num_sb_freqs = numsbfreqs
-
-  d_albedo = 1.0d-7  ! lower limit (hydrometeor scattering/absorption total)
-                     !  for diagonalization of layer instrument parameters
-
-
-  number_h2o_phases = 5    ! number of hydrometeor phases
-                           ! liquid             : cloud liquid, rain
-                           ! solid              : ice
-                           ! mixed liquid/solid : snow, grauppel
-  nvar = 2 + 2 * number_h2o_phases ! 12
-                                   ! number of variables for radiation Jacobian
-                                   ! T (temperature)
-                                   ! Ka (absorption coefficient)
-                                   ! Ks (scatter coefficient)      X number_h2o_phases
-                                   ! g (scatter asymmetry)         X number_h2o_phases
-
-  nang = nstreams ! number of stream angles, up and down (even)
+  nang = nstream ! number of stream angles, up and down (even)
   nangover2=nang/2
   if( 2*nangover2 /= nang ) then
     write(8,*) 'nang is odd integer, program STOPPED'
     stop
   end if
-  ! stream angles and weights for Gaussian-Lobatto quadrature, including
-  ! streams at 0 and 180 degrees
+
+! stream angles and weights for Gaussian-Lobatto quadrature, including
+! streams at 0 and 180 degrees
     kpts = 2
     kind = 1
     endpts(1) = -1.0D0
     endpts(2) = +1.0D0
-    call gaussq(kind, nang, alpha, beta, kpts, endpts, b, t, cris_quad_wghts)
-    t(1) = -1.0d0
-    t(nang) = +1.0d0
+    call gaussq(kind, nang, alpha, beta, kpts, endpts, b, quad, cris_quad_wghts)
+    quad(1) = -1.0d0
+    quad(nang) = +1.0d0
     do j = 1, nang
-      quad_angle_array(j) = (180.0d0/pi)*acos(t(nang-j+1))
+      quad_angle(j) = (180.0d0/pi)*acos(quad(nang-j+1))
+      teta(j) = quad_angle(j)
     end do
-
-    !write(debugout,*) "w = "
-    !call mexPrintf(debugout//achar(10))
-    !do j = 1, nang
-    !   write(debugout,*) quad_angle_array(j), cris_quad_wghts(j)
-    !   call mexPrintf(debugout//achar(10))
-    !end do
     
-  ! Henyey-Greenstein phase matrix
+! Henyey-Greenstein phase matrix
     call HG_phmat()
-    do j = 1, nang
-      stream_angles(j) = teta(j)
-    end do
+!
+! read atmosphere profiles
+  if (trim(prof_src) == 'single' ) then
+    call read_text_profile()
+  elseif (trim(prof_src) == 'WRF') then
+    call get_wrf_data()
+  endif
+!
+! Allocate brightness temperature and jacobian output variables
+  allocate(Tb_obs_mat(0:nlev,2))
+  allocate(dTb_dT_obs_mat(nlev,2))
+  allocate(dTb_dp_obs_mat(nlev,2))
+  allocate(dTb_dq_obs_mat(nlev,2))
+  allocate(dTb_dw_obs_mat(nlev,5,2))
+  allocate(Tbo_str_mat(nstream/2, 2))
+  allocate(dTb_dT_str_mat(nlev,nstream/2,2))
+  allocate(dTb_dp_str_mat(nlev,nstream/2,2))
+  allocate(dTb_dq_str_mat(nlev,nstream/2,2))
+  allocate(dTb_dw_str_mat(nlev,nstream/2,5,2))
 
-  ! inteprolate surface reflectivities to stream angles
-    do j = 1, nangover2
-      theta_obs = stream_angles(j)
-      if( theta_obs < surfinp(1,1) )           theta_obs = surfinp(1,1)
-      if( theta_obs > surfinp(nsurfangles,1) ) theta_obs = surfinp(nsurfangles,1)
-      ! Determine angle boundaries
-      next_angle = 2
-      do while( ( surfinp(next_angle,1) < theta_obs   ) .and. &
-                (          next_angle < nsurfangles ) )
-           next_angle = next_angle + 1
-      end do
-      last_angle = next_angle - 1
-      law = (surfinp(next_angle,1) -            theta_obs) &
-          / (surfinp(next_angle,1) - surfinp(last_angle,1) )
-      naw = 1.0d0 - law
-
-      surf_inp%vr(j) = law * surfinp(last_angle,2) + naw * surfinp(next_angle,2)
-      surf_inp%hr(j) = law * surfinp(last_angle,3) + naw * surfinp(next_angle,3)
-    end do
-
-end subroutine configure
+end subroutine setup_all_inputs

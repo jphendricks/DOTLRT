@@ -1,23 +1,24 @@
-!-----------------------------------------------------------------------
-!          This file contains subroutine HYDROMETEOR_MASTER_5PH_d.F90
-!          and all slave subroutines called by it
-!
-!     NOTE:  it is used here, that (p=0, q=0) or (p=0, q=1) only
-!
+!======================================================================
+SUBROUTINE hydrometeor_master_5ph_d( freq, phase, temp, p, q, k0, a0,       &
+                                     hab, hsc, g,                           &
+                                     dhab, dhsc, dg,                        &
+                                     a0_is_constant ) ! , numpanels, fixnumpanels)
+!======================================================================
+! This file contains subroutine HYDROMETEOR_MASTER_5PH_d.F90
+! and all slave subroutines called by it
+! NOTE:  it is used here, that (p=0, q=0) or (p=0, q=1) only
 !----------------------------------------------------------------------
-! SUBROUTINE hydrometeor_master_5ph_d(temp, freq, p, q, k0, a0, &
-!                                    hab, hsc, g, phase)
 ! HYDROMETEOR_MASTER_5PH_d.F90 was created by modifying subroutine HYDROMETEOR_EXT_5PH.F90
-!From CALCPR0FILE the size distributions only let either k0 or a0 vary, but not both.
-!For phases 1 (cloud liquid), 3 (ice),    k0 varies with water density, but a0 is fixed.
-!For phases 2(rain), 4(snow), 5(graupel), a0 varies with water density, but k0 is fixed.
-!This master routine is for a general size distribution for which both k0 and a0 
-!   vary with water density.
+! From CALCPR0FILE the size distributions only let either k0 or a0 vary, but not both.
+! For phases 1 (cloud liquid), 3 (ice),    k0 varies with water density, but a0 is fixed.
+! For phases 2(rain), 4(snow), 5(graupel), a0 varies with water density, but k0 is fixed.
+! This master routine is for a general size distribution for which both k0 and a0 
+! vary with water density.
 ! Following this subroutine and in this file, is a subroutine specialized for phase = 1 & 3
 ! as well as another subroutine specialized for phase = 2,4,& 5 (which is not presently used, but is saved)
-!  Differentiation was redone by Reg Hill 8/12/03; testing and corrections were finished in Sept. 03
+! Differentiation was redone by Reg Hill 8/12/03; testing and corrections were finished in Sept. 03
 ! The logical variable "is_a0_constant" was inserted by Reg Hill 8/28/03 to identify cases for
-!    which a0 is constant because a great savings of computer time is obtained for that case. 
+! which a0 is constant because a great savings of computer time is obtained for that case. 
 !-----------------------------------------------------------------------
 !   This is a version of the original subroutine which calculates along
 !   with parameters _hab, _hsc, _g vectors _dhab(1-3), _dhsc(1-3), _dg(1-3)
@@ -26,17 +27,12 @@
 !   [so that, e.g.   _dhsc(1)=d(_hsc)/d(_temp) 
 !                  , _dhsc(2)=d(_hsc)/d(_k0  )
 !                  , _dhsc(3)=d(_hsc)/d(_a0  ) ].
-!
 ! Warning file with reference number _outfile should be opened outside
 ! of the subroutine; in the present version it is set _outfile=5.
-!
-
 !-----------------------------------------------------------------------
-
-SUBROUTINE hydrometeor_master_5ph_d( freq, phase, temp, p, q, k0, a0,       &
-                                     hab, hsc, g,                           &
-                                     dhab, dhsc, dg,                        &
-                                     a0_is_constant ) ! , numpanels, fixnumpanels)
+! History:
+!   9/26/20 Kevin Schaefer deleted unused variables
+!-----------------------------------------------------------------------
 IMPLICIT NONE
                  
 !real(8),               INTENT( IN) :: freq, temp, p,q,k0,a0
@@ -46,7 +42,7 @@ real(8), DIMENSION(3), INTENT(OUT) :: dhab, dhsc, dg
 !c real(8), DIMENSION(3) :: dhab, dhsc, dg
 INTEGER         ,               INTENT( IN) :: phase
 
-INTEGER         , PARAMETER :: m1=20, m2=10, m3=8, outfile=6
+INTEGER         , PARAMETER :: m1=20, m2=10, m3=8
 real(8), PARAMETER :: raythresh=0.1d0
 
 INTEGER :: i, numpanels
@@ -68,8 +64,6 @@ real(8) ::  pi, c , speclength, f, meanradrel, sigmarel, ka   &
 real(8) :: ddalph_da0, dalph1_da0, dalph_da0, dweight_da0, dc_da0, dw_da0, df_da0
 real(8) :: dw_dk0,df_dk0
 DOUBLE COMPLEX   ::   epsil, depsil_dt, index, dindex_dt
-
-character*120 debugout
                 
 EXTERNAL  h2o_liq_diel_d                        &
          ,h2o_ice_diel_d                        &
@@ -509,7 +503,7 @@ real(8),               INTENT(OUT) ::  hab,  hsc,  g
 real(8), DIMENSION(3), INTENT(OUT) :: dhab, dhsc, dg
 INTEGER         ,               INTENT( IN) :: phase
 
-INTEGER         , PARAMETER :: m1=20, m2=10, m3=8, outfile=6
+INTEGER         , PARAMETER :: m1=20, m2=10, m3=8
 real(8), PARAMETER :: raythresh=0.1d0
 
 INTEGER :: i, numpanels
@@ -520,7 +514,7 @@ real(8) ::  pi, c , speclength, f, meanradrel, sigmarel, ka   &
                    ,  dhsc_dt , dhex_dt , dg_dt                        &
                    , detasc_dt , detaex_dt , dassymetry_dt             &
                    , detasc_da0, detaex_da0, dassymetry_da0            &
-                   , weight , alph, alph1, dalph, dalph1, alphu, w , dw_dt
+                   , weight , alph, alph1, dalph, alphu, w , dw_dt
 
 real(8) :: dw_dk0, dhsc_da0, dhex_da0, dg_da0
 
@@ -949,7 +943,7 @@ real(8),               INTENT(OUT) ::  hab,  hsc,  g
 real(8), DIMENSION(3), INTENT(OUT) :: dhab, dhsc, dg
 INTEGER         ,               INTENT( IN) :: phase
 
-INTEGER         , PARAMETER :: m1=20, m2=10, m3=8, outfile=6
+INTEGER         , PARAMETER :: m1=20, m2=10, m3=8
 real(8), PARAMETER :: raythresh=0.1d0
 
 INTEGER :: i, numpanels
@@ -961,7 +955,7 @@ real(8) ::  pi, c , speclength, f, meanradrel, sigmarel, ka   &
                    ,          dhsc_da0, dhex_da0, dg_da0               &
                    , detasc_dt , detaex_dt , dassymetry_dt             &
                    , detasc_da0, detaex_da0, dassymetry_da0            &
-                   , weight , alph, alph1, dalph, dalph1, alphu, w, dw_dt 
+                   , weight , alph, alph1, dalph, alphu, w, dw_dt 
 
 real(8) :: ddalph_da0, dalph1_da0, dalph_da0, dweight_da0, dc_da0, dw_da0, df_da0
 
@@ -1344,8 +1338,6 @@ DOUBLE COMPLEX   :: y, m2, m2m1, a1, a2, b1, d, wn, wnm1, wnm2          &
  
 DOUBLE COMPLEX  , PARAMETER :: iz=(0.d0,1.d0)
 
-INTEGER         , PARAMETER :: outfile=6
-
 !---------------------------------
 
   y =m*x
@@ -1664,13 +1656,12 @@ SUBROUTINE h2o_ice_diel_d( freq, temp, epsil, depsil_dt )
   IMPLICIT NONE
   real(8), INTENT( IN)  :: freq , temp
   DOUBLE COMPLEX  , INTENT(OUT)  :: epsil, depsil_dt
-  INTEGER         , PARAMETER    :: outfile=6
   real(8), PARAMETER    :: c=2.99793d8
   INTEGER                        :: i,j 
   real(8) :: lambda, tt, nr, ni, dnr_dt, dni_dt
   real(8) :: ratio, prod, slope, intercept, dslope_dt, dintercept_dt 
   real(8), DIMENSION(35) :: nREAL, nIMAG, dnREAL_dt, dnIMAG_dt
-  DOUBLE COMPLEX                  :: n, dn , dn_dt
+  DOUBLE COMPLEX                  :: n, dn_dt
   real(8), DIMENSION(35)   :: wl ! wavelength in mm
   data wl /                                  &
    .29850d+00,.31620d+00,.35480d+00,.39810d+00,.44670d+00,.50120d+00,.56230d+00, &
@@ -2001,8 +1992,6 @@ SUBROUTINE h2omixeddiel_d( freq, temp, phase , epsil, depsil_dt)
    real(8), PARAMETER :: point = 16.d0
    real(8), PARAMETER :: A3 = 1.4324101899475d0
    real(8), PARAMETER :: zeta3 = -1.7495065207990d0
-
-   real(8) ::dx_dt, dE_dt, dpolyfit_dt,dy3n2_dt !TEMPORARY TEST VARIABLES
    real(8), DIMENSION(3), parameter :: coefs = (/ -2.0079700293637d-1, &
         6.8397684390001d-1, -4.2709198240675d-1 /)
 
@@ -2099,17 +2088,6 @@ ELSE
  f    = 2.d0  ! i.e., 10.d0**DLOG10(2.d0)
 df_dt = 0.d0
 END IF
-
-! to check derivatives to this point, use the code below
-! dx_dt       = dx_dw*dw_dt
-! dE_dt       = dE_dx*dx_dt
-! dx_dt       = dx_dw*dw_dt
-! dpolyfit_dt = dpolyfit_dx*dx_dt
-! dy3n2_dt    = dy3n2_dx*dx_dt
-!  epsil      = DCMPLX(f,    y3n2 )
-! depsil_dt   = DCMPLX(df_dt,dy3n2_dt)
-!RETURN ! worked for: w, dw_dt and all commented-out derivatives above 
-! end of check derivatives to this point
  
     CALL h2o_liq_diel_d(freq,           273.15d0 , epsilw, depsilw_dt) 
 !                           NOTE THAT depsilw_dt=0.d0   (R. Hill 7/15/03)
