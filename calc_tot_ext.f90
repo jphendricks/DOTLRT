@@ -31,6 +31,17 @@ subroutine calc_tot_ext(freq)
   real(8) do2abs_t, do2abs_v,do2abs_p
   real(8), external  :: o2abs, absn2, abh2o
 
+  character*120 debugout
+
+!  write(debugout,*) "#levels=",atm_inp%num_levels
+!  call mexPrintf(debugout//achar(10))
+!  write(debugout,*) "temp=",atm_inp%prof(1)%temperature
+!  call mexPrintf(debugout//achar(10))
+!  write(debugout,*) "press=",atm_inp%prof(1)%pressure
+!  call mexPrintf(debugout//achar(10))
+!  write(debugout,*) "a0,k0=",atm_inp%prof(1)%cloud_rn_a0, atm_inp%prof(1)%cloud_rn_k0
+!  call mexPrintf(debugout//achar(10)) 
+  
   do level = 1, atm_inp%num_levels
     gas_prof(level)%absn2 = absn2(atm_inp%prof(level)%temperature,         &
                                   atm_inp%prof(level)%pressure,freq,       &
@@ -45,7 +56,7 @@ subroutine calc_tot_ext(freq)
                                   do2abs_t, do2abs_v,do2abs_p)
     atm_inp%prof(level)%abs_o2 = gas_prof(level)%o2abs + gas_prof(level)%absn2
     atm_inp%prof(level)%abs_h2o = gas_prof(level)%absh2o
-
+ 
     gas_prof(level)%dabsn2_dt = dabsn2_t
     gas_prof(level)%dabsn2_dp = dabsn2_p
 
@@ -80,6 +91,9 @@ subroutine calc_tot_ext(freq)
     hydro_prof(level,phase)%dcloudg_dk0 = dg(2)
     hydro_prof(level,phase)%dcloudg_da0 = dg(3)
 
+    !write(debugout,*) "liquid: abs,sc,g=", abs_cloud_liq, scat_cloud_liq, g_cloud_liq
+    !call mexPrintf(debugout//achar(10))
+
     phase = 2 ! rain
     call hydrometeor_master_5ph_d( freq, phase,                                &
                                    atm_inp%prof(level)%temperature,            &
@@ -102,6 +116,9 @@ subroutine calc_tot_ext(freq)
     hydro_prof(level,phase)%dcloudg_dt = dg(1)
     hydro_prof(level,phase)%dcloudg_dk0 = dg(2)
     hydro_prof(level,phase)%dcloudg_da0 = dg(3)
+
+    !write(debugout,*) "liquid: abs,sc,g=", abs_cloud_rn, scat_cloud_rn, g_cloud_rn
+    !call mexPrintf(debugout//achar(10))
 
     phase = 3 ! ice
     call hydrometeor_master_5ph_d( freq, phase,                                 &
@@ -195,6 +212,14 @@ subroutine calc_tot_ext(freq)
     atm_inp%prof(level)%albedo = atm_inp%prof(level)%scat_cloud &
                                / atm_inp%prof(level)%ext_tot
     atm_inp%prof(level)%bb_spec_int = atm_inp%prof(level)%temperature
+
+!    write(debugout,*) "ext,abs,scat,level=",atm_inp%prof(level)%ext_tot, &
+!         atm_inp%prof(level)%abs_cloud, atm_inp%prof(level)%scat_cloud, level
+!    call mexPrintf(debugout//achar(10))
+
+!    write(debugout,*) "g = ", atm_inp%prof(level)%asymmetry
+!    call mexPrintf(debugout//achar(10))
+    
   end do
 return
 end subroutine calc_tot_ext

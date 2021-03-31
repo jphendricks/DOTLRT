@@ -171,8 +171,10 @@ real(8) function o2abs(temperature, pressure, vapor_density, frequency, do2abs_t
 
   end if
  DEN =   0.001d0 * (0.22d0 *   PRESDA   * B                  + 0.78d0 *   PRESDA   * G                  + 1.1d0 *   PRESWV   * TH)
-dDEN_t = 0.001d0 * (0.22d0 * (dPRESDA_t * B + PRESDA * dB_t) + 0.78d0 * (dPRESDA_t * G + PRESDA * dG_t) + 1.1d0 * (dPRESWV_t * TH + PRESWV * dTH_t) )
-dDEN_v = 0.001d0 * (0.22d0 * (dPRESDA_v * B )                + 0.78d0 * (dPRESDA_v * G )                + 1.1d0 * (dPRESWV_v * TH ) )
+dDEN_t = 0.001d0 * (0.22d0 * (dPRESDA_t * B + PRESDA * dB_t) + 0.78d0 * (dPRESDA_t * G + PRESDA * dG_t) &
+                                                             +1.1d0*(dPRESWV_t*TH+PRESWV*dTH_t))
+dDEN_v = 0.001d0 * (0.22d0 * (dPRESDA_v * B )                + 0.78d0 * (dPRESDA_v * G )                &
+                                                             + 1.1d0 * (dPRESWV_v * TH ) )
 dDEN_p = 0.001d0 * (0.22d0 *              B                  + 0.78d0 * G )! dPRESDA_p = 1, ! dPRESWV_p = 0
 
  DFNR   = wb300 * DEN

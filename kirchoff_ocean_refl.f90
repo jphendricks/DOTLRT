@@ -66,7 +66,8 @@ subroutine kirchoff_ocean_refl(freq, temp, sal, theta_i, slope_var, rv, rh)
                         rv_k = gamv * conjg(gamv)
                         rh_k = gamh * conjg(gamh)
                         if( theta_k .gt. 0.0d0 .and. phi_k .gt. 0.0d0 .and. phi_k .lt. two_pi ) then
-                             v_dot_q_s = 1.0d0/(1.0d0+((sin_theta_i*cos_theta_k-cos_theta_i*sin_theta_k*cos_phi_k)/(sin_theta_k*sin_phi_k))**2)
+                             v_dot_q_s = 1.0d0/(1.0d0+((sin_theta_i*cos_theta_k-cos_theta_i*sin_theta_k*cos_phi_k) &
+                                         /(sin_theta_k*sin_phi_k))**2)
                         else
                              v_dot_q_s = 0.0d0
                         end if

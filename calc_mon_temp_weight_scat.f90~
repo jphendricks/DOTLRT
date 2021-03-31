@@ -144,14 +144,14 @@ SUBROUTINE calc_mon_temp_weight_scat( Tb_inp, tau, tb_pl_inp, tb_mn_inp, dtb_pl_
     end if
     naw = 1.0d0 - law
 
-    !write(debugout,*) "inp_theta = ",inp_theta
-    !call mexPrintf(debugout//achar(10))
-    !write(debugout,*) "theta_obs = ",theta_obs, teta(next_angle), teta(last_angle)
-    !call mexPrintf(debugout//achar(10))
-    !write(debugout,*) "law and naw = ", law, naw
-    !call mexPrintf(debugout//achar(10))
-    !write(debugout,*) "angle index = ", next_angle, last_angle
-    !call mexPrintf(debugout//achar(10))
+    write(debugout,*) "inp_theta = ",inp_theta
+    call mexPrintf(debugout//achar(10))
+    write(debugout,*) "theta_obs = ",theta_obs, teta(next_angle), teta(last_angle)
+    call mexPrintf(debugout//achar(10))
+    write(debugout,*) "law and naw = ", law, naw
+    call mexPrintf(debugout//achar(10))
+    write(debugout,*) "angle index = ", next_angle, last_angle
+    call mexPrintf(debugout//achar(10))
 
     ! linear interpolation coefficients for angle - end
  

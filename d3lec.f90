@@ -11,6 +11,7 @@
 
 subroutine d3lec( kappa, freq, temp, sl, i )
 implicit none
+real(8) :: pi = 3.1415926536d0
 integer(4) i
 real(8) freq, temp, sl
 double complex kappa, eps
@@ -47,12 +48,12 @@ real(8) L, LS, N, T, SIGMA, EI, ES, ALPHA, S, DEL, SIG, D, ep, epp
       LS = LS * ( 1.0d0 + N * ( T * 0.1463d-2 - 0.04896d0 &
          + N * ( -0.02967d0 + N * 5.644d-3 ) ) )
     end if
-    S = dSINd(ALPHA*90.0d0)
+    S = dsin(ALPHA*90.0d0*pi/180.0d0)  !dSINd(ALPHA*90.0d0)
     L = 2.99776d-1/FREQ
     T = (LS/L)**(1.0d0-ALPHA)
     D = 1.0d0+T*(2.0d0*S+T)
     EP = EI+(ES-EI)*(1.0d0+T*S)/D
-    EPP = (ES-EI)*T*dcosd(ALPHA*90.0d0)/D+L*SIGMA/18.8496d8
+    EPP = (ES-EI)*T*dcos(ALPHA*90.0d0*pi/180.0d0)/D+L*SIGMA/18.8496d8 !(ES-EI)*T*dcosd(ALPHA*90.0d0)/D+L*SIGMA/18.8496d8
     eps = dcmplx(ep,-epp)
     kappa = eps
     ! kappa = dcmplx(EP,-EPP)

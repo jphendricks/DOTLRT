@@ -21,6 +21,8 @@ subroutine configure( inpheight,         & ! observation height (AGL, km)
   real(8) stream_angles(nstreams)
   real(8) surfinp(nsurfangles,3)
 
+  character*120 debugout
+
   inp_height = inpheight
   inp_theta = inptheta
 
@@ -29,8 +31,11 @@ subroutine configure( inpheight,         & ! observation height (AGL, km)
   m1 = 1
   nlr1 = nlr*m1
 
+!  write(debugout,*) "nlevels=",atm_inp_num_levels
+!  call mexPrintf(debugout//achar(10))
+  
   ! instrument specification parameters input file:
-    call get_instr_spec( instrspec )
+  call get_instr_spec( instrspec )
 
   num_sb_freqs = numsbfreqs
 
@@ -67,6 +72,14 @@ subroutine configure( inpheight,         & ! observation height (AGL, km)
     do j = 1, nang
       quad_angle_array(j) = (180.0d0/pi)*acos(t(nang-j+1))
     end do
+
+    !write(debugout,*) "w = "
+    !call mexPrintf(debugout//achar(10))
+    !do j = 1, nang
+    !   write(debugout,*) quad_angle_array(j), cris_quad_wghts(j)
+    !   call mexPrintf(debugout//achar(10))
+    !end do
+    
   ! Henyey-Greenstein phase matrix
     call HG_phmat()
     do j = 1, nang

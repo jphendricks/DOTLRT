@@ -71,6 +71,9 @@ use variables
     real(8) g
     real(8) HGgs(2), HGphs(2), dHGphs(2), HGs, dHGs
     integer jHGphs(2)
+
+    character*120 debugout
+    
     EXTERNAL    dtb94   ! InterpSR
 
 !    do i = 1, surf_inp%num_angles
@@ -87,10 +90,30 @@ use variables
           abs_H2O(i) = atm_inp%prof(i)%abs_H2O
         abs_cloud(i) = atm_inp%prof(i)%abs_cloud
        scat_cloud(i) = atm_inp%prof(i)%scat_cloud
-        abs_total(i) = abs_O2(i) + abs_H2O(i) + abs_cloud(i)
+       abs_total(i) = abs_O2(i) + abs_H2O(i) + abs_cloud(i)
+
+       !write(debugout,*) g_asymmetry(i),altitude(i),temperature(i)
+       !call mexPrintf(debugout//achar(10))
+
+       !write(debugout,*) "cloud=",  abs_cloud(i), scat_cloud(i)
+       !call mexPrintf(debugout//achar(10))
+
+       !write(debugout,*) "abs_total=", abs_O2(i), abs_H2O(i), abs_total(i)
+       !call mexPrintf(debugout//achar(10))
     end do
-	altitude(atm_inp%num_levels+1) = 2 * altitude(atm_inp%num_levels) &
+	
+    altitude(atm_inp%num_levels+1) = 2 * altitude(atm_inp%num_levels) &
                                        - altitude(atm_inp%num_levels-1)
+
+    !write(debugout,*) "nrlevels=", atm_inp%num_levels
+    !call mexPrintf(debugout//achar(10))
+
+    !do i=0,atm_inp%num_levels+1
+    !   write(debugout,*) "alt = ",i,altitude(i)
+    !   call mexPrintf(debugout);
+    !end do
+    !call mexPrintf(achar(10))
+
 
 !    !retain reflectivity at zero degrees as follows
 !	surf_reflecv(1) = surfinp_reflecv(1)
@@ -141,7 +164,7 @@ use variables
             dphaseff_sc(ilr,j,i,hydrometeor_phase) = d_phase11_sc(ilr,j,nang+1-i,hydrometeor_phase)
           END DO
         END DO
-      end do ! hydrometeor_phase
+     end do ! hydrometeor_phase     
     END DO ! ilr
 
 !    DO i=1,nang

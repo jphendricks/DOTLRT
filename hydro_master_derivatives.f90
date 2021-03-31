@@ -68,7 +68,8 @@ real(8) ::  pi, c , speclength, f, meanradrel, sigmarel, ka   &
 real(8) :: ddalph_da0, dalph1_da0, dalph_da0, dweight_da0, dc_da0, dw_da0, df_da0
 real(8) :: dw_dk0,df_dk0
 DOUBLE COMPLEX   ::   epsil, depsil_dt, index, dindex_dt
- 
+
+character*120 debugout
                 
 EXTERNAL  h2o_liq_diel_d                        &
          ,h2o_ice_diel_d                        &
@@ -152,6 +153,12 @@ END IF
 
     CALL h2o_liq_diel_d(freq,temp,epsil,depsil_dt)
 
+
+!    write(debugout,*) "freq,temp=",freq,temp
+!    call mexPrintf(debugout//achar(10))    
+!    write(debugout,*) "eps=",epsil
+!    call mexPrintf(debugout//achar(10))
+    
     speclength=1.d0
 
    ELSE
@@ -213,8 +220,8 @@ END IF
         dalph1_da0 = ddalph_da0  !other derivatives are zero
     END IF
         alphu=1.0d0+m2*sigmarel
-IF (fixnumpanels .eq. .false.) THEN
-     numpanels=IIDINT((alphu-alph1)/dalph+1.5d0)
+IF (fixnumpanels .eqv. .false.) THEN
+     numpanels=INT2((alphu-alph1)/dalph+1.5d0)
 END IF 
         dalph     = (alphu -  alph1    )/numpanels
         ddalph_da0 = (      - dalph1_da0)/numpanels !other derivatives are zero
@@ -652,8 +659,8 @@ EXTERNAL  h2o_liq_diel_d                        &
     ! dalph1_da0 = ddalph_da0  !!!!!!!!!!!!!other derivatives are zero!!!!!!!!!!!!!!!
         END IF
         alphu=1.0d0+m2*sigmarel
-IF (fixnumpanels .eq. .false.) THEN
-     numpanels=IIDINT((alphu-alph1)/dalph+1.5d0) !?? differentiate an integer?? NO
+IF (fixnumpanels .eqv. .false.) THEN
+     numpanels=INT2((alphu-alph1)/dalph+1.5d0) ! IIDINT((alphu-alph1)/dalph+1.5d0) !?? differentiate an integer?? NO
 END IF 
     
         dalph     = (alphu -  alph1    )/numpanels
@@ -1051,7 +1058,7 @@ EXTERNAL  h2o_liq_diel_d                        &
      dalph1_da0 = ddalph_da0  !!!!!!!!!!!!!other derivatives are zero!!!!!!!!!!!!!!!
   END IF
         alphu=1.0d0+m2*sigmarel
-     numpanels=IIDINT((alphu-alph1)/dalph+1.5d0) !?? differentiate an integer?? NO
+     numpanels=INT2((alphu-alph1)/dalph+1.5d0) !?? differentiate an integer?? NO
         dalph     = (alphu -  alph1    )/numpanels
    ddalph_da0 = (      - dalph1_da0)/numpanels !!!!!!!!!!other derivatives are zero!!!!!!!!!!!1
 
@@ -1426,7 +1433,7 @@ INTEGER         , PARAMETER :: outfile=6
 !                    Mie recursion
 !-------------------------------------------------
    n   =1
-   nmax=IIDINT(x+4.05d0*x**0.333333d0+2)
+   nmax=INT2(x+4.05d0*x**0.333333d0+2)
 
    wnm1=DCMPLX(DSIN(x),DCOS(x))
    wnm2=-iz*wnm1

@@ -163,6 +163,9 @@ LOGICAL, DIMENSION(0:nlr) :: rup_d,rdn_d,s_d
 LOGICAL                   :: a_d
 integer alloc_err
 
+INTEGER :: i,j
+character*120 debugout
+
 EXTERNAL md_inv32
 
 
@@ -175,297 +178,313 @@ allocate(da(nlr,nang,nang,nvar),db(nlr,nang,nang,nvar), &
  
 !  OPEN(115, file='chk.tst',form='formatted')           
 
-  oblv=obs_lev
+oblv=obs_lev
 
-  u(  0,:)=0.d0
-  v(  0,:)=0.d0
-  u(nlr,:)=0.d0
-  v(nlr,:)=0.d0
+u(  0,:)=0.d0
+v(  0,:)=0.d0
+u(nlr,:)=0.d0
+v(nlr,:)=0.d0
 
- DO ilr=1,nlr
-  IF( .NOT. LP(ilr,3) ) THEN
-   a(ilr,:,:) = a0(ilr,:,:)+b0(ilr,:,:)
-   b(ilr,:,:) = a0(ilr,:,:)-b0(ilr,:,:)
+!kz, Symmetrization of matrices 
+DO ilr=1,nlr
+    IF( .NOT. LP(ilr,3) ) THEN
+        a(ilr,:,:) = a0(ilr,:,:)+b0(ilr,:,:)
+        b(ilr,:,:) = a0(ilr,:,:)-b0(ilr,:,:)
 
-!             symmetrization of matrices _a, _b below - principally not needed
+        ! symmetrization of matrices _a, _b below - principally not needed
 
-   a(ilr,:,:)=(a(ilr,:,:)+TRANSPOSE(a(ilr,:,:)))/2   
-   b(ilr,:,:)=(b(ilr,:,:)+TRANSPOSE(b(ilr,:,:)))/2   
-  END IF
-  IF(       LP(ilr,3) ) THEN
-! blw
-  a(ilr,:,:) = 0.0d0
-  b(ilr,:,:) = 0.0d0
-! blw
-   DO n=1,nang
-    a(ilr,n,n) = a0(ilr,n,n)+b0(ilr,n,n)
-    b(ilr,n,n) = a0(ilr,n,n)-b0(ilr,n,n)
-   END DO
-  END IF
-  DO ivar=1,nvar
-   IF( .NOT. LP(ilr,3+ivar) ) THEN
-    da(ilr,:,:,ivar) = da0(ilr,:,:,ivar)+db0(ilr,:,:,ivar)
-    db(ilr,:,:,ivar) = da0(ilr,:,:,ivar)-db0(ilr,:,:,ivar)
+        a(ilr,:,:)=(a(ilr,:,:)+TRANSPOSE(a(ilr,:,:)))/2   
+        b(ilr,:,:)=(b(ilr,:,:)+TRANSPOSE(b(ilr,:,:)))/2   
+    END IF
 
-!             symmetrization of matrices _da, _db below - principally not needed
-
-   da(ilr,:,:,ivar)=(da(ilr,:,:,ivar)+TRANSPOSE(da(ilr,:,:,ivar)))/2   
-   db(ilr,:,:,ivar)=(db(ilr,:,:,ivar)+TRANSPOSE(db(ilr,:,:,ivar)))/2 
-   END IF
-   IF(       LP(ilr,3+ivar) ) THEN
-! blw
-  da(ilr,:,:,ivar) = 0.0d0
-  db(ilr,:,:,ivar) = 0.0d0
-! blw
-    DO n=1,nang
-     da(ilr,n,n,ivar) = da0(ilr,n,n,ivar)+db0(ilr,n,n,ivar)
-     db(ilr,n,n,ivar) = da0(ilr,n,n,ivar)-db0(ilr,n,n,ivar)
-    END DO
-   END IF
-  END DO
- END DO
-
-  rup(0,:,:) = r(  :,:)
-  ust(0,:  ) = f(0,:)
-
-  rup_d(0)=LP(0,3)     ! rup_d(0) is _TRUE if reflection matrix is diagonal
-
-!------------------------------------------
-!------------------------------------------
- DO ilr=1,nlr   ! the first loop over _ilr
-!------------------------------------------
-!------------------------------------------
-
-  rup_d(ilr)=rup_d(ilr-1) .AND. LP(ilr,3)
-    q_d(ilr)=.FALSE.
-
-!----------------------------------------------------------
-  IF( .NOT. LP(ilr,3)) THEN   !  non-diagonal case: part 0
-!----------------------------------------------------------
-!!  CALL DEVCSF(nang,a(ilr,:,:),nang,lama,ma,nang)
-  call jacobi(a(ilr,:,:),nang,nang,lama,ma,nrot)
-!----------------------------------------------------------
-  END IF                ! end of non-diagonal case: part 0
-!----------------------------------------------------------
-
-!----------------------------------------------------------
-  IF(LP(ilr,3)) THEN   !             diagonal case: part 0
-!----------------------------------------------------------
-   DO n=1,nang
-    lama(n)=a(ilr,n,n)
-   END DO
-!---------------------------------------------------------
- END IF                     ! end of diagonal case: part 0
-!---------------------------------------------------------
-
- lama12=DSQRT(lama)
-
- DO ivar=0,nvar                    ! sic - ivar=0,..
-  IF( .NOT. LP(ilr,ivar+3)) THEN
-    DO n=1,nang
-     lama12nm(n,n)=lama(n)
-     DO m=n+1,nang
-      lama12nm(n,m)=lama12(n)*lama12(m)
-      lama12nm(m,n)=lama12nm(n,m)
-     END DO
-    END DO
-   EXIT
-  END IF
- END DO
-
-!---------------------------------------------------------
- IF(.NOT. LP(ilr,3) ) THEN  !    non-diagonal case: part 1
-!---------------------------------------------------------
-  DO ivar=1,nvar
-
-   IF(.NOT. LP(ilr,ivar+3) ) t3=MATMUL(da(ilr,:,:,ivar),ma)
- 
-   DO n=1,nang
-    DO m=n,nang
-
-!------------------------------------------------------------------
-     IF( .NOT. LP(ilr,ivar+3) ) THEN   ! non-diagonal perturbation
-!------------------------------------------------------------------
-      s1=DOT_PRODUCT(ma(:,n),t3(:,m))
-!------------------------------------------------------------------
-     ELSE                              !     diagonal perturbation
-!------------------------------------------------------------------
-      s1=0.d0
-      DO k=1,nang
-       s1=s1+ma(k,n)*da(ilr,k,k,ivar)*ma(k,m)        
-      END DO
-!------------------------------------------------------------------
-     END IF     ! end of diagonal/non-diagonal perturbation
-!------------------------------------------------------------------
-
-      IF( n == m ) THEN
-       dlama(n,ivar)=s1
-       t2(n,n)=0.d0
-      ELSE
-       t2(n,m)=s1/(lama(m)-lama(n))
-       t2(m,n)=-t2(n,m)
-      END IF
-    END DO  ! m
-   END DO  ! n
-
-    dma(:,:,ivar)=MATMUL(ma,t2)
-
-  END DO  ! ivar
-
-   t3=MATMUL(TRANSPOSE(ma),b(ilr,:,:))
-
-   DO n=1,nang
-    DO m=n,nang
-     s1=0.d0
-     s2=0.d0
-     DO k=1,nang
-      s1=s1+ma(n,k)/lama(k)*ma(m,k)
-      s2=s2+t3(n,k)        *ma(k,m)
-     END DO
-    am1(ilr,n,m)=s1
-    am1(ilr,m,n)=s1
-         t1(n,m)=s2
-         t1(m,n)=s2
-    END DO
-   END DO
-
-
-!   t1=MATMUL(t3,ma)=MATMUL(MATMUL(TRANSPOSE(ma),b(ilr,:,:)),ma)
-
-   t0=t1*lama12nm
-   w2=t1/lama12nm/2
-
-   DO ivar=1,nvar
-
-    DO n=1,nang
-     DO m=n,nang
-      w3(n,m)=dlama(n,ivar)*lama(m)+lama(n)*dlama(m,ivar)
-      w3(m,n)=w3(n,m)
-     END DO
-    END DO
-
-!---------------------------------------------------------------
-    IF( .NOT. LP(ilr,ivar+3) ) THEN ! non-diagonal perturbation
-!---------------------------------------------------------------
-     t2= MATMUL(db(ilr,:,:,ivar),ma)
-     DO n=1,nang
-      DO m=n,nang
-        s1=0.d0
-        DO k=1,nang
-         s1=s1+ma(k,n)*t2(k,m)
+    IF(       LP(ilr,3) ) THEN
+        ! blw
+        a(ilr,:,:) = 0.0d0
+        b(ilr,:,:) = 0.0d0
+        ! blw
+        DO n=1,nang
+            a(ilr,n,n) = a0(ilr,n,n)+b0(ilr,n,n) !kz, Eqn. 30
+            b(ilr,n,n) = a0(ilr,n,n)-b0(ilr,n,n)
         END DO
-       t1(n,m)=s1
-       t1(m,n)=s1
-      END DO
-     END DO
-!     t1= MATMUL(MATMUL(TRANSPOSE(ma),db(ilr,:,:,ivar)),ma)
-!---------------------------------------------------------------
-    ELSE                            !     diagonal perturbation
-!---------------------------------------------------------------
-     DO n=1,nang
-      DO m=n,nang
-        s1=0.d0
-        DO k=1,nang
-         s1=s1+ma(k,n)*db(ilr,k,k,ivar)*ma(k,m)
-        END DO
-       t1(n,m)=s1
-       t1(m,n)=s1
-      END DO
-     END DO
-!---------------------------------------------------------------
-    END IF         ! end of diagonal/non-diagonal perturbation
-!---------------------------------------------------------------
-
-    t2=MATMUL(t3,dma(:,:,ivar))
-
-    dt0(:,:,ivar)=lama12nm*(t2+TRANSPOSE(t2)+t1)+w3*w2             
-
-   END DO  ! ivar
-!---------------------------------------------------------
- END IF                 ! end of non-diagonal case: part 1
-!---------------------------------------------------------
-
-!---------------------------------------------------------
-IF( LP(ilr,3) ) THEN                 !   diag case: part 1
-!---------------------------------------------------------
-
-   DO ivar=1,nvar
-!-----------------------------------------------------------------
-     IF( .NOT. LP(ilr,ivar+3) ) THEN  ! non-diagonal perturbation
-!-----------------------------------------------------------------
-       DO n=1,nang   
-        dlama(n,ivar)=da(ilr,n,n,ivar)
-        dma(n,n,ivar)=0.d0
-         DO m=n+1,nang
-          dma(n,m,ivar)= da(ilr,n,m,ivar)/(lama(m)-lama(n))
-          dma(m,n,ivar)=   -dma(n,m,ivar)
-         END DO
-       END DO
-!-----------------------------------------------------------------
-     ELSE                             !     diagonal perturbation
-!-----------------------------------------------------------------
-       DO n=1,nang
-        dlama(n,ivar)=da(ilr,n,n,ivar)
-       END DO
-!-----------------------------------------------------------------
-     END IF           ! end of diagonal/non-diagonal perturbation
-!-----------------------------------------------------------------
-   END DO   ! ivar
-! blw
-  t0 = 0.0d0
-! blw
-   DO n=1,nang
-    t0(n,n)=b(ilr,n,n)*lama(n)
-   END DO
+    END IF
 
     DO ivar=1,nvar
-!-----------------------------------------------------------------
-     IF( .NOT. LP(ilr,ivar+3) ) THEN  ! non-diagonal perturbation
-!-----------------------------------------------------------------
-     DO n=1,nang
-     DO m=n,nang
-      dt0(n,m,ivar)=( dma(m,n,ivar)*b(ilr,m,m)+b(ilr,n,n)*dma(n,m,ivar) &
-                     +db(ilr,n,m,ivar))*lama12nm(n,m)
-      dt0(m,n,ivar)=dt0(n,m,ivar)
-     END DO
-     dt0(n,n,ivar)=dt0(n,n,ivar)+dlama(n,ivar)*b(ilr,n,n)
+        IF( .NOT. LP(ilr,3+ivar) ) THEN
+            da(ilr,:,:,ivar) = da0(ilr,:,:,ivar)+db0(ilr,:,:,ivar)
+            db(ilr,:,:,ivar) = da0(ilr,:,:,ivar)-db0(ilr,:,:,ivar)
+
+            ! symmetrization of matrices _da, _db below - principally not needed
+
+            da(ilr,:,:,ivar)=(da(ilr,:,:,ivar)+TRANSPOSE(da(ilr,:,:,ivar)))/2   
+            db(ilr,:,:,ivar)=(db(ilr,:,:,ivar)+TRANSPOSE(db(ilr,:,:,ivar)))/2 
+        END IF
+
+        IF(       LP(ilr,3+ivar) ) THEN
+            ! blw
+            da(ilr,:,:,ivar) = 0.0d0
+            db(ilr,:,:,ivar) = 0.0d0
+            ! blw
+            DO n=1,nang
+                da(ilr,n,n,ivar) = da0(ilr,n,n,ivar)+db0(ilr,n,n,ivar)
+                db(ilr,n,n,ivar) = da0(ilr,n,n,ivar)-db0(ilr,n,n,ivar)
+            END DO
+        END IF
     END DO
-!-----------------------------------------------------------------
-     ELSE                             !     diagonal perturbation
-!-----------------------------------------------------------------     
-! blw
-  dt0(:,:,ivar) = 0.0d0
-! blw
-      DO n=1,nang
-       dt0(n,n,ivar)=db(ilr,n,n,ivar)*lama(n)+dlama(n,ivar)*b(ilr,n,n)
-      END DO
-!-----------------------------------------------------------------
-     END IF           ! end of diagonal/non-diagonal perturbation
-!-----------------------------------------------------------------
-    END DO   ! ivar
-!--------------------------------------------------------
+END DO
 
-END IF                     ! end of diagonal case: part 1
-!--------------------------------------------------------
+rup(0,:,:) = r(  :,:)
+ust(0,:  ) = f(0,:)
 
-!--------------------------------------------------------
- IF(LP(ilr,3)) THEN  !                diagonal case
-!--------------------------------------------------------
-  DO n=1,nang
-   lamab(n)=t0(n,n)
-  END DO
-!--------------------------------------------------------
- ELSE                !            non-diagonal case
-!--------------------------------------------------------
-!!  CALL DEVCSF(nang,t0,nang,lamab,mab,nang)
- call jacobi(t0,nang,nang,lamab,mab,nrot)
-!--------------------------------------------------------
- END IF              ! diagonal / non-diagonal case
-!--------------------------------------------------------
+rup_d(0)=LP(0,3)     ! rup_d(0) is _TRUE if reflection matrix is diagonal
 
-!--------------------------------------------------------
- IF( .NOT. LP(ilr,3) ) THEN  ! non-giagonal case: part 2
-!--------------------------------------------------------
+!------------------------------------------
+!------------------------------------------
+DO ilr=1,nlr   ! the first loop over _ilr
+!------------------------------------------
+!------------------------------------------
+
+    rup_d(ilr)=rup_d(ilr-1) .AND. LP(ilr,3)
+    q_d(ilr)=.FALSE.
+
+    !----------------------------------------------------------
+    IF( .NOT. LP(ilr,3)) THEN   !  non-diagonal case: part 0
+    !----------------------------------------------------------
+    !!  CALL DEVCSF(nang,a(ilr,:,:),nang,lama,ma,nang)
+        call jacobi(a(ilr,:,:),nang,nang,lama,ma,nrot)
+    !----------------------------------------------------------
+    END IF                ! end of non-diagonal case: part 0
+    !----------------------------------------------------------
+
+    !----------------------------------------------------------
+    IF(LP(ilr,3)) THEN   ! diagonal case: part 0
+    !----------------------------------------------------------
+       DO n=1,nang
+            lama(n)=a(ilr,n,n)
+       END DO
+    !---------------------------------------------------------
+    END IF                     ! end of diagonal case: part 0
+    !---------------------------------------------------------
+
+    lama12=DSQRT(lama) !kz: square root of eigenvalues of A
+
+!    write(debugout,*) "a="
+!    call mexPrintf(debugout//achar(10))
+
+!    do i=1,nang
+!       do j=1,nang
+!          write(debugout,*) a(ilr,i,j)
+!          call mexPrintf(debugout)
+!       end do
+!       call mexPrintf(achar(10))
+!    end do
+    
+
+    DO ivar=0,nvar                    ! sic - ivar=0,..
+        IF( .NOT. LP(ilr,ivar+3)) THEN
+        DO n=1,nang
+            lama12nm(n,n)=lama(n)
+            DO m=n+1,nang
+                lama12nm(n,m)=lama12(n)*lama12(m)
+                lama12nm(m,n)=lama12nm(n,m)
+            END DO
+        END DO
+        EXIT
+        END IF
+    END DO
+
+    !---------------------------------------------------------
+    IF(.NOT. LP(ilr,3) ) THEN  !    non-diagonal case: part 1
+    !---------------------------------------------------------
+        DO ivar=1,nvar
+
+            IF(.NOT. LP(ilr,ivar+3) ) t3=MATMUL(da(ilr,:,:,ivar),ma)
+ 
+            DO n=1,nang
+                DO m=n,nang
+
+                    !------------------------------------------------------------------
+                    IF( .NOT. LP(ilr,ivar+3) ) THEN   ! non-diagonal perturbation
+                    !------------------------------------------------------------------
+                        s1=DOT_PRODUCT(ma(:,n),t3(:,m))
+                    !------------------------------------------------------------------
+                    ELSE                              !     diagonal perturbation
+                    !------------------------------------------------------------------
+                        s1=0.d0
+                        DO k=1,nang
+                            s1=s1+ma(k,n)*da(ilr,k,k,ivar)*ma(k,m)        
+                        END DO
+                    !------------------------------------------------------------------
+                    END IF     ! end of diagonal/non-diagonal perturbation
+                    !------------------------------------------------------------------
+
+                    IF( n == m ) THEN
+                        dlama(n,ivar)=s1
+                        t2(n,n)=0.d0
+                    ELSE
+                        t2(n,m)=s1/(lama(m)-lama(n))
+                        t2(m,n)=-t2(n,m)
+                    END IF
+                 END DO  ! m
+             END DO  ! n
+
+             dma(:,:,ivar)=MATMUL(ma,t2)  !kz, Eqn. 94
+
+        END DO  ! ivar
+
+        t3=MATMUL(TRANSPOSE(ma),b(ilr,:,:))
+
+		DO n=1,nang
+		    DO m=n,nang
+				s1=0.d0
+				s2=0.d0
+				DO k=1,nang
+					s1=s1+ma(n,k)/lama(k)*ma(m,k)
+					s2=s2+t3(n,k)        *ma(k,m)
+				END DO
+				am1(ilr,n,m)=s1
+				am1(ilr,m,n)=s1
+				t1(n,m)=s2
+				t1(m,n)=s2
+			END DO
+		 END DO
+
+
+		 !   t1=MATMUL(t3,ma)=MATMUL(MATMUL(TRANSPOSE(ma),b(ilr,:,:)),ma)
+
+		 t0=t1*lama12nm
+		 w2=t1/lama12nm/2
+
+		 DO ivar=1,nvar
+
+			DO n=1,nang
+				DO m=n,nang
+					w3(n,m)=dlama(n,ivar)*lama(m)+lama(n)*dlama(m,ivar)
+					w3(m,n)=w3(n,m)
+				END DO
+			END DO
+
+			!---------------------------------------------------------------
+			IF( .NOT. LP(ilr,ivar+3) ) THEN ! non-diagonal perturbation
+			!---------------------------------------------------------------
+				t2= MATMUL(db(ilr,:,:,ivar),ma)
+				DO n=1,nang
+					DO m=n,nang
+						s1=0.d0
+						DO k=1,nang
+							s1=s1+ma(k,n)*t2(k,m)
+						END DO
+						t1(n,m)=s1
+						t1(m,n)=s1
+					END DO
+				END DO
+			!     t1= MATMUL(MATMUL(TRANSPOSE(ma),db(ilr,:,:,ivar)),ma)
+			!---------------------------------------------------------------
+			ELSE                            !     diagonal perturbation
+			!---------------------------------------------------------------
+				DO n=1,nang
+					DO m=n,nang
+						s1=0.d0
+						DO k=1,nang
+							s1=s1+ma(k,n)*db(ilr,k,k,ivar)*ma(k,m)
+						END DO
+						t1(n,m)=s1
+						t1(m,n)=s1
+					END DO
+				END DO
+			!---------------------------------------------------------------
+			END IF         ! end of diagonal/non-diagonal perturbation
+			!---------------------------------------------------------------
+
+			t2=MATMUL(t3,dma(:,:,ivar))
+
+			dt0(:,:,ivar)=lama12nm*(t2+TRANSPOSE(t2)+t1)+w3*w2             
+
+		 END DO  ! ivar
+	 !---------------------------------------------------------
+	 END IF                 ! end of non-diagonal case: part 1
+	 !---------------------------------------------------------
+
+	 !---------------------------------------------------------
+	 IF( LP(ilr,3) ) THEN                 !   diag case: part 1
+     !---------------------------------------------------------
+		DO ivar=1,nvar
+			!-----------------------------------------------------------------
+			IF( .NOT. LP(ilr,ivar+3) ) THEN  ! non-diagonal perturbation	
+			!-----------------------------------------------------------------
+				DO n=1,nang   
+					dlama(n,ivar)=da(ilr,n,n,ivar)
+					dma(n,n,ivar)=0.d0
+					DO m=n+1,nang
+						dma(n,m,ivar)= da(ilr,n,m,ivar)/(lama(m)-lama(n))
+						dma(m,n,ivar)=   -dma(n,m,ivar)
+					END DO
+				END DO
+			!-----------------------------------------------------------------
+			ELSE                             !     diagonal perturbation
+			!-----------------------------------------------------------------
+				DO n=1,nang
+					dlama(n,ivar)=da(ilr,n,n,ivar)
+				END DO
+			!-----------------------------------------------------------------
+			END IF           ! end of diagonal/non-diagonal perturbation
+			!-----------------------------------------------------------------
+		END DO   ! ivar
+
+		! blw
+		t0 = 0.0d0
+		! blw
+		DO n=1,nang
+			t0(n,n)=b(ilr,n,n)*lama(n)
+		END DO
+
+		DO ivar=1,nvar
+			!-----------------------------------------------------------------
+			IF( .NOT. LP(ilr,ivar+3) ) THEN  ! non-diagonal perturbation
+			!-----------------------------------------------------------------
+				DO n=1,nang
+					DO m=n,nang
+						dt0(n,m,ivar)=( dma(m,n,ivar)*b(ilr,m,m)+b(ilr,n,n)*dma(n,m,ivar) &
+							+db(ilr,n,m,ivar))*lama12nm(n,m)
+						dt0(m,n,ivar)=dt0(n,m,ivar)
+					END DO
+					dt0(n,n,ivar)=dt0(n,n,ivar)+dlama(n,ivar)*b(ilr,n,n)
+				END DO
+			!-----------------------------------------------------------------
+			ELSE                             !     diagonal perturbation
+			!-----------------------------------------------------------------     
+				! blw
+				dt0(:,:,ivar) = 0.0d0
+				! blw
+				DO n=1,nang
+					dt0(n,n,ivar)=db(ilr,n,n,ivar)*lama(n)+dlama(n,ivar)*b(ilr,n,n)
+				END DO
+			!-----------------------------------------------------------------
+			END IF           ! end of diagonal/non-diagonal perturbation
+			!-----------------------------------------------------------------
+		END DO   ! ivar
+		!--------------------------------------------------------
+
+	END IF                     ! end of diagonal case: part 1
+	!--------------------------------------------------------
+
+	!--------------------------------------------------------
+	IF(LP(ilr,3)) THEN  !                diagonal case
+	!--------------------------------------------------------
+		DO n=1,nang
+			lamab(n)=t0(n,n)        !kz, Eqn. 46??
+		END DO
+	!--------------------------------------------------------
+	ELSE                !            non-diagonal case
+	!--------------------------------------------------------
+	!!  CALL DEVCSF(nang,t0,nang,lamab,mab,nang)
+		call jacobi(t0,nang,nang,lamab,mab,nrot)
+	!--------------------------------------------------------
+	END IF              ! diagonal / non-diagonal case
+	!--------------------------------------------------------
+
+	!--------------------------------------------------------
+	IF( .NOT. LP(ilr,3) ) THEN  ! non-giagonal case: part 2
+	!--------------------------------------------------------
    DO ivar=1,nvar
     t1=MATMUL(dt0(:,:,ivar),mab)
     DO n=1,nang
@@ -515,6 +534,30 @@ END IF                     ! end of diagonal case: part 1
 
 CALL md_inv32 (nang, h(ilr), lama, ma, lamab, mab, lama12, t1, t2             &
                          ,dlama,dma,dlamab,dmab,dt1,dt2,nvar,LP(ilr,:))
+
+!write(debugout,*) "t"
+!call mexPrintf(debugout//achar(10))
+
+!do i=1,nang
+!   do j=1,nang
+!      write(debugout,*) t1(i,j)
+!      call mexPrintf(debugout)
+!   end do
+!   call mexPrintf(achar(10))
+!end do
+
+!write(debugout,*) "r"
+!call mexPrintf(debugout//achar(10))
+
+!do i=1,nang
+!   do j=1,nang
+!      write(debugout,*) t2(i,j)
+!      call mexPrintf(debugout)
+!   end do
+!   call mexPrintf(achar(10))
+!end do
+
+
 
 !------------------------------------------------------------------------
 
@@ -604,7 +647,19 @@ CALL md_inv32 (nang, h(ilr), lama, ma, lamab, mab, lama12, t1, t2             &
      rup(ilr,m,n)=s1
     END DO
    END DO
-     
+
+!write(debugout,*) "Rup"
+!call mexPrintf(debugout//achar(10))
+
+!do i=1,nang
+!   do j=1,nang
+!      write(debugout,*) rup(1,i,j)
+!      call mexPrintf(debugout)
+!   end do
+!   call mexPrintf(achar(10))
+!end do
+
+   
 !-------------------------------------------------------
  END IF              ! end of non-diagonal case: part 4
 !-------------------------------------------------------
@@ -667,12 +722,47 @@ CALL md_inv32 (nang, h(ilr), lama, ma, lamab, mab, lama12, t1, t2             &
                        -MATMUL(t1,dy0) 
   END DO
 
+!  write(debugout,*) "am1"
+!  call mexPrintf(debugout//achar(10))
+!  do i=1,nang
+!     do j=1,nang
+!        write(debugout,*) am1(ilr,i,j)
+!        call mexPrintf(debugout)
+!     end do
+!     call mexPrintf(achar(10))
+!  end do
+
+!  write(debugout,*) "f"
+!  call mexPrintf(debugout//achar(10))
+!  do i=1,nang
+!     write(debugout,*) f(ilr,i)
+!     call mexPrintf(debugout)
+!  end do
+!  call mexPrintf(achar(10))
+  
+!  write(debugout,*) "y0"
+!  call mexPrintf(debugout//achar(10))
+!  do i=1,nang
+!     write(debugout,*) y0(i)
+!     call mexPrintf(debugout)
+!  end do
+!  call mexPrintf(achar(10))
+  
+!  write(debugout,*) "unh="
+!  call mexPrintf(debugout//achar(10))
+!  do i=1,nang
+!     write(debugout,*) unh(ilr,i)
+!     call mexPrintf(debugout)
+!  end do
+!  call mexPrintf(achar(10))
+  
 !---------------------------------------------------------
   IF( .NOT. rup_d(ilr-1)) THEN   ! non-diagonal rup(ilr-1)
 !---------------------------------------------------------
    y0=ust(ilr-1,:)+MATMUL(rup(ilr-1,:,:),unh(ilr,:))
    ust(ilr,:)=unh(ilr,:)+MATMUL(p1(ilr,:,:),y0+MATMUL(rup(ilr-1,:,:)    &
-                        ,MATMUL(q (ilr,:,:),   MATMUL(p2(ilr,:,:),y0))))
+        ,MATMUL(q (ilr,:,:),   MATMUL(p2(ilr,:,:),y0))))
+   
 !--------------------------------------------------------
   ELSE  ! diagonal rup(ilr-1)
 !--------------------------------------------------------
@@ -985,6 +1075,9 @@ END DO   !  end of the third loop over _ilr: calculation of _rdn,_vst
 
  oblv=MAX0(0  ,oblv)
  oblv=MIN0(nlr,oblv)
+
+!write(debugout,*) "oblv=",oblv
+!call mexPrintf(debugout//achar(10))
 
 !-----------   the forth _ilr loop: calculation of s11,s12,s21,s22
 
@@ -1462,7 +1555,7 @@ END DO                ! end of the second half of the forth _ilr loop
 
    a_d=LP(ilr,3).AND.rup_d(ilr-1).AND.rdn_d(ilr)
 
-!------------ calculation of  a11, a12, a21, a22, b1, b2 
+!------------ calculation of  a11, a12, a21, a22, b1, b2                !kz, eqn. (88)
 !------------            and da11,da12,da21,da22,db1,db2 
 !-----------------------------------------------------------
   IF( .NOT. LP(ilr,3) ) THEN     ! non-diagonal case: part 9
@@ -1779,15 +1872,15 @@ END DO                ! end of the second half of the forth _ilr loop
 
  IF( ilr==nlr ) v(nlr  ,:)=f(nlr+1,:)
 
-     IF(.NOT. a_d) THEN      !   non-diagonal _a => non-diagonal _w0, _w1
-          u(ilr  ,:)=unh(ilr,:)+MATMUL(w1,y1)
-          v(ilr-1,:)=unh(ilr,:)+MATMUL(w0,y0)
-     ELSE                    !      diagonal _a =>      diagonal _w0, _w1
-        DO n=1,nang
-         u(ilr  ,n)=unh(ilr,n)+w1(n,n)*y1(n)
-         v(ilr-1,n)=unh(ilr,n)+w0(n,n)*y0(n)
-        END DO
-     END IF
+ IF(.NOT. a_d) THEN      !   non-diagonal _a => non-diagonal _w0, _w1
+      u(ilr  ,:)=unh(ilr,:)+MATMUL(w1,y1)
+      v(ilr-1,:)=unh(ilr,:)+MATMUL(w0,y0)
+ ELSE                    !      diagonal _a =>      diagonal _w0, _w1
+     DO n=1,nang
+        u(ilr  ,n)=unh(ilr,n)+w1(n,n)*y1(n)
+        v(ilr-1,n)=unh(ilr,n)+w0(n,n)*y0(n)
+     END DO
+ END IF
 
  IF( ilr==1   ) THEN
      IF(.NOT. rup_d(0) ) THEN      !   non-diagonal  _rup_d(0)
@@ -2039,7 +2132,7 @@ SUBROUTINE md_inv32 (nang,h, lama, ma, lamab, mab, lama12d, p1, p2              
 !
 !  This subroutine inverts a matrix of a special form:
 !
-!   t(n,m)= SUM [i,j=1 to i,j=nang] ma(n,i)*w(i,j)*ma(m,j)
+!   t(n,m)= SUM [i,j=1 to i,j=nang] ma(n,i)*w(i,j)*ma(m,j)                      !kz, eqn. (51)
 !
 !   where
 !
@@ -2047,12 +2140,12 @@ SUBROUTINE md_inv32 (nang,h, lama, ma, lamab, mab, lama12d, p1, p2              
 !
 !   and 
 !
-!   dzeta(k)= SQRT(lamab(k))/sinh(SQRT(lamab(k)*h))
+!   dzeta(k)= SQRT(lamab(k))/sinh(SQRT(lamab(k)*h))                              !kz, eqn. (54)
 !
-!   a(n,k)=[SQRT(lama(n))+SQRT(lamab(k))/tanh(SQRT(lamab(k)*h/2))      &
+!   a(n,k)=[SQRT(lama(n))+SQRT(lamab(k))/tanh(SQRT(lamab(k)*h/2))      &         !kz, eqn. (52)
 !                                       /SQRT(lama(n))] * mab(n,k)
 !
-!   b(m,k)=[SQRT(lama(m))+SQRT(lamab(k))*tanh(SQRT(lamab(k)*h/2))      &
+!   b(m,k)=[SQRT(lama(m))+SQRT(lamab(k))*tanh(SQRT(lamab(k)*h/2))      &         !kz, eqn. (53)
 !                                       /SQRT(lama(m))] * mab(m,k)
 !
 !   and both _ma(n,k) and _mab(n,k) are orthogonal matrices.

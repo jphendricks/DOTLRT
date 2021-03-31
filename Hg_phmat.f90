@@ -109,8 +109,8 @@ DO k=1,ng
     zrf = 1.0d0
     el = rf(xrf,yrf,zrf) - (kappa_sq/3.0d0) * rd(xrf,yrf,zrf)
 
-
-    HGph(k,i,j)=1.0d0/pi*(1-g*g)/dsqrt(t1)/t2*el
+    ! "The Adding-doubling method, Scott Prahl" P.114
+    HGph(k,i,j)=1.0d0/pi*(1-g*g)/dsqrt(t1)/t2*el 
     HGph(k,j,i)=HGph(k,i,j)
 
     dkappa_sq_dg=4*st(i)*st(j)*(t1-2*g*(g+ct(i)*ct(j)+st(i)*st(j)))/t1/t1

@@ -94,6 +94,6 @@ subroutine jacobi(a,n,np,d,v,nrot)
           z(ip)=0.0d0
 23      continue
 24    continue
-      pause 'too many iterations in jacobi'
+      !pause 'too many iterations in jacobi'
       return
 END subroutine jacobi

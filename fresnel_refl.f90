@@ -5,12 +5,13 @@
 
 subroutine fresnel_refl( rv, rh, eps, mu, theta )
     implicit none
+    real(8) :: pi = 3.1415926536d0
     real(8) theta
     real(8) rv, rh
     real(8) c
     double complex eps, mu
     double complex gamv, gamh, term1, term2
-    c = dcosd(theta)
+    c = dcos(theta*pi/180.0d0) !dcosd(theta)
     term1 = cdsqrt(eps*mu+c*c-1)
     term2 = eps*c
     gamv = (term2-term1)/(term2+term1)

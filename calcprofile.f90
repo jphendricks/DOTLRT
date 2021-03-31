@@ -30,6 +30,8 @@ subroutine calcprofile_d()
     DOUBLE PRECISION dk0_dw ! w !w=water density, 
 ! the size of the arrays, i.e. 100, must be moved to variables.f90
 
+   character*120 debugout
+
 ! tests
 !   double precision cloud_w_dens(2), cloud_k0(2), cloud_a0(2), dkdw, dadw
 ! derivatives of k0 and a0 with respect to cloud water density (each phase)
@@ -51,7 +53,11 @@ subroutine calcprofile_d()
             atm_inp%prof(index)%cloud_liq_a0 = 0.01d0
 			! da0_dw(index,1) = 0.d0
             atm_inp%prof(index)%dcloud_liq_a0_dw = 0.0d0
-			a0_is_constant(index,1) = .true.
+            a0_is_constant(index,1) = .true.
+
+            !write(debugout,*) "liq:a0,k0=", atm_inp%prof(index)%cloud_liq_a0, atm_inp%prof(index)%cloud_liq_k0
+            !call mexPrintf(debugout//achar(10))
+
             !tests
             !cloud_w_dens(1) = (1.0d0-1.0d-6) * atm_inp%prof(index)%cloud_liq_dens
             !cloud_w_dens(2) = (1.0d0+1.0d-6) * atm_inp%prof(index)%cloud_liq_dens
@@ -69,12 +75,13 @@ subroutine calcprofile_d()
             atm_inp%prof(index)%dcloud_liq_a0_dw = 0.0d0
 			a0_is_constant(index,1) = .true.
         end if
+        
         if( atm_inp%prof(index)%cloud_rn_dens .ne.  0.0d0 ) then
             ! Marshall Palmer distribution
             atm_inp%prof(index)%cloud_rn_p  = 0.0d0
             atm_inp%prof(index)%cloud_rn_q  = 1.0d0
             atm_inp%prof(index)%cloud_rn_k0 = 16000.0d0 
-            atm_inp%prof(index)%cloud_rn_a0 = 0.223d0 &
+            atm_inp%prof(index)%cloud_rn_a0 = 0.22331d0 &
                    * ( atm_inp%prof(index)%cloud_rn_dens**0.250d0 )
 			! da0_dw(index,2) = 0.250d0 * (atm_inp%prof(index)%cloud_rn_a0)/(atm_inp%prof(index)%cloud_rn_dens)
             if( atm_inp%prof(index)%cloud_rn_dens < 1.d0-8 ) then
@@ -85,7 +92,11 @@ subroutine calcprofile_d()
       !      atm_inp%prof(index)%dcloud_rn_a0_dw = 0.250d0 * (atm_inp%prof(index)%cloud_rn_a0)
             ! dk0_dw(index,2) = 0.d0
             atm_inp%prof(index)%dcloud_rn_k0_dw = 0.0d0
-			a0_is_constant(index,2) = .false.
+            a0_is_constant(index,2) = .false.
+
+            !write(debugout,*) "rain:a0,k0=", atm_inp%prof(index)%cloud_rn_a0, atm_inp%prof(index)%cloud_rn_k0
+            !call mexPrintf(debugout//achar(10))
+
             !tests
             !cloud_w_dens(1) = (1.0d0-1.0d-6) * atm_inp%prof(index)%cloud_rn_dens
             !cloud_w_dens(2) = (1.0d0+1.0d-6) * atm_inp%prof(index)%cloud_rn_dens
@@ -103,6 +114,7 @@ subroutine calcprofile_d()
             atm_inp%prof(index)%dcloud_rn_a0_dw = 0.0d0
 			a0_is_constant(index,2) = .true.
         end if
+        
         if( atm_inp%prof(index)%cloud_ice_dens .ne. 0.0d0 ) then
             ! Sekhon-Sriv. Distribution, for two phase ice
             atm_inp%prof(index)%cloud_ice_p  = 0.0d0
@@ -139,6 +151,7 @@ subroutine calcprofile_d()
             atm_inp%prof(index)%dcloud_ice_a0_dw = 0.0d0
 			a0_is_constant(index,3) = .true.
         end if
+        
         if( atm_inp%prof(index)%cloud_snow_dens .ne. 0.0d0 ) then
             ! Tao, Prasad, Alder snow size distributions converted to a0 and k0 form
             ! (see ntbk#3 pg 111)
@@ -153,7 +166,7 @@ subroutine calcprofile_d()
             atm_inp%prof(index)%cloud_snow_a0 = 0.3757d0 &
                     * ( atm_inp%prof(index)%cloud_snow_dens**0.25d0 )
             ! da0_dw(index,4) = 0.25d0* (atm_inp%prof(index)%cloud_snow_a0)/(atm_inp%prof(index)%cloud_snow_dens)
-            atm_inp%prof(index)%dcloud_snow_a0_dw = 0.25d0* (atm_inp%prof(index)%cloud_snow_a0)/(atm_inp%prof(index)%cloud_snow_dens)
+            atm_inp%prof(index)%dcloud_snow_a0_dw=0.25d0*(atm_inp%prof(index)%cloud_snow_a0)/(atm_inp%prof(index)%cloud_snow_dens)
          !   atm_inp%prof(index)%dcloud_snow_a0_dw = 0.25d0* (atm_inp%prof(index)%cloud_snow_a0)
             a0_is_constant(index,4) = .false.
 
@@ -174,6 +187,7 @@ subroutine calcprofile_d()
             atm_inp%prof(index)%dcloud_snow_a0_dw = 0.0d0
 	        a0_is_constant(index,4) = .true.
         end if
+        
         if( atm_inp%prof(index)%cloud_grpl_dens .ne. 0.0d0 ) then
             ! Tao, Prasad, Alder graupel size distributions converted to a0 and k0 form
             ! (see ntbk#3 pg 111)
@@ -185,9 +199,12 @@ subroutine calcprofile_d()
             atm_inp%prof(index)%cloud_grpl_a0 = 0.3340d0 &
                     * ( atm_inp%prof(index)%cloud_grpl_dens**0.25d0 )
 		    ! da0_dw(index,5) = 0.25d0 *(atm_inp%prof(index)%cloud_grpl_a0)/(atm_inp%prof(index)%cloud_grpl_dens)
-            atm_inp%prof(index)%dcloud_grpl_a0_dw = 0.25d0 *(atm_inp%prof(index)%cloud_grpl_a0)/(atm_inp%prof(index)%cloud_grpl_dens)
+            atm_inp%prof(index)%dcloud_grpl_a0_dw=0.25d0*(atm_inp%prof(index)%cloud_grpl_a0)/(atm_inp%prof(index)%cloud_grpl_dens)
 !            atm_inp%prof(index)%dcloud_grpl_a0_dw = 0.25d0 *(atm_inp%prof(index)%cloud_grpl_a0)
 			a0_is_constant(index,5) = .false.
+
+            !write(debugout,*) "grp:a0,k0=", atm_inp%prof(index)%cloud_grpl_a0, atm_inp%prof(index)%cloud_grpl_k0
+            !call mexPrintf(debugout//achar(10))
 
             !tests
             !cloud_w_dens(1) = (1.0d0-1.0d-6) * atm_inp%prof(index)%cloud_grpl_dens

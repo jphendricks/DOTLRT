@@ -128,9 +128,9 @@ num_surf_angles = 4; % number of angles for surface refelctivity
 %         i = 1 ... num_streams/2    ( 0 ... 90 )
 %         j = 1 (vertical polarization); 2 (horizontal polarfization)
 for j = 1:num_surf_angles
-  surf_inp(j,1) = (j-1) * 20;
-  surf_inp(j,2) = 0.05-0.01*j;
-  surf_inp(j,3) = 0.05+0.01*j;
+  surf_inp(j,1) = (j-1) * 20;  % angle in degree
+  surf_inp(j,2) = 0.05-0.01*j; % surface reflectivity in v pol
+  surf_inp(j,3) = 0.05+0.01*j; % surface reflectivity in h pol
 end
 %surface_reflectivity = 0.05 * ones(num_streams/2);
 

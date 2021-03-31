@@ -271,12 +271,13 @@ module variables
                                                               phaseff, phasefb, dphaseff, dphasefb, &
                                                               phaseff1, phasefb1, dphaseff1, dphasefb1
 
-    real(8), dimension(max_num_levels,max_num_quad_angles,max_num_quad_angles) :: phase11_sc, phaseff_sc, phasefb_sc, phaseff1_sc, phasefb1_sc
-    real(8), dimension(max_num_levels,max_num_quad_angles,max_num_quad_angles,max_number_h2o_phases) :: dphaseff_g, dphasefb_g, &
-                                                                                                                 dphaseff_sc, dphasefb_sc, &
-                                                                                                                 d_phase11_g, d_phase11_sc, &
-                                                                                                                 dphaseff1_g, dphasefb1_g, &
-                                                                                                                 dphaseff1_sc, dphasefb1_sc
+    real(8), dimension(max_num_levels,max_num_quad_angles,max_num_quad_angles) :: phase11_sc, phaseff_sc, phasefb_sc
+    real(8), dimension(max_num_levels,max_num_quad_angles,max_num_quad_angles) :: phaseff1_sc, phasefb1_sc
+    real(8), dimension(max_num_levels,max_num_quad_angles,max_num_quad_angles,max_number_h2o_phases) :: dphaseff_g, dphasefb_g
+    real(8), dimension(max_num_levels,max_num_quad_angles,max_num_quad_angles,max_number_h2o_phases) :: dphaseff_sc, dphasefb_sc
+    real(8), dimension(max_num_levels,max_num_quad_angles,max_num_quad_angles,max_number_h2o_phases) :: d_phase11_g, d_phase11_sc
+    real(8), dimension(max_num_levels,max_num_quad_angles,max_num_quad_angles,max_number_h2o_phases) :: dphaseff1_g, dphasefb1_g
+    real(8), dimension(max_num_levels,max_num_quad_angles,max_num_quad_angles,max_number_h2o_phases) :: dphaseff1_sc, dphasefb1_sc
     real(8), dimension(max_num_quad_angles) :: cris_quad_wghts
 
 

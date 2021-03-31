@@ -185,6 +185,8 @@ real(8), DIMENSION(nangover2) :: dsurf_reflec
 
 integer alloc_err
 
+character*120 debugout
+
 allocate( a0(nlr1,nangover2,nangover2), b0(nlr1,nangover2,nangover2) )
 allocate( da0(nlr1,nangover2,nangover2,nvar), db0(nlr1,nangover2,nangover2,nvar) )
 
@@ -207,7 +209,7 @@ allocate( da0(nlr1,nangover2,nangover2,nvar), db0(nlr1,nangover2,nangover2,nvar)
     t1(i) = DSQRT(cris_quad_wghts(i)/cs(i))
     t2(i) = DSQRT(cris_quad_wghts(i)*cs(i))
   END DO
-
+  
   DO ilr=1,nlr1
     !--------------  _at and _bt :
     DO i=1,nangover2
@@ -252,9 +254,10 @@ allocate( da0(nlr1,nangover2,nangover2,nvar), db0(nlr1,nangover2,nangover2,nvar)
                                         + dbt_sc(j,i,hydrometeor_phase) ) * t2(j)
         end do ! hydrometeor_phase
       END DO
-    END DO
-    h(ilr)=altitude(ilr+1)-altitude(ilr)
-
+   END DO
+   
+   h(ilr)=altitude(ilr+1)-altitude(ilr)
+   
     DO i=1,nangover2
       DO j=1,nangover2
         a0(ilr,i,j) = - at_sc(i,j)
@@ -320,7 +323,7 @@ allocate( da0(nlr1,nangover2,nangover2,nvar), db0(nlr1,nangover2,nangover2,nvar)
       END DO   !  loop over j
 
       f(ilr,i)= abs_total1(ilr) * temperature1(ilr) * t1(i)
-
+      
       !----general case---------------------------------------------------
       !    df(ilr,i) = ( dal_gas(ilr) + dabs_cloud(ilr) ) *  temperature(ilr) * t1(i)  &
       !              + (  al_gas(ilr) +  abs_cloud(ilr) ) * dtemperature(ilr) * t1(i)
@@ -335,7 +338,7 @@ allocate( da0(nlr1,nangover2,nangover2,nvar), db0(nlr1,nangover2,nangover2,nvar)
       end do ! hydrometeor_phase
     END DO   !  loop over i
   END DO  ! loop over layers ilr
-
+  
   r=0.d0
   dr=0.d0
   DO i=1,nangover2
@@ -356,6 +359,13 @@ allocate( da0(nlr1,nangover2,nangover2,nvar), db0(nlr1,nangover2,nangover2,nvar)
       df(nlr1+1,i,ivar) = dt_cb * t2(i)
     END DO
   END DO
+
+!  do i = 1,nlr1
+!     write(debugout,*) "absTotal, h = ", abs_total1(i),h(i)
+!     call mexPrintf(debugout//achar(10))
+!  end do
+
+ 
   !------------------- defining diagonal layers (04/24/03) ------------
   LP = .false. ! all layers/perturbations are considered non-diagonal
 ! blw 911     11 November 2004
@@ -376,10 +386,62 @@ allocate( da0(nlr1,nangover2,nangover2,nvar), db0(nlr1,nangover2,nangover2,nvar)
   END DO
 ! blw 911
 
+!write(debugout,*) "nlr1=",nlr1
+!call mexPrintf(debugout//achar(10))
+
+!write(debugout,*) "a0"
+!call mexPrintf(debugout//achar(10))
+
+!do i=1,nangover2
+!   do j=1,nangover2
+!      write(debugout,*) a0(1,i,j)
+!      call mexPrintf(debugout)
+!   end do
+!   call mexPrintf(achar(10))
+!end do
+
+!write(debugout,*) "b0"
+!call mexPrintf(debugout//achar(10))
+
+!do i=1,nangover2
+!   do j=1,nangover2
+!      write(debugout,*) b0(1,i,j)
+!      call mexPrintf(debugout)
+!   end do
+!   call mexPrintf(achar(10))
+!end do
+
+!write(debugout,*) "r="
+!call mexPrintf(debugout//achar(10))
+!do i=1,nangover2
+!   write(debugout,*) r(i,i)
+!   call mexPrintf(debugout)
+!end do
+!call mexPrintf(achar(10))
+
+!write(debugout,*) "f="
+!call mexPrintf(debugout//achar(10))
+!do j=0,nlr1
+!   do i=1,nangover2
+!      write(debugout,*) f(j,i)
+!      call mexPrintf(debugout)
+!   end do
+!   call mexPrintf(achar(10))
+!end do
+
 !-------------------------------------------------------------------- 
   CALL core95 (nlr1,nangover2,h,a0,b0,f,r,u,v,da0,db0,df,dr,du,dv,obs_lev1,nvar,LP)
 !----------------------------------    
 
+!write(debugout,*) "u="
+!call mexPrintf(debugout//achar(10))
+!do i=1,nang
+!   write(debugout,*) u(1,i)
+!   call mexPrintf(debugout)
+!end do
+!call mexPrintf(achar(10))
+
+  
   DO ilr = 0,nlr1
     DO i=1,nangover2
       tb_pl(ilr,i)     = u(ilr,i)/t2(i)

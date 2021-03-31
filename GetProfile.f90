@@ -4,6 +4,8 @@ subroutine getprofile( atminp )
   integer i
   real(8) atminp(atm_inp%num_levels+1,9)
 
+  character*120 debugout
+  
   ! surface at first level: height = 0 (agl)
   surf_inp%surf_temp = atminp(1,3)
 

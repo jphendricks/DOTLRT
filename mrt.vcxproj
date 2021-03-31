@@ -1,0 +1,227 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <SccProjectName />
+    <SccLocalPath />
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.Cpp.UpgradeFromVC60.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.Cpp.UpgradeFromVC60.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>.\Debug\</OutDir>
+    <IntDir>.\Debug\</IntDir>
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>.\Release\</OutDir>
+    <IntDir>.\Release\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <InlineFunctionExpansion>Default</InlineFunctionExpansion>
+      <FunctionLevelLinking>false</FunctionLevelLinking>
+      <Optimization>Disabled</Optimization>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <WarningLevel>Level3</WarningLevel>
+      <MinimalRebuild>true</MinimalRebuild>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AssemblerListingLocation>.\Debug\</AssemblerListingLocation>
+      <PrecompiledHeaderOutputFile>.\Debug\mrt.pch</PrecompiledHeaderOutputFile>
+      <ObjectFileName>.\Debug\</ObjectFileName>
+      <ProgramDataBaseFileName>.\Debug\</ProgramDataBaseFileName>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+    </ClCompile>
+    <Midl>
+      <TypeLibraryName>.\Debug\mrt.tlb</TypeLibraryName>
+    </Midl>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+    <Bscmake>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <OutputFile>.\Debug\mrt.bsc</OutputFile>
+    </Bscmake>
+    <Link>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+      <OutputFile>.\Debug\mrt.exe</OutputFile>
+      <AdditionalDependencies>odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <StackReserveSize>100000000</StackReserveSize>
+      <StackCommitSize>100000000</StackCommitSize>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <StringPooling>true</StringPooling>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <Optimization>MaxSpeed</Optimization>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AssemblerListingLocation>.\Release\</AssemblerListingLocation>
+      <PrecompiledHeaderOutputFile>.\Release\mrt.pch</PrecompiledHeaderOutputFile>
+      <ObjectFileName>.\Release\</ObjectFileName>
+      <ProgramDataBaseFileName>.\Release\</ProgramDataBaseFileName>
+    </ClCompile>
+    <Midl>
+      <TypeLibraryName>.\Release\mrt.tlb</TypeLibraryName>
+    </Midl>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+    <Bscmake>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <OutputFile>.\Release\mrt.bsc</OutputFile>
+    </Bscmake>
+    <Link>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <SubSystem>Console</SubSystem>
+      <OutputFile>.\Release\mrt.exe</OutputFile>
+      <AdditionalDependencies>odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <StackReserveSize>100000000</StackReserveSize>
+      <StackCommitSize>100000000</StackCommitSize>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="absh2o.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="absn2.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="calc_fbw_temp_weight_scat.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="calc_mon_temp_weight_scat.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="calc_passband_freq.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="calc_tot_ext.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="calcprofile.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="configure.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="core95.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="d3lec.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="do_tb_gvh94.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="Dtb94.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="fresnel_refl.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="gaussj.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="gaussq.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="GeoJacobian.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="get_instr_spec.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="GetProfile.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="Hg_phmat.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="hydro_master_derivatives.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="InterpSR.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="jacobi.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="Jacobian.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="kirchoff_ocean_refl.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="mex_matlab_mrt.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="mrt.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="o2abs.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="ocean_refl.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="rd.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="rf.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="RT_Jacobian.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="Tb94.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="variables.f90">
+      <FileType>Document</FileType>
+    </CustomBuild>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
