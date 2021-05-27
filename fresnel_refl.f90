@@ -38,7 +38,7 @@ implicit none
   gamv = (term2-term1)/(term2+term1)
   term2 = mu*costheta
   gamh = (term2-term1)/(term2+term1)
-  surf_ref_ver = gamv * dconjg(gamv)
-  surf_ref_hor = gamh * dconjg(gamh)
+  surf_ref_ver = real(gamv * dconjg(gamv))
+  surf_ref_hor = real(gamh * dconjg(gamh))
 
 end subroutine fresnel_refl

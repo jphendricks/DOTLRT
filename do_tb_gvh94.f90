@@ -78,8 +78,8 @@ implicit none
     END DO ! ilev
 
     DO i=1,nangover2
-      IF (ipol == 1) surf_reflec(i) = surf%vref(i)
-      IF (ipol == 0) surf_reflec(i) = surf%href(i)
+      IF (int(ipol) == 1) surf_reflec(i) = surf%vref(i)
+      IF (int(ipol) == 0) surf_reflec(i) = surf%href(i)
     END DO
 
     CALL dtb94 ()

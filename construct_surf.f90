@@ -61,7 +61,7 @@ implicit none
     do ilat = 1,nlat
       do ilon = 1,nlon
         surf%temp = TSK(ilon, ilat)
-        surf%type = landmask(ilon, ilat)
+        surf%type = int(landmask(ilon, ilat))
         if (trim(surf%ocean_mod) == 'Wilheit') surf%wind = wind(ilon, ilat)
         call construct_surf_characteristics(sref_hor(ilon,ilat,ichan,:), sref_ver(ilon,ilat,ichan,:))
       enddo

@@ -31,6 +31,7 @@ subroutine calc_tot_ext(freq)
   real(8) dabh2o_t, dabh2o_v, dabh2o_p
   real(8) do2abs_t, do2abs_v,do2abs_p
   real(8), external  :: o2abs, absn2, abh2o
+  real(8), parameter :: tol = 0.00001
 
   do level = 1, nlev
     gas_prof(level)%absn2 = absn2(atm(level)%temp, &
@@ -177,8 +178,8 @@ subroutine calc_tot_ext(freq)
                                   + abs_cloud_snow + abs_cloud_grpl
     atm(level)%scat_cloud = scat_cloud_liq + scat_cloud_rn + scat_cloud_ice &
                                        + scat_cloud_snow + scat_cloud_grpl
-    if( (scat_cloud_liq + scat_cloud_rn + scat_cloud_ice + &
-         scat_cloud_snow + scat_cloud_grpl) .ne. 0.0d0 ) then
+    if( abs(scat_cloud_liq + scat_cloud_rn + scat_cloud_ice + &
+         scat_cloud_snow + scat_cloud_grpl) < tol ) then
          atm(level)%asymmetry = (scat_cloud_liq * g_cloud_liq &
                                        +  scat_cloud_rn * g_cloud_rn &
                                        +  scat_cloud_ice * g_cloud_ice &

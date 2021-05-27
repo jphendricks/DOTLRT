@@ -168,7 +168,7 @@ END IF
    END IF                  ! end of dielectric constant calculation
 
 !-----------------------------------------------------------------------
-   IF( DIMAG(epsil) > 0.0d0 .AND. DREAL(epsil) /= 1.0d0 ) THEN  
+   IF( DIMAG(epsil) > 0.0d0 .AND. abs(DREAL(epsil)-1.0d0) > 0.0d0 ) THEN  
 !-----------------------------------------------------------------------
 
      IF( p >= 0.d0 .AND. q > 0.d0 ) THEN
@@ -285,12 +285,12 @@ x= ka*alph      ;      dx =  dka_da0*alph+ka*dalph_da0
         dalph_da0 = dalph_da0 + ddalph_da0
      END DO
 
-     IF( hsc /= 0.d0 ) THEN
+     IF( abs(hsc) > 0.d0 ) THEN
        g   =  g    /hsc
       dg_dt = dg_dt /hsc - g/hsc*dhsc_dt ! note that g here is the previous g divided by hsc
       dg_da0= dg_da0/hsc - g/hsc*dhsc_da0  ! ditto
      ELSE
-      IF( g /= 0.d0 ) THEN
+      IF( abs(g) > 0.d0 ) THEN
         ! WRITE(outfile,'(30x,a )') ' HYDROMETEOR_EXT_5PH_d: '
         ! WRITE(outfile,'( 5x,a/)') ' INCONSISTENT SCATTERING AND ASSYMETRY '
        g    = 0.d0
@@ -606,7 +606,7 @@ EXTERNAL  h2o_liq_diel_d                        &
    END IF                  ! end of dielectric constant calculation
 
 !-----------------------------------------------------------------------
-   IF( DIMAG(epsil) > 0.0d0 .AND. DREAL(epsil) /= 1.0d0 ) THEN  
+   IF( DIMAG(epsil) > 0.0d0 .AND. abs(DREAL(epsil)-1.0d0) > 0.0d0 ) THEN  
 !-----------------------------------------------------------------------
 
      IF( p >= 0.d0 .AND. q > 0.d0 ) THEN 
@@ -727,12 +727,12 @@ END IF
      END DO
 !!!!!!1 DERIVATIVE OF HEX IS GOOD TO HERE
 
-     IF( hsc /= 0.d0 ) THEN
+     IF( abs(hsc) > 0.d0 ) THEN
        g   =  g    /hsc
       dg_dt = dg_dt /hsc - g/hsc*dhsc_dt ! note that g here is the previous g divided by hsc
    !   dg_da0= dg_da0/hsc - g/hsc*dhsc_da0  ! ditto
      ELSE
-      IF( g /= 0.d0 ) THEN
+      IF( abs(g) > 0.d0 ) THEN
        ! WRITE(outfile,'(30x,a )') ' HYDROMETEOR_EXT_5PH_d: '
        ! WRITE(outfile,'( 5x,a/)') ' INCONSISTENT SCATTERING AND ASSYMETRY '
        g    = 0.d0
@@ -958,6 +958,7 @@ real(8) ::  pi, c , speclength, f, meanradrel, sigmarel, ka   &
                    , weight , alph, alph1, dalph, alphu, w, dw_dt 
 
 real(8) :: ddalph_da0, dalph1_da0, dalph_da0, dweight_da0, dc_da0, dw_da0, df_da0
+real(8), parameter :: tol = 0.000001
 
 ! real(8) :: dw_dk0, df_dk0
 
@@ -1004,7 +1005,7 @@ EXTERNAL  h2o_liq_diel_d                        &
    END IF                  ! end of dielectric constant calculation
 
 !-----------------------------------------------------------------------
-   IF( DIMAG(epsil) > 0.0d0 .AND. DREAL(epsil) /= 1.0d0 ) THEN  
+   IF( DIMAG(epsil) > 0.0d0 .AND. abs(DREAL(epsil)-1.0d0) > tol ) THEN  
 !-----------------------------------------------------------------------
 
      IF( p >= 0.d0 .AND. q > 0.d0 ) THEN
@@ -1121,12 +1122,12 @@ EXTERNAL  h2o_liq_diel_d                        &
         dalph_da0 = dalph_da0 + ddalph_da0 !!!!!!!!!!!!!!!!!!!!!!!!!!!! 
      END DO
 
-     IF( hsc /= 0.d0 ) THEN
+     IF( abs(hsc) > tol ) THEN
        g   =  g    /hsc
       dg_dt = dg_dt /hsc - g/hsc*dhsc_dt   ! note that g here is the previous g divided by hsc
       dg_da0= dg_da0/hsc - g/hsc*dhsc_da0  ! ditto
      ELSE
-      IF( g /= 0.d0 ) THEN
+      IF( abs(g) > 0.d0 ) THEN
        ! WRITE(outfile,'(30x,a )') ' HYDROMETEOR_EXT_5PH_d: '
        ! WRITE(outfile,'( 5x,a/)') ' INCONSISTENT SCATTERING AND ASSYMETRY '
        g    = 0.d0
@@ -1543,8 +1544,8 @@ DOUBLE COMPLEX  , PARAMETER :: iz=(0.d0,1.d0)
 
       ksc   = ksc   + delksc
 
-     dksc_dt=dksc_dt+ddelksc_dt
-     dksc_da=dksc_da+ddelksc_da
+     dksc_dt=real(dksc_dt+ddelksc_dt)
+     dksc_da=real(dksc_da+ddelksc_da)
 
        kex   = kex   +dble(2*n+1)*DREAL( smalan   +smalbn   )
 

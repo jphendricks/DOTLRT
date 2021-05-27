@@ -17,6 +17,7 @@
       PARAMETER (NMAX=50)
       INTEGER i,icol,irow,j,k,l,ll,indxc(NMAX),indxr(NMAX),ipiv(NMAX)
       REAL(8) big,dum,pivinv
+      REAL(8), PARAMETER :: tol = 0.00001
 
       do 11 j=1,n
         ipiv(j)=0
@@ -53,7 +54,7 @@
         endif
         indxr(i)=irow
         indxc(i)=icol
-        if (a(icol,icol).eq.0.0d0) stop 'b singular matrix in gaussj'
+        if (abs(a(icol,icol)) < tol) stop 'b singular matrix in gaussj'
         pivinv=1.0d0/a(icol,icol)
         a(icol,icol)=1.0d0
         do 16 l=1,n

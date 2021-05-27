@@ -34,6 +34,7 @@ DOUBLE PRECISION :: currentA
 DOUBLE PRECISION :: deltaA, Aup
 DOUBLE PRECISION :: deltaSRV, SRVup
 DOUBLE PRECISION :: deltaSRH, SRHup
+REAL(8), parameter :: tol = 0.00001
 
 DO i = 1, QN
 !
@@ -53,9 +54,9 @@ DO i = 1, QN
     IF (highP - lowP <= 1) EXIT
   END DO
 
-  IF (currentA == SRAngleA(1)) THEN
+  IF ( abs(currentA - SRAngleA(1)) < tol) THEN
          lowP = 1
-  ELSE IF (currentA == SRAngleA(QN)) THEN
+  ELSE IF ( abs(currentA - SRAngleA(QN)) < tol) THEN
      lowP = SRN - 1
   END IF
 

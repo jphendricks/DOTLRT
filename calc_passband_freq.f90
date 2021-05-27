@@ -22,7 +22,9 @@ subroutine calc_passband_freq()
     real(8)  :: if2_freq       !IF2 frequency    (GHz)
     real(8)  :: bandwidth      !filter bandwidth (GHz)
     real(8)  :: dtrms          !observation noise in degrees Kelvin (K)
-    real(8) freq_incr
+    real(8)  :: freq_incr
+    real(8)  :: freq
+    real(8), parameter :: tolerance = 0.00001d0
 
     lo_freq   = channel%lo_freq
     if1_freq  = channel%if1_freq
@@ -35,15 +37,15 @@ subroutine calc_passband_freq()
     if( (nsub_freq .le. 0) .or. (lo_freq .le. 0.0d0) .or.  &
         (if1_freq .lt. 0.0d0) .or. (if2_freq .lt. 0.0d0) .or. &
         (bandwidth .lt. 0.0d0) ) return
-    if( if1_freq .eq. 0.0d0) then
+    if( abs(if1_freq) .lt. tolerance ) then
         ! Single sideband or single conversion superhet receiver with
         ! only low pass IF filtering : one contigous passband
         if( ( (lo_freq-bandwidth/2.0d0) .gt. 0.0d0) .and. &
             ( (lo_freq+bandwidth/2.0d0) .lt. max_freq) ) then
             if( nsub_freq .gt. 1 ) then
                 if( nsub_freq .gt. max_nfreq ) then
-                    freq_incr = bandwidth/dble(max_nfreq-1)
-                    freq = lo_freq-bandwidth/2.0d0
+                    freq_incr = bandwidth/real(max_nfreq-1,8)
+                    freq = lo_freq-bandwidth/2.0d0 
                     do i = 1, max_nfreq 
                         passband_freq(i) = freq
                         freq = freq+freq_incr
@@ -69,7 +71,7 @@ subroutine calc_passband_freq()
             ! ERROR: Channel frequency out of range
         end if
     else ! if1_freq
-        if( if2_freq .eq. 0.0d0 ) then
+        if( abs(if2_freq) .lt. tolerance ) then
             ! Double sideband or double conversion superhet receiver with only
             ! low pass 2nd IF filtering one or two contigous passbands
             if( ((lo_freq-if1_freq-bandwidth/2.0d0) .gt. 0.0d0) .and.    &

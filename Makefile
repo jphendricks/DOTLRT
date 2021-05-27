@@ -3,14 +3,11 @@
 # List of Source objects for each main calling sequence 
 dot= DOTLRT_variables.o profiles.o DOTLRT_output.o DOTLRT_main.o absh2o.o absn2.o calc_fbw_temp_weight_scat.o calc_mon_temp_weight_scat.o calc_passband_freq.o calcprofile.o calc_tot_ext.o configure.o construct_surf.o core95.o d3lec.o do_tb_gvh94.o Dtb94.o fresnel_refl.o gaussj.o gaussq.o GeoJacobian.o get_instr_spec.o GetProfile.o Hg_phmat.o hydro_master_derivatives.o InterpSR.o Jacobian.o jacobi.o kirchoff_ocean_refl.o mrt.o o2abs.o rd.o rf.o RT_Jacobian.o Tb94.o handle_err.o read_WRF_netcdf.o get_data.o read_namel.o write_output.o
 
-# netcdf crap /home/kevin/LIB/netcdf
-NETCDFINC = /home/kevin/LIB/netcdf/include
-NETCDFLIB = /home/kevin/LIB/netcdf/lib
-NETCDFbin = /home/kevin/LIB/netcdf/bin
+NCDIR = $(HOME)/local
 
 FC =		gfortran
-FFLAGS =	-Wall -Wextra -I$(NETCDFINC) -fbounds-check 	
-LIBS =		-L$(NETCDFLIB) -lnetcdf -lnetcdff
+FFLAGS =	-g -Wall -Wextra -I$(NCDIR)/include -fbounds-check -Wuninitialized -Wunused -ffree-line-length-none -fbounds-check -fbacktrace -ffpe-trap=invalid,zero,overflow 	
+LIBS =		-L$(NCDIR)/lib -lnetcdf -lnetcdff
 #
 
 # Object list for each subroutine(s) in a separate file

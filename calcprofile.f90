@@ -22,14 +22,14 @@ subroutine calcprofile_d()
     use dotlrt_variables
     integer index  
     DOUBLE PRECISION dk0_dw ! w !w=water density, 
-
+    real(8), parameter :: zero = 0.0d0
 ! tests
 !   double precision cloud_w_dens(2), cloud_k0(2), cloud_a0(2), dkdw, dadw
 ! derivatives of k0 and a0 with respect to cloud water density (each phase)
 ! is multipled by cloud water density (each phase) to remove infinities
 ! when cloud water density (each phase) goes to zero.
     do index= 1, nlev
-        if( atm(index)%clw_dens .ne. 0.0d0 ) then
+        if( abs(atm(index)%clw_dens) > zero ) then
             ! Marshall Palmer distribution
             atm(index)%clw_p  = 0.0d0
             atm(index)%clw_q  = 1.0d0
@@ -51,7 +51,7 @@ subroutine calcprofile_d()
             a0_const(index,1) = .true.
         end if
         
-        if( atm(index)%rain_dens .ne.  0.0d0 ) then
+        if( abs(atm(index)%rain_dens) >  zero ) then
             ! Marshall Palmer distribution
             atm(index)%rain_p  = 0.0d0
             atm(index)%rain_q  = 1.0d0
@@ -90,7 +90,7 @@ subroutine calcprofile_d()
             a0_const(index,2) = .true.
         end if
         
-        if( atm(index)%ice_dens .ne. 0.0d0 ) then
+        if( abs(atm(index)%ice_dens) > zero ) then
             ! Sekhon-Sriv. Distribution, for two phase ice
             atm(index)%ice_p  = 0.0d0
             atm(index)%ice_q  = 1.0d0
@@ -127,7 +127,7 @@ subroutine calcprofile_d()
             a0_const(index,3) = .true.
         end if
         
-        if( atm(index)%snow_dens .ne. 0.0d0 ) then
+        if( abs(atm(index)%snow_dens) > zero ) then
             ! Tao, Prasad, Alder snow size distributions converted to a0 and k0 form
             ! (see ntbk#3 pg 111)
             atm(index)%snow_p  = 0.0d0
@@ -163,7 +163,7 @@ subroutine calcprofile_d()
            a0_const(index,4) = .true.
         end if
         
-        if( atm(index)%grpl_dens .ne. 0.0d0 ) then
+        if( abs(atm(index)%grpl_dens) > zero ) then
             ! Tao, Prasad, Alder graupel size distributions converted to a0 and k0 form
             ! (see ntbk#3 pg 111)
             atm(index)%grpl_p  = 0.0d0

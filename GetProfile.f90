@@ -23,18 +23,19 @@ subroutine hydro_layer_geometry(profile)
   real(8) var      ! (varies) generic variance
   real(8) nlayer   ! (-) number of layers
   real(8) tot      ! (varies) generic total
+  real(8), parameter :: tol = 0.000001
 
 ! find bottom of hydrometeor layer
   do ilev = 1, nlev
     indx_bot=ilev
-    if(profile(ilev)/=0.d0) exit
+    if(abs(profile(ilev)) > 0.d0) exit
   end do
   geom%h_bot=atm(indx_bot)%hgt_bot
 
 ! find top of hydrometeor layer
   do ilev = nlev,1,-1
     indx_top=ilev
-    if(profile(ilev)/=0.d0) exit
+    if(abs(profile(ilev)) > 0.d0) exit
   end do
   geom%h_top=atm(indx_top)%hgt_top
   
@@ -64,7 +65,7 @@ subroutine hydro_layer_geometry(profile)
 ! calculate height of maximum of hydrometeor value
   geom%h_max=atm(indx_bot)%hgt
   do ilev = indx_bot,indx_top
-    if (geom%max == profile(ilev)) geom%h_max=atm(ilev)%hgt
+    if (abs(geom%max - profile(ilev)) > tol) geom%h_max=atm(ilev)%hgt
   end do
 
 ! calculate mean height of hydrometeor layer
@@ -115,12 +116,9 @@ subroutine construct_reduced_dim_atm_profile()
 ! atm(ilev)%grpl_dens   ! (g m-3) graupel mixing ratio
 
 ! calculate layer thicknesses
-  do ilev = 1, nlev
-    if (ilev==1) then
-      atm(ilev)%hgt_bot=0.d0
-    else
-      atm(ilev)%hgt_bot=atm(ilev-1)%hgt_top
-    endif
+  atm(1)%hgt_bot = 0.d0
+  do ilev = 2, nlev
+    atm(ilev)%hgt_bot=atm(ilev-1)%hgt_top
     h_del = atm(ilev)%hgt - atm(ilev)%hgt_bot
     atm(ilev)%hgt_top = atm(ilev)%hgt + h_del
     atm(ilev)%hgt_del = (atm(ilev)%hgt_top - atm(ilev)%hgt_bot) * 1000 ! convert to meters
@@ -153,27 +151,27 @@ subroutine construct_reduced_dim_atm_profile()
   end do
 
 ! calculate the geometry of each hydrometeor layer
-  if(reduced%clw%tot/=0.d0) then
+  if(abs(reduced%clw%tot) > 0.d0) then
     call hydro_layer_geometry(atm(:)%clw_dens)
     reduced%clw=geom
   endif
-  if(reduced%rain%tot/=0.d0) then
+  if(abs(reduced%rain%tot) > 0.d0) then
     call hydro_layer_geometry(atm(:)%rain_dens)
     reduced%rain=geom
   endif
-  if(reduced%ice%tot/=0.d0) then
+  if(abs(reduced%ice%tot) > 0.d0) then
     call hydro_layer_geometry(atm(:)%ice_dens)
     reduced%ice=geom
   endif
-  if(reduced%snow%tot/=0.d0) then
+  if(abs(reduced%snow%tot) > 0.d0) then
     call hydro_layer_geometry(atm(:)%snow_dens)
     reduced%snow=geom
   endif
-  if(reduced%grpl%tot/=0.d0) then
+  if(abs(reduced%grpl%tot) > 0.d0) then
     call hydro_layer_geometry(atm(:)%grpl_dens)
     reduced%grpl=geom
   endif
-  if(reduced%hydro%tot/=0.d0) then
+  if(abs(reduced%hydro%tot) > 0.d0) then
     call hydro_layer_geometry(atm(:)%hydro_dens)
     reduced%hydro=geom
   endif

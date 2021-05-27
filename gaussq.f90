@@ -1024,11 +1024,11 @@
                   SMALL(1) = J
  10               CONTINUE
 !              *** CRAY T3E ***
-               CALL I1MCRA(SMALL, K, 16, 0, 0)
-               CALL I1MCRA(LARGE, K, 32751, 16777215, 16777215)
-               CALL I1MCRA(RIGHT, K, 15520, 0, 0)
-               CALL I1MCRA(DIVER, K, 15536, 0, 0)
-               CALL I1MCRA(LOG10, K, 16339, 4461392, 10451455)
+               CALL I1MCRA(SMALL(1), K, 16, 0, 0)
+               CALL I1MCRA(LARGE(1), K, 32751, 16777215, 16777215)
+               CALL I1MCRA(RIGHT(1), K, 15520, 0, 0)
+               CALL I1MCRA(DIVER(1), K, 15536, 0, 0)
+               CALL I1MCRA(LOG10(1), K, 16339, 4461392, 10451455)
                GO TO 30
  20            CALL I1MCRA(J, K, 16405, 9876536, 0)
                IF (SMALL(1) .NE. J) THEN
@@ -1106,10 +1106,12 @@
 ! unpack floating point number x so that x = y * 2.0**n, where
 ! 0.5 .le. abs(y) .lt. 1.0 .
 !
+      real(8), parameter :: tol = 0.000001
+
       absx = abs(x)
       n = 0
       y = 0.0
-      if (x.eq.0.0) return
+      if (abs(x) > tol) return
 !
  10   if (absx.ge.0.5) go to 20
       n = n - 1
