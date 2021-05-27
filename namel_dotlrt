@@ -6,8 +6,8 @@ $dotlrt_control
 /
 
 $dotlrt_input_files
-  file_instr='/home/kevin/code/DOTLRTv2.1/inputs/Instr_Spec.instr'
-  file_var='/home/kevin/code/DOTLRTv2.1/inputs/var_def.txt'
+  file_instr='/home/johe6518/DOTLRT/inputs/Instr_Spec.instr'
+  file_var='/home/johe6518/DOTLRT/inputs/var_def.txt'
 /
 
 $dotlrt_rad_tran_param
