@@ -1,0 +1,42 @@
+number of variables in table                =40
+Variable                         Start     Stop      plotMin   plotMax   Typical
+ 1  generic                      2.        80.       0.        80.       30.
+ 2  Tplank (K)                   250.0     350.0     250.0     350.0     235.0
+ 3  wavelength (micron)          1.        51.       1.        51.       2.0
+ 4  Frequency (GHz)              1.        999.      180       186.      165.31
+ 5  Rel Humidity (%)             0.        100.      0.        100.      100.0
+ 6  Tair (K)                     200.0     320.0     250.0     275.0     288.
+ 7  rhoair (kg/m3)               0.0       2.        0.        2.        1.225
+ 8  Psur (mb)                    1.0       1000.0    1.0       1000.0    1000.0
+ 9  tofday (hr GMT)              0.0       24.0      0.0       24.0      12.0
+10  DOY (day)                    0.0       365.0     0.0       365.0     100.0
+11  dec (deg)                    -23.5     23.5      -23.5     23.5      10.0
+12  cosz (-)                     -0.2      1.0       -0.2      1.0       1.
+13  Lat (deg)                    -90.0     90.0      -90.0     90.0      0.
+14  Lon (deg)                    -180.0    180.0     -180.0    180.0     0.0
+15  obs_den (log10(g/m2))        -3.       2.0       -7.0      3.0       2.0
+16  generic den (log10(g/m3))    5.        4.        0.0       2.0       8.0
+17  clw_tot (log10(g/m2)))       0.        8.0       -7.0      7.0       5.0
+18  rain_tot (log10(g/m2))       0.        8.0       -7.0      7.0       5.0
+19  ice_tot (log10(g/m2))        0.        8.0       -7.0      7.0       5.0
+20  snow_tot (log10(g/m2))       0.        8.0       -7.0      7.0       5.0
+21  grpl_tot (log10(g/m2))       0.        8.0       -7.0      7.0       5.0
+22  cloud_tot (log10(g/m2))      0.        8.0       -7.0      3.0       5.0
+23  precip_tot (log10(g/m2))     0.        8.0       -7.0      3.0       5.0
+24  hydro_tot (log10(g/m2))      0.        8.0       -7.0      3.0       5.0
+25  cloud top (km)               6.5       10.0      0.0       3.0       6.0
+26  cloud bot (km)               0.0       1.0       0.0       3.0       1.0
+27  precip top (km)              0.1       10.0       0.0      3.0       5.0
+28  precip bot (km)              0.0       1.0       0.0       3.0       0.0
+29  unused (-)                   0.0       3.0       0.0       3.0       3.0
+30  unused (-)                   0.0       3.0       0.0       3.0       3.0
+31  unused (-)                   0.0       3.0       0.0       3.0       3.0
+32  unused (-)                   0.0       3.0       0.0       3.0       3.0
+33  unused (-)                   0.0       3.0       0.0       3.0       3.0
+34  unused (-)                   0.0       3.0       0.0       3.0       3.0
+35  unused (-)                   0.0       3.0       0.0       3.0       3.0
+36  unused (-)                   0.0       0.0       0.0       0.0       0.0
+37  unused (-)                   0.0       0.0       0.0       0.0       0.0
+38  unused (-)                   0.0       0.0       0.0       0.0       0.0
+39  unused (-)                   0.0       0.0       0.0       0.0       0.0
+40  unused (-)                   0.0       0.0       0.0       0.0       0.0
