@@ -1,3 +1,0 @@
-#!/bin/bash
-
-./dot.out ${HOME}/inputs/WRF_Output/wrfout_d02_2019-05-26_12_00_00 ${HOME}/DOTLRT/output/
