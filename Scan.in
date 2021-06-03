@@ -1,0 +1,94 @@
+start input in column 46--------------------|
+                                   scan type=mrt_chan
+Scan options--------------------------------|
+  scan 2-D or 3-D?              2=2-D 3=3-D =2
+  X var(see SibscanDat)?                    =23
+  Y var(see SibscanDat)?                    =0
+  number lines(2-D only)                    =16
+  Number of points in scan                  =10
+                                 min channel=1
+                                 max channel=1
+  Save 2D data?            0=no 1=txt 2=csv =2
+  Save 3D data?            0=no 1=txt 2=csv =2
+               Calculate psuedo data profile=t
+             num var for psuedo data profile=8
+num doit  Varname      ind1    ind1   val1       val2       val3
+1   f     'read_FY3'   3       0      0.0d0      0.d0       0.0d0
+2   t     'read_sing'  1       0      0.0d0      0.d0       0.0d0
+3   f     'cloud'      0       0      2.0d0      8.0d0      4.d0
+4   f     'precip'     0       0      2.0d0      5.d0       3.0d0
+5   f     'temp'       0       0      300.0d0    210.d0     15.0d0
+6   t     'calc_tb'    0       0      0.0d0      0.d0       0.0d0
+7   t     'print_prof' 0       0      0.0d0      0.d0       0.0d0
+8   t     'print_obs'  0       0      0.0d0      0.d0       0.0d0
+                      Calculate init profile=t
+                    num var for init profile=8
+num doit  Varname  ind1    ind1   val1       val2       val3
+1   t     'read_sing'  1       0      0.0d0      0.d0       0.0d0
+2   f     'temp'       0       0      300.0d0    210.d0     15.0d0
+3   t     'cloud'      0       0      2.1d0      2.1d0      0.7d0
+4   t     'precip'     0       0      2.5d0      0.4d0      1.5d0
+5   t     'print_prof' 0       0      0.0d0      0.d0       0.0d0
+6   t     'write_prof' 2       0      0.0d0      0.d0       0.0d0
+7   f     'calc_tb'    0       0      0.0d0      0.d0       0.0d0
+8   f     'print_obs'  0       0      0.0d0      0.d0       0.0d0
+Output options------------------------------|
+  Plot data?                     1=yes 2=no =2
+  color contour plots?           1=yes 2=no =1
+  Y label (2-D only)                        =Value
+  Scale Y-axis (2-D only)?    (1=auto 2=man)=1
+                                        Ymin=-20.
+                                        Ymax=0.
+  plot title                                =
+  plot legends?                  1=yes 2=no =1
+                           number of legends=16
+num  legend
+1    'Total'
+2    'FY3 Ch 1'
+3    'FY3 Ch 2'
+4    'FY3 Ch 3'
+5    'FY3 Ch 4'
+6    'FY3 Ch 5'
+7    'FY3 Ch 6'
+8    'FY3 Ch 7'
+9    'FY3 Ch 8'
+10   'FY3 Ch 9'
+11   'FY3 Ch 10'
+12   'FY3 Ch 11'
+13   'FY3 Ch 12'
+14   'FY3 Ch 13'
+15   'FY3 Ch 14'
+16   'FY3 Ch 15'
+            Plot to screen (=1) or file (=2)=1
+  plot file name                            =/home/schaefek/code/testbed/Plots/plot
+  Contour scale (0=auto, 1=man, 2=int,3=pwr)=1
+  Contour base                              =.05
+  Mumber of Contours                        =10
+                                  mincontour=0.
+                                  maxcontour=5.
+                      colorbar number format=f4.1
+Input/Output Files--------------------------|
+                                number files=4
+num   type          path
+1     'atm_prof'    '/home/schaefek/code/testbed/inputs/atm_profile.txt'
+2     'out_path'    '/home/schaefek/code/testbed/Plots/Atm_prof_opt.csv'
+3     'obs_path'    '/home/schaefek/code/testbed/inputs/Case_02.csv'
+4     'prof_path'   '/home/schaefek/code/testbed/Plots/Atm_prof_init.csv'
+output manipulations------------------------|
+                        number manipulations=1
+doit  type         map    ind2    Val1      val2
+f     'sum'        1      2       0.        0.
+-------does not read beyond this line--------
+
+
+atm profile Key:
+Varname      ind1        ind2     val1               val2          val3
+'cloud'      na          na       col_tot (g/m3)     peak (km)     std (km)
+'precip'     na          na       col_tot (g/m3)     peak (km)     std (km)
+'temp'       na          na       Tsurf (K)          Ttrop (K)     Height trop (km)
+'read_sing'  pathnum     na       na                 na            na
+'calc_tb'    na          na       na                 na            na    
+'read_FY3'   na          na       na                 na            na
+'print_prof' na          na       na                 na            na
+'write_prof' pathnum     na       na                 na            na
+'print_obs'  na          na       na                 na            na

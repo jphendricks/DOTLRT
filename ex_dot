@@ -1,0 +1,3 @@
+#./dot.out /home/kevin/code/DOTLRTv2.1/inputs/atm_profile.txt /home/kevin/code/DOTLRTv2.1/output/
+
+./dot.out /home/kevin/inputs/WRF_Output/wrfout_d02_2019-05-26_12_00_00 /home/kevin/code/DOTLRTv2.1/output/
