@@ -6,25 +6,25 @@ $dotlrt_control
 /
 
 $dotlrt_input_files
-  file_instr='/home/schaefek/code/testbed/inputs/Inst_FY3.instr'
-  file_var  ='/home/schaefek/code/testbed/inputs/var_def.txt'
+  file_instr='/home/alim/weatherlock/DOTLRTv2.1_mpi/inputs/Instr_Spec.instr'
+  file_var='/home/alim/weatherlock/DOTLRTv2.1_mpi/inputs/var_def.txt'
 /
 
 $dotlrt_rad_tran_param
   nstream = 16
   nstream_surf = 8
-  obs_height = 500.
-  obs_theta = 0.
+  obs_height = 400.
+  obs_theta = 25.
   nsub_freq = 1
 /
 
 $dotlrt_grid_param
   chan_strt = 1
-  chan_stop = 1
+  chan_stop = 22
   lon_strt = 1
-  lon_stop = 1
+  lon_stop = 498
   lat_strt = 1
-  lat_stop = 1
+  lat_stop = 381
   flag_reduce_nvar = .false.
   new_nlev = 73
 /
@@ -32,9 +32,9 @@ $dotlrt_grid_param
 $dotlrt_output_control
   save_sing_prof = .false.
   save_sing_rad = .false.
-  save_ilon = 1
-  save_ilat = 1
-  save_rad_file = .false.
+  save_ilon = 100
+  save_ilat = 200
+  save_rad_file = .true.
   save_jac_file = .false.
   save_prof_file = .false.
 /

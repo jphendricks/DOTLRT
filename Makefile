@@ -3,6 +3,7 @@ SHELL=/bin/sh
 # List of Source objects for each main calling sequence 
 # (main first, subroutines second)
 
+<<<<<<< HEAD
 test= DOTLRT_variables.o profiles.o DOTLRT_output.o scan_mod.o scan.o scan_control.o scan_routines.o scan_var_assign.o scan_var_control.o  scan_read_input.o absh2o.o absn2.o calc_fbw_temp_weight_scat.o calc_mon_temp_weight_scat.o calc_passband_freq.o calcprofile.o calc_tot_ext.o configure.o construct_surf.o core95.o d3lec.o do_tb_gvh94.o Dtb94.o fresnel_refl.o gaussj.o gaussq.o GeoJacobian.o get_instr_spec.o GetProfile.o Hg_phmat.o hydro_master_derivatives.o InterpSR.o Jacobian.o jacobi.o kirchoff_ocean_refl.o mrt.o o2abs.o rd.o rf.o RT_Jacobian.o Tb94.o handle_err.o read_WRF_netcdf.o get_data.o read_namel.o write_output.o
 
 # Tunable parameters
@@ -30,6 +31,24 @@ FC =		gfortran
 FFLAGS =	-Wall -Wextra -I$(NETCDFINC) -Wno-compare-reals -Wno-do-subscript -fbounds-check
 LIBS =		-L$(NETCDFLIB) -lnetcdf -lnetcdff 
 LDFLAGS =       	
+=======
+# netcdf crap /home/kevin/LIB/netcdf
+#NETCDFINC = /home/kevin/LIB/netcdf/include
+#NETCDFLIB = /home/kevin/LIB/netcdf/lib
+#NETCDFbin = /home/kevin/LIB/netcdf/bin
+
+NETCDF = ${SSEC_NETCDF_DIR}
+
+NETCDFINC = ${NETCDF}/include
+NETCDFLIB = ${NETCDF}/lib
+NETCDFbin = ${NETCDF}/bin
+
+FC =            mpiifort
+#FC =		gfortran
+#FFLAGS =	-Wall -Wextra -I$(NETCDFINC) -fbounds-check 	
+FFLAGS =        -I$(NETCDFINC)
+LIBS =		-L$(NETCDFLIB) -lnetcdf -lnetcdff
+>>>>>>> DOTLRTv2.1-MPI
 #
 # end machine uniquescan_var_assign.o
 CMD =		a.out

@@ -49,7 +49,7 @@ allocate(dTb_dw_streams(nlev,nangover2,nphase,updown))
 
 ! model hydrometeor distribution parameters
   call calcprofile_d()
-
+      
 do jpol = 1, npol ! 1 = horizontal, 2 = vertical polarization
   call calc_fbw_temp_weight_scat( Tbo_mat(jpol), tau, Tb_obs, dTb_dT_obs, dTb_dp_obs, dTb_dq_obs, dTb_dw_obs, &
     Tbo_streams, dTb_dT_streams, dTb_dp_streams, dTb_dq_streams, dTb_dw_streams)

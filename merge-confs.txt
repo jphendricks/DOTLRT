@@ -1,0 +1,25 @@
+Auto-merging write_output.f90
+Auto-merging namel_dotlrt
+CONFLICT (content): Merge conflict in namel_dotlrt
+Auto-merging mrt.f90
+CONFLICT (content): Merge conflict in mrt.f90
+Auto-merging gaussq.f90
+Auto-merging core95.f90
+CONFLICT (content): Merge conflict in core95.f90
+Auto-merging configure.f90
+CONFLICT (content): Merge conflict in configure.f90
+Auto-merging calc_tot_ext.f90
+CONFLICT (content): Merge conflict in calc_tot_ext.f90
+Auto-merging calc_mon_temp_weight_scat.f90
+CONFLICT (content): Merge conflict in calc_mon_temp_weight_scat.f90
+Auto-merging Tb94.f90
+CONFLICT (content): Merge conflict in Tb94.f90
+Auto-merging Makefile
+CONFLICT (content): Merge conflict in Makefile
+Auto-merging GetProfile.f90
+CONFLICT (content): Merge conflict in GetProfile.f90
+Auto-merging DOTLRT_variables.f90
+CONFLICT (content): Merge conflict in DOTLRT_variables.f90
+CONFLICT (add/add): Merge conflict in .gitignore
+Auto-merging .gitignore
+Automatic merge failed; fix conflicts and then commit the result.
