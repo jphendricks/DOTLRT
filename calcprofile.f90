@@ -1,203 +1,141 @@
 !===================================================================
 subroutine calcprofile_d()
 !===================================================================
-! p and q vary depending on the phase of condensed water, but are constant given for each phase;
-!         they are parameters of the gamma distribution of hydrometeor sizes.
-! k0 and a0 depend only on water density in each of the phases;
-!         they do not depend upon temperature or microwave frequency.
+! calculates vertical profile of particle size distribution parameters 
+! p and q are constant for each phase and are parameters of gamma distribution of hydrometeor size
+! k0 and a0 depend only on phase density and not temperature or frequency.
+!
 ! History:
-!   9/26/2020 Kevin Schaefer deleted unused variables and tabs 
-!     1 - Original from Gail Skofronick Jackson
-!     2 - Modified for MRT by Marian Klein, November 1998
-!     3 - Provided in PASCAL by Marian Klein and Albin Gasiewski
-!         NOAA ETL/ET1 Microwave System Development Division
-!     4 - Converted April 2003 from PASCAL to FORTRAN by Ronald Richter
-!         ron.richter@noaa.gov NOAA/ETL SET
-!         FORTRAN 90 Portland Group Compiler on Red Hat Linux
-!     5 - Differentiated and derivatives were tested by Reg Hill Aug. 2003
-!     6 - The logical variable "a0_const" was inserted by Reg Hill 8/28/03 to identify cases for
-!         which a0 is constant because a great savings of computer time is obtained for that case.
-!         The savings is in subroutine HYDROMETEOR_MASTER_5PH_D
+! TBD       Gail Skofronick Jackson wrote Original code 
+! 11/1/1998 Marian Klein Modified code for MRT
+! 4/1/2003  Ronald Richter Converted code from Marian Klein and Albin Gasiewski from PASCAL to FORTRAN
+! 8/1/2003  Reg Hill tested Differentiated and derivatives 
+! 8/28/2003 Reg Hill inserted "a0_const" to save computer time in subroutine HYDROMETEOR_MASTER_5PH_D
+! 9/26/2020 Kevin Schaefer deleted unused variables and tabs 
+! 2/3/2021  Kevin Schaefer cleaned up code, deleted all unused code
 !-------------------------------------------------------------------
-    use dotlrt_variables
-    integer index  
-    DOUBLE PRECISION dk0_dw ! w !w=water density, 
+use dotlrt_variables
 
-! tests
-!   double precision cloud_w_dens(2), cloud_k0(2), cloud_a0(2), dkdw, dadw
+! internal variables
+  integer ilev   ! (-) level index
+  real(8) den_min ! (g/m3) minimum density
+  
+  den_min=1.0d-10
+
 ! derivatives of k0 and a0 with respect to cloud water density (each phase)
 ! is multipled by cloud water density (each phase) to remove infinities
 ! when cloud water density (each phase) goes to zero.
-    do index= 1, nlev
-        if( atm(index)%clw_dens .ne. 0.0d0 ) then
-            ! Marshall Palmer distribution
-            atm(index)%clw_p  = 0.0d0
-            atm(index)%clw_q  = 1.0d0
-            ! Constant a0, k0 varies w/r/t M
-            dk0_dw = 2.0d0 * 1989436788.65d0
-            atm(index)%dclw_k0_dw = dk0_dw
 
-            atm(index)%clw_k0 = dk0_dw * atm(index)%clw_dens
-            atm(index)%clw_a0 = 0.01d0
-            atm(index)%dclw_a0_dw = 0.0d0
-            a0_const(index,1) = .true.
-        else
-            atm(index)%clw_p  = 0.0d0
-            atm(index)%clw_q  = 0.0d0
-            atm(index)%clw_k0 = 0.0d0
-            atm(index)%clw_a0 = 0.0d0
-            atm(index)%dclw_k0_dw = 0.0d0
-            atm(index)%dclw_a0_dw = 0.0d0
-            a0_const(index,1) = .true.
-        end if
-        
-        if( atm(index)%rain_dens .ne.  0.0d0 ) then
-            ! Marshall Palmer distribution
-            atm(index)%rain_p  = 0.0d0
-            atm(index)%rain_q  = 1.0d0
-            atm(index)%rain_k0 = 16000.0d0 
-            atm(index)%rain_a0 = 0.22331d0 &
-                   * ( atm(index)%rain_dens**0.250d0 )
-         ! da0_dw(index,2) = 0.250d0 * (atm(index)%rain_a0)/(atm(index)%rain_dens)
-            if( atm(index)%rain_dens < 1.d0-8 ) then
-              atm(index)%drain_a0_dw = 0.0d0
-            else
-              atm(index)%drain_a0_dw = 0.250d0 * (atm(index)%rain_a0)/(atm(index)%rain_dens)
-            end if
-      !      atm(index)%drain_a0_dw = 0.250d0 * (atm(index)%rain_a0)
-            ! dk0_dw(index,2) = 0.d0
-            atm(index)%drain_k0_dw = 0.0d0
-            a0_const(index,2) = .false.
+  do ilev= 1, nlev
+    !print*, ilev, atm(ilev)%clw%fhydro, atm(ilev)%rain%fhydro, atm(ilev)%ice%fhydro, atm(ilev)%snow%fhydro, atm(ilev)%grpl%fhydro
 
-            !write(debugout,*) "rain:a0,k0=", atm(index)%rain_a0, atm(index)%rain_k0
-            !all mexPrintf(debugout//achar(10))
+! Cloud liquid water
+! Marshall Palmer distribution
+! Constant a0, k0 varies wrt mass
+    if( atm(ilev)%clw%dens > den_min ) then
+      atm(ilev)%clw%p  = 0.0d0
+      atm(ilev)%clw%q  = 1.0d0
+      atm(ilev)%clw%dk0_dw = 2.0d0 * 1989436788.65d0
+      atm(ilev)%clw%da0_dw = 0.0d0
+      atm(ilev)%clw%k0 = atm(ilev)%clw%dk0_dw * atm(ilev)%clw%dens
+      atm(ilev)%clw%a0 = 0.01d0
+      atm(ilev)%clw%a0_const = .true.
+    else
+      atm(ilev)%clw%p  = 0.0d0
+      atm(ilev)%clw%q  = 1.0d0
+      atm(ilev)%clw%dk0_dw = 2.0d0 * 1989436788.65d0
+      atm(ilev)%clw%da0_dw = 0.0d0
+      atm(ilev)%clw%k0 = atm(ilev)%clw%dk0_dw * den_min
+      atm(ilev)%clw%a0 = 0.01d0
+      atm(ilev)%clw%a0_const = .true.
+    end if
 
-            !tests
-            !loud_w_dens(1) = (1.0d0-1.0d-6) * atm(index)%rain_dens
-            !loud_w_dens(2) = (1.0d0+1.0d-6) * atm(index)%rain_dens
-            !do j = 1, 2
-            !  cloud_a0(j) = 0.223d0 * ( cloud_w_dens(j)**0.250d0 )
-            !end do
-            !da_dw = ( cloud_a0(2) - cloud_a0(1) ) / ( cloud_w_dens(2) - cloud_w_dens(1) )
-        else
-            atm(index)%rain_p  = 0.0d0
-            atm(index)%rain_q  = 0.0d0
-            atm(index)%rain_k0 = 0.0d0
-            atm(index)%rain_a0 = 0.0d0
-			! da0_dw(index,2) = 0.d0  ;  dk0_dw (index,2) = 0.d0
-            atm(index)%drain_k0_dw = 0.0d0
-            atm(index)%drain_a0_dw = 0.0d0
-            a0_const(index,2) = .true.
-        end if
-        
-        if( atm(index)%ice_dens .ne. 0.0d0 ) then
-            ! Sekhon-Sriv. Distribution, for two phase ice
-            atm(index)%ice_p  = 0.0d0
-            atm(index)%ice_q  = 1.0d0
-            ! Constant a0, k0 varies w/r/t M, assumes no size change when changing phase
-            ! (see Bauer and Schluessel) - allows for polydispersive sizes and for mie
-            ! and Rayleigh scattering
-         ! dk0_dw(index,3) = 2.0d0 * 1989436788.65d0
-            dk0_dw = 2.0d0 * 1989436788.65d0
-            atm(index)%dice_k0_dw = dk0_dw
-     !       atm(index)%dice_k0_dw = atm(index)%dice_k0_dw &
-     !                                            * atm(index)%ice_dens
-            ! atm(index)%ice_k0 = dk0_dw (index,3) * atm(index)%ice_dens 
-            atm(index)%ice_k0 = dk0_dw * atm(index)%ice_dens
-            atm(index)%ice_a0 =  0.01d0
-         ! da0_dw(index,3) = 0.d0
-            atm(index)%dice_a0_dw = 0.d0
-         a0_const(index,3) = .true.
+! rain
+! Marshall Palmer distribution
+    if( atm(ilev)%rain%dens > den_min ) then
+      atm(ilev)%rain%p  = 0.0d0
+      atm(ilev)%rain%q  = 1.0d0
+      atm(ilev)%rain%k0 = 16000.0d0 
+      atm(ilev)%rain%a0 = 0.22331d0 * ( atm(ilev)%rain%dens**0.250d0 )
+      atm(ilev)%rain%da0_dw = 0.250d0 * (atm(ilev)%rain%a0)/(atm(ilev)%rain%dens)
+      atm(ilev)%rain%dk0_dw = 0.0d0
+      atm(ilev)%rain%a0_const = .false.
+    else
+      atm(ilev)%rain%p  = 0.0d0
+      atm(ilev)%rain%q  = 1.0d0
+      atm(ilev)%rain%k0 = 16000.0d0 
+      atm(ilev)%rain%a0 = 0.22331d0 * ( den_min**0.250d0 )
+      atm(ilev)%rain%da0_dw = 0.250d0 * (atm(ilev)%rain%a0)/(den_min)
+      atm(ilev)%rain%dk0_dw = 0.0d0
+      atm(ilev)%rain%a0_const = .false.
+    end if
 
-            !tests
-            !loud_w_dens(1) = (1.0d0-1.0d-6) * atm(index)%ice_dens
-            !loud_w_dens(2) = (1.0d0+1.0d-6) * atm(index)%ice_dens
-            !do j = 1, 2
-            !  cloud_k0(j) = dk0_dw * cloud_w_dens(j)
-            !end do
-            !dk_dw = ( cloud_k0(2) - cloud_k0(1) ) / ( cloud_w_dens(2) - cloud_w_dens(1) )
-        else
-            atm(index)%ice_p  = 0.0d0
-            atm(index)%ice_q  = 0.0d0
-            atm(index)%ice_k0 = 0.0d0
-            atm(index)%ice_a0 = 0.0d0
-         ! da0_dw(index,3) = 0.d0  ;  dk0_dw(index,3) = 0.d0
-            atm(index)%dice_k0_dw = 0.0d0
-            atm(index)%dice_a0_dw = 0.0d0
-            a0_const(index,3) = .true.
-        end if
-        
-        if( atm(index)%snow_dens .ne. 0.0d0 ) then
-            ! Tao, Prasad, Alder snow size distributions converted to a0 and k0 form
-            ! (see ntbk#3 pg 111)
-            atm(index)%snow_p  = 0.0d0
-            atm(index)%snow_q  = 1.0d0
-            ! If following Rutledge and Hobbs (1983), then parameterization:
-            !                                         cloudsnowk0 = 20000.0
-            ! Instead, use Rutledge and Hobbs (1984)
-            atm(index)%snow_k0 = 8000.0d0
-          ! dk0_dw(index,4) = 0.d0
-            atm(index)%dsnow_k0_dw = 0.d0
-            atm(index)%snow_a0 = 0.3757d0 &
-                    * ( atm(index)%snow_dens**0.25d0 )
-            ! da0_dw(index,4) = 0.25d0* (atm(index)%snow_a0)/(atm(index)%snow_dens)
-            atm(index)%dsnow_a0_dw=0.25d0*(atm(index)%snow_a0)/(atm(index)%snow_dens)
-         !   atm(index)%dsnow_a0_dw = 0.25d0* (atm(index)%snow_a0)
-            a0_const(index,4) = .false.
+! ice
+! Sekhon-Sriv. Distribution, for two phase ice
+! Constant a0, k0 varies w/r/t M, assumes no size change when changing phase
+! (see Bauer and Schluessel) - allows for polydispersive sizes and for mie
+! and Rayleigh scattering
+    if( atm(ilev)%ice%dens > den_min ) then
+      atm(ilev)%ice%p  = 0.0d0
+      atm(ilev)%ice%q  = 1.0d0
+      atm(ilev)%ice%dk0_dw = 2.0d0 * 1989436788.65d0
+      atm(ilev)%ice%da0_dw = 0.d0
+      atm(ilev)%ice%k0 = atm(ilev)%ice%dk0_dw * atm(ilev)%ice%dens
+      atm(ilev)%ice%a0 =  0.01d0
+      atm(ilev)%ice%a0_const = .true.
+    else
+      atm(ilev)%ice%p  = 0.0d0
+      atm(ilev)%ice%q  = 1.0d0
+      atm(ilev)%ice%dk0_dw = 2.0d0 * 1989436788.65d0
+      atm(ilev)%ice%da0_dw = 0.d0
+      atm(ilev)%ice%k0 = atm(ilev)%ice%dk0_dw * den_min
+      atm(ilev)%ice%a0 =  0.01d0
+      atm(ilev)%ice%a0_const = .true.
+    end if
 
-            !tests
-            !loud_w_dens(1) = (1.0d0-1.0d-6) * atm(index)%snow_dens
-            !loud_w_dens(2) = (1.0d0+1.0d-6) * atm(index)%snow_dens
-            !do j = 1, 2
-            !  cloud_a0(j) = 0.3757d0 * cloud_w_dens(j)**0.25d0
-            !end do
-            !da_dw = ( cloud_a0(2) - cloud_a0(1) ) / ( cloud_w_dens(2) - cloud_w_dens(1) )
-        else
-            atm(index)%snow_p  = 0.0d0
-            atm(index)%snow_q  = 0.0d0
-            atm(index)%snow_k0 = 0.0d0
-            atm(index)%snow_a0 = 0.0d0
-            ! da0_dw(index,4) = 0.d0  ;  dk0_dw(index,4) = 0.d0
-            atm(index)%dsnow_k0_dw = 0.0d0
-            atm(index)%dsnow_a0_dw = 0.0d0
-           a0_const(index,4) = .true.
-        end if
-        
-        if( atm(index)%grpl_dens .ne. 0.0d0 ) then
-            ! Tao, Prasad, Alder graupel size distributions converted to a0 and k0 form
-            ! (see ntbk#3 pg 111)
-            atm(index)%grpl_p  = 0.0d0
-            atm(index)%grpl_q  = 1.0d0
-            atm(index)%grpl_k0 = 8000.0d0 
-          ! dk0_dw(index,5) = 0.d0
-            atm(index)%dgrpl_k0_dw = 0.0d0
-            atm(index)%grpl_a0 = 0.3340d0 &
-                    * ( atm(index)%grpl_dens**0.25d0 )
-          ! da0_dw(index,5) = 0.25d0 *(atm(index)%grpl_a0)/(atm(index)%grpl_dens)
-            atm(index)%dgrpl_a0_dw=0.25d0*(atm(index)%grpl_a0)/(atm(index)%grpl_dens)
-!            atm(index)%dgrpl_a0_dw = 0.25d0 *(atm(index)%grpl_a0)
-         a0_const(index,5) = .false.
+! snow
+! Tao, Prasad, Alder snow size distributions converted to a0 and k0 form
+! (see ntbk#3 pg 111)
+! If following Rutledge and Hobbs (1983), then parameterization: cloudsnowk0 = 20000.0
+! Instead, use Rutledge and Hobbs (1984)
+    if( atm(ilev)%snow%dens > den_min ) then
+      atm(ilev)%snow%p  = 0.0d0
+      atm(ilev)%snow%q  = 1.0d0
+      atm(ilev)%snow%k0 = 8000.0d0
+      atm(ilev)%snow%dk0_dw = 0.d0
+      atm(ilev)%snow%a0 = 0.3757d0 * ( atm(ilev)%snow%dens**0.25d0 )
+      atm(ilev)%snow%da0_dw=0.25d0*(atm(ilev)%snow%a0)/(atm(ilev)%snow%dens)
+      atm(ilev)%snow%a0_const = .false.
+    else
+      atm(ilev)%snow%p  = 0.0d0
+      atm(ilev)%snow%q  = 1.0d0
+      atm(ilev)%snow%k0 = 8000.0d0
+      atm(ilev)%snow%dk0_dw = 0.d0
+      atm(ilev)%snow%a0 = 0.3757d0 * ( den_min**0.25d0 )
+      atm(ilev)%snow%da0_dw=0.25d0*(atm(ilev)%snow%a0)/(den_min)
+      atm(ilev)%snow%a0_const = .false.
+    end if
 
-            !write(debugout,*) "grp:a0,k0=", atm(index)%grpl_a0, atm(index)%grpl_k0
-            !all mexPrintf(debugout//achar(10))
+! graupel
+! Tao, Prasad, Alder graupel size distributions converted to a0 and k0 form (see ntbk#3 pg 111)
+    if( atm(ilev)%grpl%dens > den_min ) then
+      atm(ilev)%grpl%p  = 0.0d0
+      atm(ilev)%grpl%q  = 1.0d0
+      atm(ilev)%grpl%k0 = 8000.0d0 
+      atm(ilev)%grpl%dk0_dw = 0.0d0
+      atm(ilev)%grpl%a0 = 0.3340d0 * ( atm(ilev)%grpl%dens**0.25d0 )
+      atm(ilev)%grpl%da0_dw=0.25d0*(atm(ilev)%grpl%a0)/(atm(ilev)%grpl%dens)
+      atm(ilev)%grpl%a0_const = .false.
+    else
+      atm(ilev)%grpl%p  = 0.0d0
+      atm(ilev)%grpl%q  = 1.0d0
+      atm(ilev)%grpl%k0 = 8000.0d0 
+      atm(ilev)%grpl%dk0_dw = 0.0d0
+      atm(ilev)%grpl%a0 = 0.3340d0 * ( den_min**0.25d0 )
+      atm(ilev)%grpl%da0_dw=0.25d0*(atm(ilev)%grpl%a0)/(den_min)
+      atm(ilev)%grpl%a0_const = .false.
+    end if
+  end do 
 
-            !tests
-            !loud_w_dens(1) = (1.0d0-1.0d-6) * atm(index)%grpl_dens
-            !loud_w_dens(2) = (1.0d0+1.0d-6) * atm(index)%grpl_dens
-            !do j = 1, 2
-            !  cloud_a0(j) = 0.3340d0 * ( cloud_w_dens(j)**0.25d0 )
-            !end do
-            !da_dw = ( cloud_a0(2) - cloud_a0(1) ) / ( cloud_w_dens(2) - cloud_w_dens(1) ) 
-        else
-            atm(index)%grpl_p  = 0.0d0
-            atm(index)%grpl_q  = 0.0d0
-            atm(index)%grpl_k0 = 0.0d0
-            atm(index)%grpl_a0 = 0.0d0
-           ! da0_dw(index,5) = 0.d0 ; dk0_dw(index,5) = 0.d0
-            atm(index)%dgrpl_k0_dw = 0.0d0
-            atm(index)%dgrpl_a0_dw = 0.0d0
-           a0_const(index,5) = .true.
-        end if
-    end do 
-    return
+return
 end subroutine calcprofile_d

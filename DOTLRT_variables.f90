@@ -14,6 +14,7 @@ module dotlrt_variables
 !  12/1/2020  Kevin Schaefer added permmitivity of free space as constant
 !  12/12/2020 Kevin Schaefer removed all but one nlev variable
 !  1/24/2021  Kevin Schaefer restructured reduced dimension branch
+!  5/16/2021  Kevin Schaefer changed d_albedo = 1.d-7 to albedo_diag=1.0d-12
 ! --------------------------------------------------------------
 
 implicit none
@@ -54,7 +55,8 @@ integer save_ilat      ! (-) latitude index of profile to save
 
 ! execution time diagnostic variables
 integer time_rate   ! conversion between count and clock time
-integer time_start  ! time count at stat
+integer time_start  ! time count at start
+integer time_temp   ! time count at start
 integer time_stop   ! time count at endreal(8)
 logical print_ex    ! (-) flag to print execution times
 integer nseg        ! (-) number of code segments
@@ -98,7 +100,8 @@ real(8), parameter :: land_refl = 0.05d0      ! (-) reference surface reflectivi
 real(8), parameter :: water_refl = 0.5d0      ! (-) reference surface reflectivity for water (lake and ocean)
 real(8), parameter :: sal_ocean = 0.035d0     ! (-) ocean reference salinity fraction (avg = 0.035)
 real(8), parameter :: sal_lake = 0.d0         ! (-) freshwater lake salinity fraction
-real(8), parameter :: d_albedo=1.0d-7         ! (-) lower limit scat/abs total for diagonalization layer inst parameters
+real(8), parameter :: albedo_diag=1.0d-12     ! (-) lower limit on albedo to assume diagonal matrices
+real(8), parameter :: t_frz=273.15d0          ! (K) freezing point of water
 
 ! quadrature parameters
 integer nlev         ! (-) number of vertical levels
@@ -117,10 +120,12 @@ real(8) obs_height   ! (km) height of observation
 real(8) ipol         ! (-) polarization number 1=vertical 0=horizontal
 integer num_freqs    ! (-) number of freq points for passband quadrature
 integer nsub_freq    ! (-) Number of frequency points in a sideband for passband quadrature
-
 real(8) g_asymmetry(max_nlev)
-LOGICAL a0_const(max_nlev,max_nphase)
 real(8) passband_freq(max_nfreq)
+real(8) testvar1 ! test diagnostic variable 1
+real(8) testvar2 ! test diagnostic variable 2
+real(8) testvar3 ! test diagnostic variable 3
+real(8) testval(10) ! test diagnostic variable array
 
 type gas_type
     real(8) absn2      ! (nepers/km) nitrogen absorption
@@ -201,63 +206,30 @@ real(8), dimension(max_nlev,max_nstream,2) :: dTbdgsnow   ! Jacobian asymmetry s
 real(8), dimension(max_nlev,max_nstream,2) :: dTbdKsgrpl  ! Jacobian scatter graupel
 real(8), dimension(max_nlev,max_nstream,2) :: dTbdggrpl   ! Jacobian asymmetry graupel
 
+! Hydrometeor distribution state variable parameter branch
+type hydrometeor_characteristics
+    real(8) dens     ! (g/m3) hydrometeor density
+    real(8) p        ! (?) hydrometeor particle size distribution exponent
+    real(8) q        ! (?) hydrometeor particle size variance parameter
+    real(8) k0       ! (num/m3/mm) reference hydrometeor number density in radius
+    real(8) a0       ! (mm) mean hydrometeor radius
+    real(8) dk0_dw   ! (?) k0 derivative wrt hydrometeor density 
+    real(8) da0_dw   ! (?) a0 derivative wrt hydrometeor density
+    real(8) ftot     ! (-) fraction of total column value
+    real(8) fprecip  ! (-) fraction of total precipitation per layer (rain + snow + graupel)
+    real(8) fcloud   ! (-) fraction of total cloud per layer (CLW + ice)
+    real(8) fhydro   ! (-) fraction of total hydrometeor per layer (CLW + ice + rain + snow + graupel)
+    logical a0_const ! (-) true if density is zero 
+end type hydrometeor_characteristics
+type(hydrometeor_characteristics) gen_hm
+
+! atmospheric profile branch atm%
 type profile_type
     ! Gaseous state variables
     real(8) press       ! (mb) pressure
     real(8) temp        ! (K) temperature
     real(8) humid       ! (g/m3) water vapor density
-
-    ! Hydrometeor distribution state variable parameters
-    real(8) clw_p       ! cloud liquid water particle size distribution exponent
-    real(8) clw_q       ! cloud liquid water particle size variance parameter
-    real(8) clw_k0      ! cloud liquid water particle size normalization constant
-    real(8) clw_a0      ! cloud liquid water particle size parameter in mm
-    real(8) rain_p      ! cloud rain (precip-water) particle size dist. exponent
-    real(8) rain_q      ! cloud rain particle size variance parameter
-    real(8) rain_k0     ! cloud rain particle size normalization constant
-    real(8) rain_a0     ! cloud rain  particle size parameter in mm
-    real(8) ice_p       ! cloud frozen particle size distribution exponent
-    real(8) ice_q       ! cloud frozen particle size variance parameter
-    real(8) ice_k0      ! cloud frozen particle size normalization constant
-    real(8) ice_a0      ! cloud frozen particle size parameter in mm
-    real(8) snow_p      ! cloud snow particle size distribution exponent
-    real(8) snow_q      ! cloud snow particle size variance parameter
-    real(8) snow_k0     ! cloud snow particle size normalization constant
-    real(8) snow_a0     ! cloud snow particle size parameter in mm
-    real(8) grpl_p      ! cloud graupel particle size distribution exponent
-    real(8) grpl_q      ! cloud graupel particle size variance parameter
-    real(8) grpl_k0     ! cloud graupel particle size normalization constant
-    real(8) grpl_a0     ! cloud graupel particle size parameter in mm
-
-    real(8) hgt         ! (km) height to middle of layer wrt to surface
-    real(8) hgt_top     ! (km) height to top of layer wrt to surface
-    real(8) hgt_bot     ! (km) height to bottom of layer wrt to surface
-    real(8) hgt_del     ! (m) layer thickness (note the units are meters not km)
-
-    real(8) clw_dens    ! (g/m3) cloud liquid water density
-    real(8) rain_dens   ! (g/m3) cloud rain density
-    real(8) ice_dens    ! (g/m3) cloud ice density
-    real(8) snow_dens   ! (g/m3) cloud snow density
-    real(8) grpl_dens   ! (g/m3) cloud graupel density
-    real(8) hydro_dens  ! (g/m3) total density of all hydrometeors
-
-    ! derivative of k0 and a0 with respect to water density
-                        ! at each level for each phase of water
-                        ! k0 and a0 depend only on water density
-    real(8) dclw_k0_dw  ! k0 water density derivative
-    real(8) dclw_a0_dw  ! a0 water density derivative
-    real(8) drain_k0_dw ! k0 water density derivative
-    real(8) drain_a0_dw ! a0 water density derivative
-    real(8) dice_k0_dw  ! k0 water density derivative
-    real(8) dice_a0_dw  ! a0 water density derivative
-    real(8) dsnow_k0_dw ! k0 water density derivative
-    real(8) dsnow_a0_dw ! a0 water density derivative
-    real(8) dgrpl_k0_dw ! k0 water density derivative
-    real(8) dgrpl_a0_dw ! a0 water density derivative
-
-    ! Derived water vapor quantities
-    real(8) h2o_v_sat   ! water vapor saturation pressure in mb
-    real(8) rel_hum     ! relative humidity 0-100%
+    real(8) f_froz      ! (-) frozen fraction of hydrometeors
 
     ! Derived radiative transfer quantities : frequency dependent
     real(8) abs_o2      ! oxygen and nitrogen absorption in nepers/km
@@ -267,50 +239,73 @@ type profile_type
     real(8) asymmetry   ! cloud particle asymmetry factor (unitless)
     real(8) ext_tot     ! total atmospheric extinction in nepers/km
     real(8) albedo      ! single scattering albedo
-    real(8) bb_spec_int ! brightness temperature or specific 
-                        ! black body intensity for either polarization at level in W/m**2/Hz/ster
+    real(8) bb_spec_int ! (W/m2/Hz/ster) black body intensity for either polarization at level in W/m**2/Hz/ster
+
+    ! layer geometry variables
+    real(8) hgt_mid     ! (km) height to middle of layer wrt to surface
+    real(8) hgt_top     ! (km) height to top of layer wrt to surface
+    real(8) hgt_bot     ! (km) height to bottom of layer wrt to surface
+    real(8) hgt_del     ! (m) layer thickness (note the units are meters not km)
+
+    ! Hydrometeor distribution state variable parameters
+    type(hydrometeor_characteristics) clw
+    type(hydrometeor_characteristics) rain
+    type(hydrometeor_characteristics) ice
+    type(hydrometeor_characteristics) snow
+    type(hydrometeor_characteristics) grpl
+    type(hydrometeor_characteristics) cloud
+    type(hydrometeor_characteristics) precip
+    type(hydrometeor_characteristics) hydro
 end type profile_type
 type(profile_type) atm(max_nlev)
+type(profile_type) temp_atm(max_nlev)
+type(profile_type) psuedo_atm(max_nlev)
+type(profile_type) init_atm(max_nlev)
 
-! reduced dimension and cloud geometry branch
-type cloud_geometry_type
+! hydrometeor characteristic and geometry branch
+type hm_geometry_type
     real(8) tot     ! (g/m2) total column hydrometeor
-    real(8) min     ! (g/m3) minimum hydrometeor value in layer
-    real(8) max     ! (g/m3) maximum hydrometeor value in layer
-    real(8) ave     ! (g/m3) average hydrometeor value in layer
-    real(8) std     ! (g/m3) standard deviation hydrometeor value in layer
-    real(8) h_ave   ! (km) average height of layer
-    real(8) h_std   ! (km) height standard deviation of layer
-    real(8) h_top   ! (km) top of layer
-    real(8) h_bot   ! (km) bottom of layer
-    real(8) h_del   ! (km) thickness of layer
-    real(8) h_max   ! (km) height of max value in layer
-end type cloud_geometry_type
-    type(cloud_geometry_type) geom
+    real(8) min     ! (g/m3) minimum hydrometeor value in cloud
+    real(8) max     ! (g/m3) maximum hydrometeor value in cloud
+    real(8) ave     ! (g/m3) average hydrometeor value in cloud
+    real(8) std     ! (g/m3) standard deviation hydrometeor value in cloud
+    real(8) frac    ! (-) fraction of total hydrometeor in cloud
+    real(8) h_frz   ! (km) freezing height of cloud
+    real(8) h_ave   ! (km) average height of cloud
+    real(8) h_std   ! (km) height standard deviation of cloud
+    real(8) h_top   ! (km) top of cloud
+    real(8) h_bot   ! (km) bottom of cloud
+    real(8) h_del   ! (km) thickness of cloud
+    real(8) h_max   ! (km) height of max value in cloud
+end type hm_geometry_type
+type(hm_geometry_type) geom
 
-type atm_reduced_type
-    type(cloud_geometry_type) clw
-    type(cloud_geometry_type) rain
-    type(cloud_geometry_type) ice
-    type(cloud_geometry_type) snow
-    type(cloud_geometry_type) grpl
-    type(cloud_geometry_type) hydro
-end type atm_reduced_type
-    type(atm_reduced_type) reduced
+! main cloud geometry branch
+type atm_cloud_type
+    type(hm_geometry_type) clw
+    type(hm_geometry_type) rain
+    type(hm_geometry_type) ice
+    type(hm_geometry_type) snow
+    type(hm_geometry_type) grpl
+    type(hm_geometry_type) cloud
+    type(hm_geometry_type) precip
+    type(hm_geometry_type) hydro
+end type atm_cloud_type
+    type(atm_cloud_type) cld ! cloud geometry branch
 
 ! surface characteristics branch
 type surface_charateristics
-     integer(4) type               ! (-) surface type flag 2=land, 1=lake, 0=ocean
-     character*20 ocean_mod        ! (-) ocean model: 'Fresnel','Wilheit',or 'ITRA'
-     character*20 diel_mod         ! (-) water dielectric model: 'Salt','NaCl',or 'Fresh'
-     real(8) temp                  ! (K) surface skin temperature
+     integer(4) type         ! (-) surface type flag 2=land, 1=lake, 0=ocean
+     character*20 ocean_mod  ! (-) ocean model: 'Fresnel','Wilheit',or 'ITRA'
+     character*20 diel_mod   ! (-) water dielectric model: 'Salt','NaCl',or 'Fresh'
+     real(8) temp            ! (K) surface skin temperature
      real(8) theta(max_nang) ! (deg) angle of incidence or reflection wrt surface normal
      real(8) vref(max_nang)  ! (-) vertically polarized surface reflectivity
      real(8) href(max_nang)  ! (-) horizontally polarized surface reflectivity
-     real(8) sal                   ! (-) water salinity ratio
-     double complex diel           ! (-) dielectric constant
-     real(8) wind                  ! (m/s) surface wind speed
-     integer nstream               ! (-) number of surface stream angles
+     real(8) sal             ! (-) water salinity ratio
+     double complex diel     ! (-) dielectric constant
+     real(8) wind            ! (m/s) surface wind speed
+     integer nstream         ! (-) number of surface stream angles
 end type surface_charateristics
 type (surface_charateristics) :: surf
 real(8), dimension(max_nang) :: surf_reflec ! (-) generic surface reflectivity for local calculations
