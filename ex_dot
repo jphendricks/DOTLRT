@@ -1,3 +1,3 @@
-#!/bin/bash
+#./dot.out /home/johnny/code/DOTLRTv2.1/inputs/atm_profile.txt /home/johnny/code/DOTLRTv2.1/output/
 
-./dot.out ${HOME}/inputs/WRF_Output/wrfout_d02_2019-05-26_12_00_00 ${HOME}/DOTLRT/output/
+./dot.out /home/johe6518/inputs/WRF_Output/wrfout_d02_2019-05-26_12_00_00 /home/johe6518/code/DOTLRTv2.1/output/

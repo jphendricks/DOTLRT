@@ -16,7 +16,7 @@ namelist /dotlrt_control/ & ! execution configuration control
   flag_print_full, flag_read_anc, ocean_mod, prof_src
 
 namelist /dotlrt_input_files/ & ! input file names
-  file_instr, file_var
+  file_instr, file_var, file_index_table
   
 namelist /dotlrt_rad_tran_param/ & ! input radiative transfer parameters
   nstream, nstream_surf, obs_height, obs_theta, nsub_freq 

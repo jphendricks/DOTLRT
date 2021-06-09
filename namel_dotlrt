@@ -1,13 +1,14 @@
 $dotlrt_control
   flag_print_full = .true.
-  flag_read_anc = .false.
-  ocean_mod = 'Fresnel'
-  prof_src = 'WRF'
+  flag_read_anc   = .false.
+  ocean_mod       = 'Fresnel'
+  prof_src        = 'single'
 /
 
 $dotlrt_input_files
-  file_instr='/home/johe6518/DOTLRT/inputs/Instr_Spec.instr'
-  file_var='/home/johe6518/DOTLRT/inputs/var_def.txt'
+  file_instr       = '/home/johe6518/code/DOTLRTv2.1/inputs/Inst_Generic.instr'
+  file_var         = '/home/johe6518/code/DOTLRTv2.1/inputs/var_def.txt'
+  file_index_table = '/home/johe6518/index_tables/index_table_25.nc'
 /
 
 $dotlrt_rad_tran_param
@@ -19,12 +20,12 @@ $dotlrt_rad_tran_param
 /
 
 $dotlrt_grid_param
-  chan_strt = 12
-  chan_stop = 12
-  lon_strt = 100
-  lon_stop = 100
-  lat_strt = 200
-  lat_stop = 200
+  chan_strt = 1
+  chan_stop = 1
+  lon_strt = 1
+  lon_stop = 1
+  lat_strt = 1
+  lat_stop = 1
   flag_reduce_nvar = .false.
   new_nlev = 73
 /
@@ -32,8 +33,8 @@ $dotlrt_grid_param
 $dotlrt_output_control
   save_sing_prof = .false.
   save_sing_rad = .false.
-  save_ilon = 100
-  save_ilat = 200
+  save_ilon = 1
+  save_ilat = 1
   save_rad_file = .false.
   save_jac_file = .false.
   save_prof_file = .false.

@@ -62,28 +62,27 @@ implicit none
       ! iphase = 1 (cloud liquid) a0 = constant
       dKab_dw(ilev,1) = atm(ilev)%clw%dk0_dw  * hydro_prof(ilev,1)%dcloudab_dk0
       dKsc_dw(ilev,1) = atm(ilev)%clw%dk0_dw  * hydro_prof(ilev,1)%dcloudsc_dk0
-      dg_dw(ilev,1)   = atm(ilev)%clw%dk0_dw  * hydro_prof(ilev,1)%dcloudg_dk0
+      dg_dw(ilev,1) = atm(ilev)%clw%dk0_dw    * hydro_prof(ilev,1)%dcloudg_dk0
 
       ! iphase = 2 (rain) k0 = constant
       dKab_dw(ilev,2) = atm(ilev)%rain%da0_dw  * hydro_prof(ilev,2)%dcloudab_da0
       dKsc_dw(ilev,2) = atm(ilev)%rain%da0_dw  * hydro_prof(ilev,2)%dcloudsc_da0
-      dg_dw(ilev,2)   = atm(ilev)%rain%da0_dw  * hydro_prof(ilev,2)%dcloudg_da0
+      dg_dw(ilev,2) = atm(ilev)%rain%da0_dw    * hydro_prof(ilev,2)%dcloudg_da0
 
       ! iphase = 3 (ice) a0 = constant
       dKab_dw(ilev,3) = atm(ilev)%ice%dk0_dw  * hydro_prof(ilev,3)%dcloudab_dk0
       dKsc_dw(ilev,3) = atm(ilev)%ice%dk0_dw  * hydro_prof(ilev,3)%dcloudsc_dk0
-      dg_dw(ilev,3)   = atm(ilev)%ice%dk0_dw  * hydro_prof(ilev,3)%dcloudg_dk0
+      dg_dw(ilev,3) = atm(ilev)%ice%dk0_dw    * hydro_prof(ilev,3)%dcloudg_dk0
 
       ! iphase = 4 (snow) k0 = constant
       dKab_dw(ilev,4) = atm(ilev)%snow%da0_dw  * hydro_prof(ilev,4)%dcloudab_da0
       dKsc_dw(ilev,4) = atm(ilev)%snow%da0_dw  * hydro_prof(ilev,4)%dcloudsc_da0
-      dg_dw(ilev,4)   = atm(ilev)%snow%da0_dw  * hydro_prof(ilev,4)%dcloudg_da0
+      dg_dw(ilev,4) = atm(ilev)%snow%da0_dw    * hydro_prof(ilev,4)%dcloudg_da0
 
       ! iphase = 5 (graupel) k0 = constant
       dKab_dw(ilev,5) = atm(ilev)%grpl%da0_dw  * hydro_prof(ilev,5)%dcloudab_da0
       dKsc_dw(ilev,5) = atm(ilev)%grpl%da0_dw  * hydro_prof(ilev,5)%dcloudsc_da0 
-      dg_dw(ilev,5)   = atm(ilev)%grpl%da0_dw  * hydro_prof(ilev,5)%dcloudg_da0
-
+      dg_dw(ilev,5) = atm(ilev)%grpl%da0_dw    * hydro_prof(ilev,5)%dcloudg_da0
     end do ! ilev
 
 end subroutine GeoJacobian

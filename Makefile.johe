@@ -1,0 +1,226 @@
+# Current directory
+BASEPATH = $(shell pwd)
+
+# Absolute paths to the directories
+SRCDIR = $(BASEPATH)/src
+BINDIR = $(BASEPATH)/bin
+OBJDIR = $(BASEPATH)/obj
+MODDIR = $(BASEPATH)/mod
+
+NCDIR = $(HOME)/local
+
+FC = gfortran
+
+INCS = -I$(NCDIR)/include
+LIBS = -L$(NCDIR)/lib -lnetcdf -lnetcdff
+
+FCFLAGS = -g -fbounds-check -ffree-line-length-none -fbounds-check \
+          -fbacktrace -ffpe-trap=invalid,zero,overflow 	\
+          -Wall -Wextra -Wuninitialized -Wunused $(INCS)
+
+LDFLAGS = $(FCFLAGS) $(LIBS) 
+
+PROGRAM = ncread 
+NCREAD = ncread
+
+TARGET = ncread
+
+MODS = \
+	netcdf_utilities_mod
+
+#MODS = \
+#	DOTLRT_output \
+#	DOTLRT_variables \
+#	netcdf_utilities_mod \
+#	profiles
+#MODS = \
+#	DOTLRT_output.f90 \
+#	DOTLRT_variables.f90 \
+#	netcdf_utilities_mod.f90 \
+#	profiles.f90
+
+SRC = \
+	DOTLRT_output.f90 \
+	DOTLRT_variables.f90 \
+	Dtb94.f90 \
+	GeoJacobian.f90 \
+	GetProfile.f90 \
+	Hg_phmat.f90 \
+	InterpSR.f90 \
+	Jacobian.f90 \
+	RT_Jacobian.f90 \
+	Tb94.f90 \
+	absh2o.f90 \
+	absn2.f90 \
+	calc_fbw_temp_weight_scat.f90 \
+	calc_mon_temp_weight_scat.f90 \
+	calc_passband_freq.f90 \
+	calc_tot_ext.f90 \
+	calcprofile.f90 \
+	configure.f90 \
+	construct_surf.f90 \
+	core95.f90 \
+	d3lec.f90 \
+	do_tb_gvh94.f90 \
+	fresnel_refl.f90 \
+	gaussj.f90 \
+	gaussq.f90 \
+	get_data.f90 \
+	get_instr_spec.f90 \
+	handle_err.f90 \
+	hydro_master_derivatives.f90 \
+	jacobi.f90 \
+	kirchoff_ocean_refl.f90 \
+	mrt.f90 \
+	o2abs.f90 \
+	profiles.f90 \
+	rd.f90 \
+	read_WRF_netcdf.f90 \
+	read_namel.f90 \
+	rf.f90 \
+	scan_control.f90 \
+	scan_mod.f90 \
+	scan_read_input.f90 \
+	scan_routines.f90 \
+	scan_var_assign.f90 \
+	scan_var_control.f90 \
+	write_output.f90
+
+# Replace .f90 with .o
+OBJ_S = $(patsubst %.f90,%.o,$(SRC))
+OBJ_M = $(patsubst %.f90,%.o,$(MODS))
+
+OBJECTS = $(TARGET).o $(OBJ_M)
+
+print:
+	@echo $(NCDIR)
+	@echo $(OBJ_S)
+	@echo $(MODS)
+	@echo $(OBJECTS)
+	@echo $(TARGET)
+
+all: $(PROGRAM)
+
+# $(NCREAD): $(OBJ_S)
+# 	$(FC) $(FCFLAGS) -o $@ $^ $(LDFLAGS)
+# 
+$(PROGRAM): $(OBJ_M)
+	$(FC) $(FCFLAGS) -o $@ $^ $(LDFLAGS)
+# 
+%.o: $(MODS).f90
+	$(MODS).o: $(MODS).f90 $(OBJ_M)
+	$(FC) $(FCFLAGS) -c $<
+
+.PHONY: clean veryclean
+clean:
+	rm -f *.o *.mod *.MOD
+
+veryclean: clean
+	rm -f *~ $(PROGRAM)
+
+
+# $@ is the file name of the target of the rule
+#$(TARGET): $(OBJECTS)
+#	$(FC) -o $@ $(OBJECTS)
+
+# $< is the first prerequisite
+#%.o: $(MODS).f90
+#	$(FC)  $(FCFLAGS) -c $< -o $@ $(LD_FLAGS)
+#$(TARGET).o: $(TARGET).f90 $(OBJECTS)
+#	$(FC)  $(FCFLAGS) -c $< -o $@
+#
+#.PHONY : clean
+#clean:
+#	rm -f *.o *.out *.mod *.stb core
+
+## Current directory
+#BASEPATH = $(shell pwd)
+#
+## Absolute paths to the directories
+#SRCDIR = $(BASEPATH)/src
+#BINDIR = $(BASEPATH)/bin
+#OBJDIR = $(BASEPATH)/obj
+#MODDIR = $(BASEPATH)/mod
+#
+## Put module files in their own directory
+#FFLAGS += -J$(MODDIR)
+#
+## Search path for source code
+#VPATH = $(SRCDIR)
+#
+#
+#$(OBJDIR)/%.o: %.f90
+#    # Check object and binary directories exist, make them if necessary
+#    # We can use the $(@D) magic variable to get the directory
+#    @mkdir -p $(@D)
+#    # $@ means the left-hand side of the recipe
+#    # $< means all of the right hand side
+#    $(FC) $(FFLAGS) -c -o $@ $<
+# 
+#
+# FC = gfortran
+# DEPS = matrix.mod
+# OBJ = main.o sub1.o
+# 
+# DEPS = DOTLRT_output.mod DOTLRT_variables.mod netcdf_utilities_mod.mod netcdf_utils.mod profiles.mod scan_mod.mod types_mod.mod
+# 
+# main.out: $(OBJ)
+#     $(FC) -o $^
+# %.mod:%.90 %.o
+#     $(FC) -c -o $@ $^
+# 
+# %.o:%.f90 $(DEPS)
+#     $(FC) -c -o $@ $^
+# 
+# .PHONY: clean
+# 
+#  clean:
+#     -rm -f *.o *~
+# 
+# F90 = gfortran
+# TARGET = myProg
+# 
+# # compile any .f90 file into a .o file
+# .f90.o : 
+# 	$(F90) c $<
+# 
+# # rules
+# # making $(TARGET) depends on obj{1,2,3}
+# $ (TARGET): obj1.o obj2.o obj3.o
+#  $(F90) $ (TARGET) obj1.o obj2.o obj3.o -llapack
+# 
+# # gfortran -c helloWorld.f90 -o helloWorld.o
+# # gfortran -o helloWorld helloWorld.o
+# 
+# helloWorld : helloWorld.o
+# 	gfortran -o helloWorld helloWorld.o
+# 
+# helloWorld.o: helloWorld.f90
+# 	gfortran -c helloWorld.f90 -o helloWorld.o
+# 
+# 
+# TARGET = moduleCall
+# OBJECTS = $(TARGET).o mod.o
+# 
+# $(TARGET) : $(OBJECTS)
+# gfortran -o $(TARGET) $(OBJECTS)
+# 
+# 
+# 
+# mod o : mod.f90
+# gfortran -c mod.f90
+# $(TARGET).o: $(TARGET).f90 mod.o
+# 	gfortran -c $(TARGET).f90
+# .PHONY : c l e a n
+# clean:
+# 	rm f $ (TARGET) $ (OBJECTS)
+
+
+
+
+
+
+
+
+
+

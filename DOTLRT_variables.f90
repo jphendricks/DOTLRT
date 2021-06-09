@@ -14,7 +14,6 @@ module dotlrt_variables
 !  12/1/2020  Kevin Schaefer added permmitivity of free space as constant
 !  12/12/2020 Kevin Schaefer removed all but one nlev variable
 !  1/24/2021  Kevin Schaefer restructured reduced dimension branch
-!  5/16/2021  Kevin Schaefer changed d_albedo = 1.d-7 to albedo_diag=1.0d-12
 ! --------------------------------------------------------------
 
 implicit none
@@ -39,10 +38,11 @@ character(20) ocean_mod  ! (-) ocean model type
                          ! 'ITRA'    ITRA reflectivity model
 
 ! file names
-character*250 file_in     ! (-) path to input atm profile
-character*250 file_instr  ! (-) path to instrument spec file
-character*250 file_var    ! (-) path to output variable definition file
-character*250 out_path    ! (-) path to output directory
+character*250 file_in          ! (-) path to input atm profile
+character*250 file_instr       ! (-) path to instrument spec file
+character*250 file_var         ! (-) path to output variable definition file
+character*250 file_index_table ! (-) path to output variable definition file
+character*250 out_path         ! (-) path to output directory
 
 ! output control variables
 logical save_rad_file  ! (-) save radiation output as netcdf file
@@ -100,7 +100,7 @@ real(8), parameter :: land_refl = 0.05d0      ! (-) reference surface reflectivi
 real(8), parameter :: water_refl = 0.5d0      ! (-) reference surface reflectivity for water (lake and ocean)
 real(8), parameter :: sal_ocean = 0.035d0     ! (-) ocean reference salinity fraction (avg = 0.035)
 real(8), parameter :: sal_lake = 0.d0         ! (-) freshwater lake salinity fraction
-real(8), parameter :: albedo_diag=1.0d-12     ! (-) lower limit on albedo to assume diagonal matrices
+real(8), parameter :: d_albedo=1.0d-7         ! (-) lower limit scat/abs total for diagonalization layer inst parameters
 real(8), parameter :: t_frz=273.15d0          ! (K) freezing point of water
 
 ! quadrature parameters
@@ -125,7 +125,6 @@ real(8) passband_freq(max_nfreq)
 real(8) testvar1 ! test diagnostic variable 1
 real(8) testvar2 ! test diagnostic variable 2
 real(8) testvar3 ! test diagnostic variable 3
-real(8) testval(10) ! test diagnostic variable array
 
 type gas_type
     real(8) absn2      ! (nepers/km) nitrogen absorption
@@ -223,13 +222,16 @@ type hydrometeor_characteristics
 end type hydrometeor_characteristics
 type(hydrometeor_characteristics) gen_hm
 
-! atmospheric profile branch atm%
+! atmospheric profile branch
 type profile_type
     ! Gaseous state variables
     real(8) press       ! (mb) pressure
     real(8) temp        ! (K) temperature
     real(8) humid       ! (g/m3) water vapor density
-    real(8) f_froz      ! (-) frozen fraction of hydrometeors
+
+    ! Derived water vapor quantities
+    real(8) h2o_v_sat   ! water vapor saturation pressure in mb
+    real(8) rel_hum     ! relative humidity 0-100%
 
     ! Derived radiative transfer quantities : frequency dependent
     real(8) abs_o2      ! oxygen and nitrogen absorption in nepers/km
@@ -242,7 +244,7 @@ type profile_type
     real(8) bb_spec_int ! (W/m2/Hz/ster) black body intensity for either polarization at level in W/m**2/Hz/ster
 
     ! layer geometry variables
-    real(8) hgt_mid     ! (km) height to middle of layer wrt to surface
+    real(8) hgt         ! (km) height to middle of layer wrt to surface
     real(8) hgt_top     ! (km) height to top of layer wrt to surface
     real(8) hgt_bot     ! (km) height to bottom of layer wrt to surface
     real(8) hgt_del     ! (m) layer thickness (note the units are meters not km)
@@ -259,8 +261,8 @@ type profile_type
 end type profile_type
 type(profile_type) atm(max_nlev)
 type(profile_type) temp_atm(max_nlev)
-type(profile_type) psuedo_atm(max_nlev)
-type(profile_type) init_atm(max_nlev)
+type(profile_type) obs_atm(max_nlev)
+type(profile_type) gen_atm(max_nlev)
 
 ! hydrometeor characteristic and geometry branch
 type hm_geometry_type

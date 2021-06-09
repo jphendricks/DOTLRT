@@ -12,10 +12,10 @@ NCDIR = $(HOME)/local
 FC = gfortran
 
 # DEBUG FLAGS
-#FFLAGS = -g -Wall -Wextra -I$(NCDIR)/include -Wuninitialized -Wunused -ffree-line-length-none -fbounds-check -fbacktrace -ffpe-trap=invalid,zero,overflow 
+FFLAGS = -g -Wall -Wextra -I$(NCDIR)/include -Wuninitialized -Wunused -ffree-line-length-none -fbounds-check -fbacktrace -ffpe-trap=invalid,zero,overflow 
 
 # OPTIMIZED FLAGS
-FFLAGS = -I$(NCDIR)/include
+#FFLAGS = -I$(NCDIR)/include
 
 LIBS = -L$(NCDIR)/lib -lnetcdf -lnetcdff
 LDFLAGS =

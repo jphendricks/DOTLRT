@@ -1,0 +1,54 @@
+start input in column 46--------------------|
+generalized scanning?            1=yes 2=no =1
+                                   scan type=hm_ph5
+Scan options--------------------------------|
+  scan 2-D or 3-D?              2=2-D 3=3-D =2
+  X var(see SibscanDat)?                    =16
+  Y var(see SibscanDat)?                    =6
+  number y-variables           (2-D only)   =1
+  Number of points in scan                  =4
+  min channel number                        =10
+  max channel number                        =12
+  Save data?               0=no 1=txt 2=csv =2
+  Save 3D data?            0=no 1=txt 2=csv =2
+  Calc psuedo-data?              1=yes 2=no =1
+  num obs psuedo-data?               1 or 2 =1
+  X obs Variable (0= none)                  =24
+  y obs Variable (0= none)                  =0
+Output options------------------------------|
+  Plot data?                     1=yes 2=no =2
+  color contour plots?           1=yes 2=no =1
+  Y label (2-D only)                        =Value
+  Scale Y-axis (2-D only)?    (1=auto 2=man)=1
+                                        Ymin=-20.
+                                        Ymax=0.
+  plot title                                =
+  plot legends?                  1=yes 2=no =1
+                                     legend1=Total
+                                     legend2=GEMS2 Ch 16
+                                     legend3=GEMS2 Ch 17
+                                     legend4=GEMS2 Ch 18
+                                     legend5=GEMS2 Ch 19
+                                     legend6=GEMS2 Ch 20
+                                     legend7=GEMS2 Ch 21
+                                     legend8=GEMS2 Ch 22
+                                     legend9=GEMS2 Ch 23
+                                    legend10=GEMS2 Ch 24
+            Plot to screen (=1) or file (=2)=1
+  plot file name                            =/home/johe6518/code/testbed/Plots/plot
+  Contour scale (0=auto, 1=man, 2=int,3=pwr)=1
+  Contour base                              =.05
+  Mumber of Contours                        =10
+                                  mincontour=0.
+                                  maxcontour=5.
+                      colorbar number format=f4.1
+Input/Output Files--------------------------|
+                                number files=2
+num   type          path
+1     'atm_prof'    '/home/johe6518/code/DOTLRTv2.1/inputs/atm_profile.txt'
+1     'out_path'    '/home/johe6518/code/testbed/Plots/Atm_prof_opt.csv'
+output manipulations------------------------|
+                        number manipulations=1
+doit  type         map    ind2    Val1      val2
+f     'sum'        1      2       0.        0.
+-------does not read beyond this line--------

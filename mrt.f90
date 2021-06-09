@@ -102,7 +102,7 @@ deallocate(dTb_dw_streams)
 end ! program mrt
 
 !========================================================================================
-subroutine ex_time(num_segment, id_segment)
+subroutine ex_time(num_segment, name_segment)
 !========================================================================================
 ! History:
 !  1/27/2021 Kevin Schaefer created routine
@@ -115,14 +115,19 @@ implicit none
 
 ! input variables
 integer num_segment
-character*40 id_segment
+character*40 name_segment
 
 ! calculate execution time
   call system_clock(time_stop,time_rate) ! stop counting
   time_del= real(time_stop-time_start)/real(time_rate)
   time_seg(num_segment) = time_seg(num_segment)+time_del
   num_call(num_segment)=num_call(num_segment)+1
-  seg_name(num_segment)= trim(id_segment)
+  seg_name(num_segment)= trim(name_segment)
   nseg=num_segment
+
+! Sample code
+!name='initialize'
+!call ex_time(1, name)
+!call system_clock(time_start)
 
 end subroutine ex_time

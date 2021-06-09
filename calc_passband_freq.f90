@@ -13,20 +13,16 @@ subroutine calc_passband_freq()
 !         FORTRAN 90 Portland Group Compiler on Red Hat Linux
 !     3 - Modified 31 July 2003 by Bob Weber
 !         FORTRAN 90 COMPAQ Compiler on Windows 2000 / XP
-!      9/26/2020 Kevin Schaefer deleted unused variables 
+!      9/26/2020 Kevin Schaefer deleted unused variables
 !----------------------------------------------------------
-  use dotlrt_variables
-    
-  implicit none
+    use dotlrt_variables
 
-  real(8) lo_freq   ! (GHz) LO frequency
-  real(8) if1_freq  ! (GHz) IF1 frequency
-  real(8) if2_freq  ! (GHz) IF2 frequency
-  real(8) bandwidth ! (GHz) filter bandwidth
-  real(8) dtrms     ! (K) observation noise in degrees Kelvin
-  real(8) freq_incr ! (GHz) delta frequency in passband integral
-  real(8) freq      ! (GHz) frequency in passband integral
-  integer ifrq      ! (-) frequency index
+    real(8)  :: lo_freq        !LO frequency     (GHz)
+    real(8)  :: if1_freq       !IF1 frequency    (GHz)
+    real(8)  :: if2_freq       !IF2 frequency    (GHz)
+    real(8)  :: bandwidth      !filter bandwidth (GHz)
+    real(8)  :: dtrms          !observation noise in degrees Kelvin (K)
+    real(8) freq_incr
 
     lo_freq   = channel%lo_freq
     if1_freq  = channel%if1_freq
@@ -48,8 +44,8 @@ subroutine calc_passband_freq()
                 if( nsub_freq .gt. max_nfreq ) then
                     freq_incr = bandwidth/dble(max_nfreq-1)
                     freq = lo_freq-bandwidth/2.0d0
-                    do ifrq = 1, max_nfreq 
-                        passband_freq(ifrq) = freq
+                    do i = 1, max_nfreq 
+                        passband_freq(i) = freq
                         freq = freq+freq_incr
                     end do
                     num_freqs = max_nfreq
@@ -58,8 +54,8 @@ subroutine calc_passband_freq()
                 else
                     freq_incr = bandwidth/dble(nsub_freq-1)
                     freq = lo_freq-bandwidth/2.0d0
-                    do ifrq = 1, nsub_freq
-                        passband_freq(ifrq) = freq
+                    do i = 1, nsub_freq
+                        passband_freq(i) = freq
                         freq = freq+freq_incr
                     end do
                     num_freqs = nsub_freq
@@ -84,14 +80,14 @@ subroutine calc_passband_freq()
                     if( nsub_freq .gt. idint(dble(max_nfreq)/2.0d0)) THEN
                         freq_incr = bandwidth/(idint(dble(max_nfreq)/2.0d0)-1.0d0)
                         freq = lo_freq-if1_freq-bandwidth/2.0d0
-                        do ifrq = 1, idint(dble(max_nfreq)/2.0d0) 
-                            passband_freq(ifrq) = freq
+                        do i = 1, idint(dble(max_nfreq)/2.0d0) 
+                            passband_freq(i) = freq
                             freq = freq+freq_incr
                         end do
                         freq = lo_freq+if1_freq-bandwidth/2.0d0
-                        do ifrq = idint(dble(max_nfreq)/2.0d0)+1, &
+                        do i = idint(dble(max_nfreq)/2.0d0)+1, &
                                2*idint(dble(max_nfreq)/2.0d0)
-                            passband_freq(ifrq) = freq
+                            passband_freq(i) = freq
                             freq = freq+freq_incr
                         end do
                         num_freqs = 2*idint(dble(max_nfreq)/2.0d0)
@@ -100,13 +96,13 @@ subroutine calc_passband_freq()
                     else
                         freq_incr = bandwidth/dble(nsub_freq-1)
                         freq = lo_freq-if1_freq-bandwidth/2.0d0
-                        do ifrq = 1, nsub_freq
-                            passband_freq(ifrq) = freq
+                        do i = 1, nsub_freq
+                            passband_freq(i) = freq
                             freq = freq+freq_incr
                         end do
                         freq = lo_freq+if1_freq-bandwidth/2.0d0
-                        do ifrq = nsub_freq+1, 2*nsub_freq
-                            passband_freq(ifrq) = freq
+                        do i = nsub_freq+1, 2*nsub_freq
+                            passband_freq(i) = freq
                             freq = freq+freq_incr
                         end do
                         num_freqs = 2*nsub_freq
@@ -131,26 +127,26 @@ subroutine calc_passband_freq()
                     if( nsub_freq .gt. idint(dble(max_nfreq)/4.0d0) ) then
                         freq_incr = bandwidth/(idint(dble(max_nfreq)/4.0d0)-1)
                         freq = lo_freq-if1_freq-if2_freq-bandwidth/2.0d0
-                        do ifrq = 1, idint(dble(max_nfreq)/4.0d0)
-                            passband_freq(ifrq) = freq
+                        do i = 1, idint(dble(max_nfreq)/4.0d0)
+                            passband_freq(i) = freq
                             freq = freq+freq_incr
                         end do
                         freq = lo_freq-if1_freq+if2_freq-bandwidth/2.0d0
-                        do ifrq = idint(dble(max_nfreq)/4.0d0)+1, &
+                        do i = idint(dble(max_nfreq)/4.0d0)+1, &
                                2*idint(dble(max_nfreq)/4.0d0)
-                            passband_freq(ifrq) = freq
+                            passband_freq(i) = freq
                             freq = freq+freq_incr
                         end do
                         freq = lo_freq+if1_freq-if2_freq-bandwidth/2.0
-                        do ifrq = 2*idint(dble(max_nfreq)/4.0d0)+1, &
+                        do i = 2*idint(dble(max_nfreq)/4.0d0)+1, &
                                3*idint(dble(max_nfreq)/4.0d0)
-                            passband_freq(ifrq) = freq
+                            passband_freq(i) = freq
                             freq = freq+freq_incr
                         end do
                         freq = lo_freq+if1_freq+if2_freq-bandwidth/2.0d0
-                        do ifrq = 3*idint(dble(max_nfreq)/4.0d0)+1, &
+                        do i = 3*idint(dble(max_nfreq)/4.0d0)+1, &
                                4*idint(dble(max_nfreq)/4.0d0)
-                            passband_freq(ifrq) = freq
+                            passband_freq(i) = freq
                             freq = freq+freq_incr
                         end do
                         num_freqs = 4*idint(dble(max_nfreq)/4.0d0)
@@ -159,23 +155,23 @@ subroutine calc_passband_freq()
                     else
                         freq_incr = bandwidth/dble(nsub_freq-1)
                         freq = lo_freq-if1_freq-if2_freq-bandwidth/2.0d0
-                        do ifrq = 1, nsub_freq
-                            passband_freq(ifrq) = freq
+                        do i = 1, nsub_freq
+                            passband_freq(i) = freq
                             freq = freq+freq_incr
                         end do
                         freq = lo_freq-if1_freq+if2_freq-bandwidth/2.0d0
-                        do ifrq = nsub_freq+1, 2*nsub_freq
-                            passband_freq(ifrq) = freq
+                        do i = nsub_freq+1, 2*nsub_freq
+                            passband_freq(i) = freq
                             freq = freq+freq_incr
                         end do
                         freq = lo_freq+if1_freq-if2_freq-bandwidth/2.0d0
-                        do ifrq = 2*nsub_freq+1, 3*nsub_freq
-                            passband_freq(ifrq) = freq
+                        do i = 2*nsub_freq+1, 3*nsub_freq
+                            passband_freq(i) = freq
                             freq = freq+freq_incr
                         end do
                         freq = lo_freq+if1_freq+if2_freq-bandwidth/2.0
-                        do ifrq = 3*nsub_freq+1, 4*nsub_freq
-                            passband_freq(ifrq) = freq
+                        do i = 3*nsub_freq+1, 4*nsub_freq
+                            passband_freq(i) = freq
                             freq = freq+freq_incr
                         end do
                         num_freqs = 4*nsub_freq

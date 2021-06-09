@@ -50,11 +50,11 @@ program simple_read
   !    write(varname,2000) ichan,'ice'
   !    call get_var_index_table(ncid,varname,vals)
   !    print *, trim(varname), ' ', maxval(vals)
+  !    write(varname,2000) ichan,'graupel'
 
-  !write(varname,2000) 1,'graupel'
-  !call get_var_index_table(ncid,varname,vals)
-  !print *, trim(varname), ' ', maxval(vals)
+  !    call get_var_index_table(ncid,varname,vals)
 
+  !    print *, trim(varname), ' ', maxval(vals)
   !enddo
 
   deallocate(vals)
@@ -66,5 +66,48 @@ program simple_read
 contains
 
 
+!:========================================================================
+subroutine get_var_index_table(ncid,mfreq,mtair,mdens,mphase)
+!,varname,vals)
+  use netcdf
+  !use dotlrt_variables
+  !use scan_Variables
+
+  implicit none
+
+  integer                  , intent(in)  :: ncid
+  real(8)                  , intent(in)  :: mfreq
+  real(8)                  , intent(in)  :: mtair
+  real(8)                  , intent(in)  :: mdens
+  integer                  , intent(in)  :: mphase
+  !real(8), dimension(:,:,:), intent(out) :: vals
+
+  integer :: ivals, jdens, ktemp
+  integer :: vsize, dsize, tsize
+  integer,                  dimension(3) :: varsize
+  character(NF90_MAX_NAME), dimension(3) :: dimnames
+
+  !call calcprofile_d()
+  !call extract_channel(2)
+  !myfreq = channel%lo_freq 
+
+  print *, 'myfreq = ', myfreq
+  print *, 'ncid   = ', ncid
+  print *, 'mfreq   = ', mfreq
+  print *, 'mdens   = ', mdens
+  print *, 'mtair   = ', mtair
+  print *, 'mphase  = ', mphase
+  !vsize =  nc_get_dimension_size(ncid, 'values')
+  !dsize =  nc_get_dimension_size(ncid, 'density')
+  !tsize =  nc_get_dimension_size(ncid, 'temperature')
+
+  !call nc_get_variable_size(ncid, varname, varsize)
+  !call nc_get_variable_dimension_names(ncid, varname, dimnames)
+  !call nc_get_variable(ncid, varname, vals)
+
+  2000 format('chann_',i0.2,'_',A)
+
+end subroutine get_var_index_table
+!:========================================================================
 
 end program simple_read

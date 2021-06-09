@@ -1,14 +1,215 @@
-!
 !=======================================================================
-  subroutine calculate_atm_profile (atm_loc, layer_loc, loc_n_man, man_loc)
+  subroutine construct_precip_profile ()
 !=======================================================================      
-! Constructs an atmospheric hydrometeor density profile from
-! hydromet layer geometry 
+!  Constructs a cloud  
 !
 ! Modifications:
-!  2/13/2021 Kevin Schaefer created subroutine
-!  2/21/2021 Kevin Schaefer added all hydrometeor species
-!  5/22/2021 Kevin Schaefer made generic for psuedo, init, and current profile
+!  3/16/2021 Kevin Schaefer created subroutine
+!----------------------------------------------------------------------
+  use scan_Variables
+  use dotlrt_variables
+  use profiles
+  use dotlrt_output
+
+  implicit none
+
+! local variables
+  integer ilev            ! (-) atm level index
+  integer ngau            ! (-) number slices for Gaussian intergral
+  integer igau            ! (-) Gaussian intergral index
+  integer indx_top        ! (-) layer index top cloud/pecip layer
+  integer indx_bot        ! (-) layer index bottom cloud/pecip layer
+  real(8) del_h           ! (-) raw gaussian value top of layer
+  real(8) loc_h           ! (-) raw gaussian value bottom of layer
+  real(8) frac_gau(nlev)  ! (-) raw gaussian fraction per layer
+  real(8) frac_pre(nlev)  ! (-) precip fraction of total column precip per layer
+  real(8) frac_cld(nlev)  ! (-) cloud fraction of total column precip per layer
+  real(8) frac_clw(nlev)  ! (-) clw fraction of total column cloud per layer
+  real(8) frac_rain(nlev) ! (-) rain fraction of total column cloud per layer
+  real(8) frac_ice(nlev)  ! (-) ice fraction of total column cloud per layer
+  real(8) frac_snow(nlev) ! (-) snow fraction of total column cloud per layer
+  real(8) frac_grpl(nlev) ! (-) graupel fraction of total column cloud per layer
+  real(8) hgt_var_pre     ! (km) precip height var
+  real(8) hgt_var_cld     ! (km) cloud height var
+  real(8) total           ! (-) local total
+  real(8) slope           ! (km/K) slope of H vs temp
+  integer frz_lev         ! (-) freezing level index
+  real(8) hgt_frz         ! (km) freezing height
+  real(8) hgt_mix_top     ! (km) top of mixed ice/liquid layer
+  real(8) hgt_mix_bot     ! (km) bottom of mixed ice/liquid layer
+
+! calculate cloud and precip characteristics
+  cloud%precip%top = cloud%precip%pk + 2.d0*cloud%precip%std
+  cloud%precip%bot = cloud%precip%pk - 2.d0*cloud%precip%std
+  cloud%precip%bot = max (0.d0, atm(1)%hgt_bot, cloud%precip%bot)
+  hgt_var_pre = cloud%precip%std*cloud%precip%std
+
+  cloud%cloud%top = cloud%cloud%pk + 2.d0*cloud%cloud%std
+  cloud%cloud%bot = cloud%cloud%pk - 2.d0*cloud%cloud%std
+  cloud%cloud%bot = max (0.d0, atm(1)%hgt_bot, cloud%cloud%bot)
+  hgt_var_cld = cloud%cloud%std*cloud%cloud%std
+
+! find top and bottom of precip layer
+  do ilev=1,nlev
+    indx_bot=ilev
+    if (atm(ilev)%hgt_top > cloud%precip%bot) exit
+  enddo
+  do ilev=nlev,1,-1
+    indx_top=ilev
+    if (atm(ilev)%hgt_bot < cloud%precip%top) exit
+  enddo
+
+! calculate raw, unscaled precip Gaussian fraction per layer
+  frac_gau(:) = 0.d0
+  total=0.d0
+  ngau=100
+  do ilev=indx_bot,indx_top
+    if (ilev == indx_bot) then
+      del_h= (atm(ilev)%hgt_top - cloud%precip%bot)/dble(ngau)
+      loc_h = cloud%precip%bot
+    elseif (ilev == indx_top) then
+      del_h= (cloud%precip%top - atm(ilev)%hgt_bot)/dble(ngau)
+      loc_h = atm(ilev)%hgt_bot
+    else
+      del_h= (atm(ilev)%hgt_top - atm(ilev)%hgt_bot)/dble(ngau)
+      loc_h = atm(ilev)%hgt_bot
+    endif
+
+    frac_gau(ilev) = 0.d0
+    do igau = 1, ngau
+      frac_gau(ilev) = frac_gau(ilev)+ del_h*exp(-(loc_h-cloud%precip%pk)**2.d0/hgt_var_pre)
+      loc_h = loc_h + del_h
+    enddo
+    if (frac_gau(ilev) < 10.d-15) frac_gau(ilev) = 0.d0
+
+    total = total + frac_gau(ilev)
+    !print*, ilev, cloud%precip%pk, cloud%precip%std, frac_gau(ilev)
+   enddo
+
+! calculate precip fraction of total column precipitation per layer
+  do ilev=1,nlev
+    frac_pre(ilev) = frac_gau(ilev)/total
+    !if (ilev <20) print*, ilev, atm(ilev)%hgt, frac_gau(ilev), frac_pre(ilev)
+  enddo
+
+! find top and bottom of cloud layer
+  do ilev=1,nlev
+    indx_bot=ilev
+    if (atm(ilev)%hgt_top > cloud%cloud%bot) exit
+  enddo
+  do ilev=nlev,1,-1
+    indx_top=ilev
+    if (atm(ilev)%hgt_bot < cloud%cloud%top) exit
+  enddo
+
+! calculate cloud raw, unscaled cloud Gaussian fraction per layer
+  frac_gau(:) = 0.d0
+  total=0.d0
+  ngau=100
+  do ilev=indx_bot,indx_top
+    if (ilev == indx_bot) then
+      del_h= (atm(ilev)%hgt_top - cloud%cloud%bot)/dble(ngau)
+      loc_h = cloud%precip%bot
+    elseif (ilev == indx_top) then
+      del_h= (cloud%cloud%top - atm(ilev)%hgt_bot)/dble(ngau)
+      loc_h = atm(ilev)%hgt_bot
+    else
+      del_h= (atm(ilev)%hgt_top - atm(ilev)%hgt_bot)/dble(ngau)
+      loc_h = atm(ilev)%hgt_bot
+    endif
+
+    frac_gau(ilev) = 0.d0
+    do igau = 1, ngau
+      frac_gau(ilev) = frac_gau(ilev)+ del_h*exp(-(loc_h-cloud%cloud%pk)**2.d0/hgt_var_cld)
+      loc_h = loc_h + del_h
+    enddo
+    if (frac_gau(ilev) < 10.d-15) frac_gau(ilev) = 0.d0
+
+    total = total + frac_gau(ilev)
+    !print*, ilev, cloud%cloud%pk, cloud%cloud%std, frac_gau(ilev)
+  enddo
+
+! calculate cloud fraction of total column cloud per layer
+  do ilev=1,nlev
+    frac_cld(ilev) = frac_gau(ilev)/total
+    !if(ilev<20) print*, ilev, atm(ilev)%hgt, frac_gau(ilev), frac_cld(ilev)
+  enddo
+
+! calculate freeze height
+  do ilev = 1, nlev
+    if (atm(ilev)%temp < t_frz) exit
+    frz_lev = ilev
+  enddo
+  slope = (atm(frz_lev)%hgt-atm(frz_lev+1)%hgt)/(atm(frz_lev)%temp-atm(frz_lev+1)%temp)
+  hgt_frz=atm(frz_lev)%hgt+slope*(t_frz-atm(frz_lev)%temp)
+  hgt_mix_top = hgt_frz + 1.d0
+  hgt_mix_bot = hgt_frz - 1.d0
+
+! calculate liquid and ice fractions of total cloud per layer 
+  do ilev=1,nlev
+    if (atm(ilev)%hgt < hgt_mix_bot) then
+      frac_clw(ilev) = 1.d0
+      frac_ice(ilev) = 0.d0
+    elseif (atm(ilev)%hgt > hgt_mix_top) then
+      frac_clw(ilev) = 0.d0
+      frac_ice(ilev) = 1.d0
+    else
+      frac_ice(ilev) = 0.5d0*(atm(ilev)%hgt-hgt_frz)+0.5d0
+      frac_clw(ilev)  = 1.d0 - frac_ice(ilev)
+    endif
+  enddo
+
+! calculate liquid and ice fractions of total precip per layer 
+  do ilev=1,nlev
+    if (atm(ilev)%hgt < hgt_mix_bot) then
+      frac_rain(ilev) = 1.d0
+      frac_snow(ilev) = 0.d0
+      frac_grpl(ilev) = 0.d0
+    elseif (atm(ilev)%hgt > hgt_mix_top) then
+      frac_rain(ilev) = 0.d0
+      frac_snow(ilev) = 0.5d0
+      frac_grpl(ilev) = 0.5d0
+    else
+      frac_rain(ilev) = frac_clw(ilev)
+      frac_snow(ilev) = 0.5d0*frac_ice(ilev)
+      frac_grpl(ilev) = 0.5d0*frac_ice(ilev)
+    endif
+  enddo
+
+! calculate fraction of total column cloud water per species per layer
+  do ilev=1,nlev
+    atm(ilev)%clw%fprecip  = 0.d0
+    atm(ilev)%rain%fprecip = frac_pre(ilev)*frac_rain(ilev)
+    !if(ilev<20) print*, ilev, atm(ilev)%hgt, frac_pre(ilev), frac_rain(ilev), atm(ilev)%rain%fprecip
+
+    atm(ilev)%ice%fprecip  = 0.d0
+    atm(ilev)%snow%fprecip = frac_pre(ilev)*frac_snow(ilev)
+    atm(ilev)%grpl%fprecip = frac_pre(ilev)*frac_grpl(ilev)
+
+    atm(ilev)%clw%fcloud  = frac_cld(ilev)*frac_clw(ilev)
+    atm(ilev)%rain%fcloud = 0.d0
+    atm(ilev)%ice%fcloud  = frac_cld(ilev)*frac_ice(ilev)
+    atm(ilev)%snow%fcloud = 0.d0
+    atm(ilev)%grpl%fcloud = 0.d0
+  enddo
+
+! construct vertical density profiles
+  call construct_hydromet_profile (cld%cloud%tot,  atm(:)%clw%fcloud,   atm(:)%clw%dens)
+  call construct_hydromet_profile (cld%precip%tot, atm(:)%rain%fprecip, atm(:)%rain%dens)
+  call construct_hydromet_profile (cld%cloud%tot,  atm(:)%ice%fcloud,   atm(:)%ice%dens)
+  call construct_hydromet_profile (cld%precip%tot, atm(:)%snow%fprecip, atm(:)%snow%dens)
+  call construct_hydromet_profile (cld%precip%tot, atm(:)%grpl%fprecip, atm(:)%grpl%dens)
+
+  return                                                                    
+  end
+
+!=======================================================================
+  subroutine construct_cloud_profile (top, bot)
+!=======================================================================      
+!  Constructs a cloud  
+!
+! Modifications:
+!  3/16/2021 Kevin Schaefer created subroutine
 !----------------------------------------------------------------------
   use scan_Variables
   use dotlrt_variables
@@ -18,457 +219,91 @@
   implicit none
 
 ! input variables
-  type(profile_type) atm_loc(max_nlev) ! (variable) local atmospheric profile
-  type(hydro_layers) layer_loc ! local hydrometeor layer variables
-  integer loc_n_man                  ! (-) local number of manipulations
-  type(manipulation) man_loc(1000) ! local manipulations for profile
-
-! local variables
-  character*250 filename ! (-) local filename
-  integer iman  ! (-) manipulation index
-  integer ilev  ! (-) level index
-  real(8) lapse ! (K/km) lapse rate
-
-! loop through manipulations to construct atmospheric profile
-  do iman=1, loc_n_man
-
-    if (man_loc(iman)%doit .and. man_loc(iman)%typ == 'clw') then
-      atm_loc(:)%clw%dens = 0.d0
-      call assign_hydromet_layer_variables (layer_loc%clw, man_loc(iman)%val1, man_loc(iman)%val2, man_loc(iman)%val3)
-      call fraction_per_layer_gaussian(layer_loc%clw, atm_loc(:)%clw%ftot)
-      call construct_hydromet_profile (layer_loc%clw%tot, atm_loc(:)%clw%ftot, atm_loc(:)%clw%dens)
-      call calculate_hydromet_layer_variables (atm_loc, atm_loc(:)%clw%dens, layer_loc%clw)
-    endif
-
-    if (man_loc(iman)%doit .and. man_loc(iman)%typ == 'rain') then
-      atm_loc(:)%rain%dens = 0.d0
-      call assign_hydromet_layer_variables (layer_loc%rain, man_loc(iman)%val1, man_loc(iman)%val2, man_loc(iman)%val3)
-      call fraction_per_layer_gaussian(layer_loc%rain, atm_loc(:)%rain%ftot)
-      call construct_hydromet_profile (layer_loc%rain%tot, atm_loc(:)%rain%ftot, atm_loc(:)%rain%dens)
-      call calculate_hydromet_layer_variables (atm_loc, atm_loc(:)%rain%dens, layer_loc%rain)
-    endif
-
-    if (man_loc(iman)%doit .and. man_loc(iman)%typ == 'ice') then
-      atm_loc(:)%ice%dens = 0.d0
-      call assign_hydromet_layer_variables (layer_loc%ice, man_loc(iman)%val1, man_loc(iman)%val2, man_loc(iman)%val3)
-      call fraction_per_layer_gaussian(layer_loc%ice, atm_loc(:)%ice%ftot)
-      call construct_hydromet_profile (layer_loc%ice%tot, atm_loc(:)%ice%ftot, atm_loc(:)%ice%dens)
-      call calculate_hydromet_layer_variables (atm_loc, atm_loc(:)%ice%dens, layer_loc%ice)
-    endif
-
-    if (man_loc(iman)%doit .and. man_loc(iman)%typ == 'snow') then
-      atm_loc(:)%snow%dens = 0.d0
-      call assign_hydromet_layer_variables (layer_loc%snow, man_loc(iman)%val1, man_loc(iman)%val2, man_loc(iman)%val3)
-      call fraction_per_layer_gaussian(layer_loc%snow, atm_loc(:)%snow%ftot)
-      call construct_hydromet_profile (layer_loc%snow%tot, atm_loc(:)%snow%ftot, atm_loc(:)%snow%dens)
-      call calculate_hydromet_layer_variables (atm_loc, atm_loc(:)%snow%dens, layer_loc%snow)
-    endif
-
-    if (man_loc(iman)%doit .and. man_loc(iman)%typ == 'grpl') then
-      atm_loc(:)%grpl%dens = 0.d0
-      call assign_hydromet_layer_variables (layer_loc%grpl, man_loc(iman)%val1, man_loc(iman)%val2, man_loc(iman)%val3)
-      call fraction_per_layer_gaussian(layer_loc%grpl, atm_loc(:)%grpl%ftot)
-      call construct_hydromet_profile (layer_loc%grpl%tot, atm_loc(:)%grpl%ftot, atm_loc(:)%grpl%dens)
-      call calculate_hydromet_layer_variables (atm_loc, atm_loc(:)%grpl%dens, layer_loc%grpl)
-    endif
-
-    if (man_loc(iman)%doit .and. man_loc(iman)%typ == 'cloud') then
-      atm_loc(:)%cloud%dens = 0.d0
-      atm_loc(:)%clw%dens = 0.d0
-      atm_loc(:)%ice%dens = 0.d0
-      call assign_hydromet_layer_variables (layer_loc%cloud, man_loc(iman)%val1, man_loc(iman)%val2, man_loc(iman)%val3)
-      call construct_cloud_density_profile (atm_loc, layer_loc)
-      call calculate_hydromet_layer_variables (atm_loc, atm_loc(:)%clw%dens, layer_loc%clw)
-      call calculate_hydromet_layer_variables (atm_loc, atm_loc(:)%ice%dens, layer_loc%ice)
-      call calculate_hydromet_layer_variables (atm_loc, atm_loc(:)%hydro%dens, layer_loc%hydro)
-    endif
-
-    if (man_loc(iman)%doit .and. man_loc(iman)%typ == 'precip') then
-      atm_loc(:)%precip%dens = 0.d0
-      atm_loc(:)%rain%dens = 0.d0
-      atm_loc(:)%snow%dens = 0.d0
-      atm_loc(:)%grpl%dens = 0.d0
-      call assign_hydromet_layer_variables (layer_loc%precip, man_loc(iman)%val1, man_loc(iman)%val2, man_loc(iman)%val3)
-      call construct_precip_density_profile (atm_loc, layer_loc)
-      call calculate_hydromet_layer_variables (atm_loc, atm_loc(:)%rain%dens, layer_loc%rain)
-      call calculate_hydromet_layer_variables (atm_loc, atm_loc(:)%snow%dens, layer_loc%snow)
-      call calculate_hydromet_layer_variables (atm_loc, atm_loc(:)%grpl%dens, layer_loc%grpl)
-      call calculate_hydromet_layer_variables (atm_loc, atm_loc(:)%hydro%dens, layer_loc%hydro)
-    endif
-
-    if (man_loc(iman)%doit .and. man_loc(iman)%typ == 'temp') then
-      lapse = (man_loc(iman)%val2 - man_loc(iman)%val1)/man_loc(iman)%val3
-      do ilev = 1, nlev
-        if (atm_loc(ilev)%hgt_mid < 15.d0) then
-          atm_loc(ilev)%temp = man_loc(iman)%val1 + lapse*(atm_loc(ilev)%hgt_mid-atm_loc(1)%hgt_bot)
-        else
-          atm_loc(ilev)%temp = (man_loc(iman)%val1 + lapse*15.d0) - (atm_loc(ilev)%hgt_mid-15.d0)
-        endif
-      enddo
-    endif
-    
-    if (man_loc(iman)%doit .and. man_loc(iman)%typ == 'read_sing') then
-      filename = trim(files(man_loc(iman)%ind1)%path)
-      call read_text_profile(atm_loc, filename)
-      call calculate_hydromet_layer_variables (atm_loc, atm_loc(:)%clw%dens, layer_loc%clw)
-      call calculate_hydromet_layer_variables (atm_loc, atm_loc(:)%rain%dens, layer_loc%rain)
-      call calculate_hydromet_layer_variables (atm_loc, atm_loc(:)%ice%dens, layer_loc%ice)
-      call calculate_hydromet_layer_variables (atm_loc, atm_loc(:)%snow%dens, layer_loc%snow)
-      call calculate_hydromet_layer_variables (atm_loc, atm_loc(:)%grpl%dens, layer_loc%grpl)
-      call calculate_hydromet_layer_variables (atm_loc, atm_loc(:)%cloud%dens, layer_loc%cloud)
-      call calculate_hydromet_layer_variables (atm_loc, atm_loc(:)%precip%dens, layer_loc%precip)
-      call calculate_hydromet_layer_variables (atm_loc, atm_loc(:)%hydro%dens, layer_loc%hydro)
-    endif
-    
-    if (man_loc(iman)%doit .and. man_loc(iman)%typ == 'calc_tb') call calculate_brightness_temps(atm_loc)
-    
-    if (man_loc(iman)%doit .and. man_loc(iman)%typ == 'read_FY3') call read_observed_brightness_temp
-    
-    if (man_loc(iman)%doit .and. man_loc(iman)%typ == 'print_prof') call print_reduced_profile(atm_loc, layer_loc)
-
-    if (man_loc(iman)%doit .and. man_loc(iman)%typ == 'write_prof') then
-      filename = trim(files(man_loc(iman)%ind1)%path)
-      call write_atmospheric_profile(atm_loc, filename)
-    endif
-
-    if (man_loc(iman)%doit .and. man_loc(iman)%typ == 'print_obs') call print_observed_brightness_temps
-
-  enddo
-
-  return                                                                    
-  end subroutine calculate_atm_profile
-!
-!====================================================================
-  subroutine reconstruct_atm_layer_geometry()
-!====================================================================
-! recalculates atmospheric layer geometry in response to changes in
-! cloud and precipitation layers
-! done only when constructing an atmospheric profile from scratch
-!
-! History:
-!  4/10/2021 Kevin Schaefer created routine
-!--------------------------------------------------------------------
-  use scan_Variables
-  use dotlrt_variables
-  use profiles
-  use dotlrt_output
-  implicit none
-!
-! internal variables  
-  integer ilev         ! (-) level index
-  integer ilev2        ! (-) level index
-  real(8) delta_z_min  ! (km) minimum layer thickness
-  real(8) delta_z_max  ! (km) maximum layer thickness
-  real(8) scale_dz     ! (-) ratio between adjacent layer thicknesses
-  real(8) hgt_max      ! (km) maximum height of atmospheric column
-  real(8) del_z_scale  ! (km) scaler to normalize heights
-  real(8) ratio        ! (-) scaling factor for interpolation
-  character(50) fmt    ! (-) format variable
-  logical split        ! (-) split layer flag
-  logical print_flag   ! (-) print diagnostics flag
-  
-! set layer geometry parameters
-  delta_z_min = 0.07d0
-  delta_z_max = 0.7d0
-  scale_dz = 1.2d0
-  hgt_max= 25.d0
-
-! clear out the atmospheric profile
-! hydrometeors added later
-  do ilev = 1, max_nlev
-    atm(ilev)%hgt_mid = 0.d0
-    atm(ilev)%hgt_top = 0.d0
-    atm(ilev)%hgt_bot = 0.d0
-    atm(ilev)%hgt_del = 0.d0
-    atm(ilev)%press   = 0.d0
-    atm(ilev)%temp    = 0.d0
-    atm(ilev)%humid   = 0.d0
-  end do
-
-! print cloud and precip geometry
-  print_flag = .false.
-  if (print_flag) then
-    fmt = '(a8,2x,4(a9,2x))'
-    print(fmt), 'Class', 'Bot (km)', 'Peak (km)', 'Top (km)', 'STD(km)'
-    fmt = '(a8,2x,4(f9.3,2x))'
-    print(fmt), 'precip', cur_lay%precip%bot, cur_lay%precip%pk, cur_lay%precip%top, cur_lay%precip%std
-    print(fmt), 'cloud', cur_lay%cloud%bot, cur_lay%cloud%pk, cur_lay%cloud%top, cur_lay%cloud%std
-    fmt = '(a3,2x,4(a8,2x))'
-    print(fmt), 'Lay', 'Bot (km)', 'Mid (km)', 'Top (km)', 'Del(km)'
-    fmt = '(i3,2x,4(f8.3,2x))'
-  endif
-
-! calculate new layer geometry
-  nlev = 1
-  atm(1)%hgt_bot = 0.d0
-  atm(1)%hgt_del = delta_z_min
-  atm(1)%hgt_top = delta_z_min
-  atm(1)%hgt_mid = delta_z_min/2.d0
-  do ilev = 2, max_nlev
-    atm(ilev)%hgt_del = scale_dz*atm(ilev-1)%hgt_del
-    atm(ilev)%hgt_del = min(atm(ilev)%hgt_del, delta_z_max)
-    atm(ilev)%hgt_bot = atm(ilev-1)%hgt_top
-    atm(ilev)%hgt_top = atm(ilev-1)%hgt_top + atm(ilev)%hgt_del
-    atm(ilev)%hgt_mid = (atm(ilev)%hgt_top + atm(ilev)%hgt_bot)/2.d0
-    nlev = nlev + 1
-
-    if (print_flag) print(fmt), ilev, atm(ilev)%hgt_bot, atm(ilev)%hgt_mid, atm(ilev)%hgt_top, atm(ilev)%hgt_del
-    if (atm(ilev)%hgt_top > hgt_max) exit
-  end do
-
-! split layers to account for bottom of precip layer
-  if (print_flag) then
-    fmt = '(a3,2x,4(a8,2x))'
-    print(fmt), 'Lay', 'Bot (km)', 'Mid (km)', 'Top (km)', 'Del(km)'
-    fmt = '(i3,2x,4(f8.3,2x))'
-  endif
-  split = .true.
-  if (cur_lay%precip%bot == 0.d0) split = .false.
-  do ilev = 1, max_nlev
-    if (atm(ilev)%hgt_top > cur_lay%precip%bot .and. split) then
-      split = .false.
-
-! shift array up one level
-      nlev = nlev+1
-      do ilev2 = nlev, ilev+1, -1
-        atm(ilev2)%hgt_bot = atm(ilev2-1)%hgt_bot
-        atm(ilev2)%hgt_mid = atm(ilev2-1)%hgt_mid
-        atm(ilev2)%hgt_top = atm(ilev2-1)%hgt_top
-        atm(ilev2)%hgt_del = atm(ilev2-1)%hgt_del
-      enddo
-
-! adjust current level, which we split at precip%bot
-      ! atm(ilev+1)%hgt_bot unchanged
-      atm(ilev)%hgt_top = cur_lay%precip%bot
-      atm(ilev)%hgt_mid = (atm(ilev)%hgt_top + atm(ilev)%hgt_bot)/2.d0
-      atm(ilev)%hgt_del = atm(ilev)%hgt_top - atm(ilev)%hgt_bot
-
-! adjust next level, which we split at precip%bot
-      atm(ilev+1)%hgt_bot = cur_lay%precip%bot
-      !atm(ilev+1)%hgt_top = unchanged
-      atm(ilev+1)%hgt_mid = (atm(ilev+1)%hgt_top + atm(ilev+1)%hgt_bot)/2.d0
-      atm(ilev+1)%hgt_del = atm(ilev+1)%hgt_top - atm(ilev+1)%hgt_bot
-    endif
-    if (print_flag) print(fmt), ilev, atm(ilev)%hgt_bot, atm(ilev)%hgt_mid, atm(ilev)%hgt_top, atm(ilev)%hgt_del
-    if (atm(ilev)%hgt_top > hgt_max) exit
-  end do
-
-! split layers to account for top of precip layer
-  if (print_flag) then
-    fmt = '(a3,2x,4(a8,2x))'
-    print(fmt), 'Lay', 'Bot (km)', 'Mid (km)', 'Top (km)', 'Del(km)'
-    fmt = '(i3,2x,4(f8.3,2x))'
-  endif
-  split = .true.
-  do ilev = 1, max_nlev
-    if (atm(ilev)%hgt_top > cur_lay%precip%top .and. split) then
-      split = .false.
-
-! shift array up one level
-      nlev = nlev+1
-      do ilev2 = nlev, ilev+1, -1
-        atm(ilev2)%hgt_bot = atm(ilev2-1)%hgt_bot
-        atm(ilev2)%hgt_mid = atm(ilev2-1)%hgt_mid
-        atm(ilev2)%hgt_top = atm(ilev2-1)%hgt_top
-        atm(ilev2)%hgt_del = atm(ilev2-1)%hgt_del
-      enddo
-
-! adjust current level, which we split at precip%top
-      ! atm(ilev+1)%hgt_bot unchanged
-      atm(ilev)%hgt_top = cur_lay%precip%top
-      atm(ilev)%hgt_mid = (atm(ilev)%hgt_top + atm(ilev)%hgt_bot)/2.d0
-      atm(ilev)%hgt_del = atm(ilev)%hgt_top - atm(ilev)%hgt_bot
-
-! adjust next level, which we split at precip%top
-      atm(ilev+1)%hgt_bot = cur_lay%precip%top
-      !atm(ilev+1)%hgt_top = unchanged
-      atm(ilev+1)%hgt_mid = (atm(ilev+1)%hgt_top + atm(ilev+1)%hgt_bot)/2.d0
-      atm(ilev+1)%hgt_del = atm(ilev+1)%hgt_top - atm(ilev+1)%hgt_bot
-    endif
-    if (print_flag) print(fmt), ilev, atm(ilev)%hgt_bot, atm(ilev)%hgt_mid, atm(ilev)%hgt_top, atm(ilev)%hgt_del
-    if (atm(ilev)%hgt_top > hgt_max) exit
-  end do
-
-! normalize the reference atmos profile to zero at bottom
-  del_z_scale=temp_atm(1)%hgt_bot
-  do ilev2 = 1, nlev_ref
-    temp_atm(ilev2)%hgt_bot = temp_atm(ilev2)%hgt_bot - del_z_scale
-    temp_atm(ilev2)%hgt_mid = temp_atm(ilev2)%hgt_mid - del_z_scale
-    temp_atm(ilev2)%hgt_top = temp_atm(ilev2)%hgt_top - del_z_scale
-    temp_atm(ilev2)%hgt_del = temp_atm(ilev2)%hgt_del - del_z_scale
-  end do
-
-! Interpolate temperature, pressure, and humidity to new center of each layer
-! assume layer 1 matches
-  atm(1)%press = temp_atm(1)%press
-  atm(1)%temp = temp_atm(1)%temp
-  atm(1)%humid = temp_atm(1)%humid
-  do ilev = 2, nlev
-    do ilev2 = 1, nlev_ref
-      if ( temp_atm(ilev2)%hgt_mid > atm(ilev)%hgt_mid ) then
-        !print*, ilev, ilev2, atm(ilev)%hgt_mid, temp_atm(ilev2)%hgt_mid
-
-        if(ilev2 == 1) then
-          atm(1)%press = temp_atm(1)%press
-          atm(1)%temp = temp_atm(1)%temp
-          atm(1)%humid = temp_atm(1)%humid
-        else
-          ratio = (atm(ilev)%hgt_mid-temp_atm(ilev2-1)%hgt_mid) / (temp_atm(ilev2)%hgt_mid -temp_atm(ilev2-1)%hgt_mid )
-          atm(ilev)%press = ratio*temp_atm(ilev2)%press + (1.d0 - ratio)*scale*temp_atm(ilev2-1)%press
-          atm(ilev)%temp  = ratio*temp_atm(ilev2)%temp  + (1.d0 - ratio)*scale*temp_atm(ilev2-1)%temp
-          atm(ilev)%humid = ratio*temp_atm(ilev2)%humid + (1.d0 - ratio)*scale*temp_atm(ilev2-1)%humid
-        endif
-
-        exit
-      endif
-    enddo
-  enddo
-
-! Convert thickness to meters
-  do ilev = 1, nlev
-    atm(ilev)%hgt_del = atm(ilev)%hgt_del *1000.d0
-  enddo
-
-  end subroutine reconstruct_atm_layer_geometry
-!
-!====================================================================
-  subroutine fraction_per_layer_gaussian(layer_loc, f_lay)
-!====================================================================
-! Calculates the hydrometeor fraction per layer using numerical integration
-! assuming a Gaussian verticle distribution
-!
-! History:
-!  5/8/21/2021 Kevin Schaefer created routine
-!--------------------------------------------------------------------
-  use scan_Variables
-  use dotlrt_variables
-  use profiles
-  use dotlrt_output
-  implicit none
-
-! input/output variable
-  type(hydro_lay_geo) layer_loc ! input hydrometeor layer geometry
-
-! output variable
-  real(8) f_lay(max_nlev) ! (-) hydrometeor fraction per layer of column total
+  real(8) top             ! (km) cloud top height  
+  real(8) bot             ! (km) cloud bottom height  
 
 ! local variables
   integer ilev            ! (-) atm level index
-  integer ngau            ! (-) number slices for Gaussian integral
-  integer igau            ! (-) Gaussian integral index
-  integer indx_top        ! (-) layer index top of hydrometeor layer
-  integer indx_bot        ! (-) layer index bottom of hydrometeor layer
-  real(8) del_h           ! (km) delta height for Gaussian integral
-  real(8) loc_h           ! (km) current height for Gaussian integral
-  real(8) f_gau(max_nlev) ! (-) unscaled gaussian fraction per layer
-  real(8) hgt_var         ! (km) height variance
+  real(8) gaus_frac(nlev) ! (-) raw gaussian fraction per layer
+  real(8) cld_frac(nlev)  ! (-) cloud fraction of total column cloud per layer
+  real(8) clw_frac(nlev)  ! (-) clw fraction of total column cloud per layer
+  real(8) ice_frac(nlev)  ! (-) ice fraction of total column cloud per layer
+  real(8) thickness       ! (km) cloud thickness
+  real(8) peak            ! (km) cloud density peak
+  real(8) hgt_std         ! (km) cloud height standard deviation
+  real(8) hgt_var         ! (km) cloud height var
   real(8) total           ! (-) local total
+  real(8) slope           ! (km/K) slope of H vs temp
+  integer frz_lev         ! (-) freezing level index
+  real(8) hgt_frz         ! (km) freezing height
+  real(8) hgt_mix_top     ! (km) top of mixed ice/liquid layer
+  real(8) hgt_mix_bot     ! (km) bottom of mixed ice/liquid layer
 
-! calculate height variance
-  hgt_var = layer_loc%std*layer_loc%std
+! cloud thickness and standard deviation
+  thickness = top - bot
+  peak = (top + bot)/2.d0
+  if (thickness <=0.d0) return
+  hgt_std = thickness/6
+  hgt_var = hgt_std*hgt_std
 
-! find top and bottom of layer
-  do ilev=1,nlev
-    indx_bot=ilev
-    if (atm(ilev)%hgt_top > layer_loc%bot) exit
-  enddo
-  do ilev=nlev,1,-1
-    indx_top=ilev
-    if (atm(ilev)%hgt_bot < layer_loc%top) exit
-  enddo
-
-! calculate raw, unscaled precip Gaussian fraction per layer
-  f_gau(:) = 0.d0
+! calculate raw, unscaled Gaussian fraction per layer
   total=0.d0
-  ngau=100
-  do ilev=indx_bot,indx_top
-    if (ilev == indx_bot) then ! adjust for partial of hydromet layer
-      del_h= (atm(ilev)%hgt_top - layer_loc%bot)/dble(ngau)
-      loc_h = layer_loc%bot
-
-    elseif (ilev == indx_top) then
-      del_h= (layer_loc%top - atm(ilev)%hgt_bot)/dble(ngau)
-      loc_h = atm(ilev)%hgt_bot
-
-    else  ! adjust for partial of hydromet layer
-      del_h= (atm(ilev)%hgt_top - atm(ilev)%hgt_bot)/dble(ngau)
-      loc_h = atm(ilev)%hgt_bot
-    endif
-
-    f_gau(ilev) = 0.d0
-    do igau = 1, ngau
-      f_gau(ilev) = f_gau(ilev)+ del_h*exp(-(loc_h-layer_loc%pk)**2.d0/hgt_var)
-      loc_h = loc_h + del_h
-    enddo
-    if (f_gau(ilev) < 10.d-15) f_gau(ilev) = 0.d0
-
-    total = total + f_gau(ilev)
-    !print*, ilev, layer_loc%pk, layer_loc%std, f_gau(ilev)
-   enddo
-
-! Scale by dividing by the total integral to ensure all fractions sum to one
   do ilev=1,nlev
-    f_lay(ilev) = f_gau(ilev)/total
-    !if (ilev <20) print*, ilev, atm(ilev)%hgt, f_gau(ilev), f_pre(ilev)
+    if(atm(ilev)%hgt <top .and. atm(ilev)%hgt > bot) then
+      gaus_frac(ilev)= exp(-(atm(ilev)%hgt-peak)**2.d0/hgt_var)
+    else
+      gaus_frac(ilev)= 0.d0
+    endif
+    total = total + gaus_frac(ilev)
   enddo
 
-  end subroutine fraction_per_layer_gaussian
-!
-!====================================================================
-  subroutine fraction_frozen_hydro(atm_loc)
-!====================================================================
-! Calculates the liquid fraction of total hydrometeor based on freeze height
-!
-! History:
-!  5/9/2021  Kevin Schaefer created routine
-!  5/23/2021 Kevin Schaefer switched to local atmospheric profile
-!--------------------------------------------------------------------
- use scan_Variables
-  use dotlrt_variables
-  use profiles
-  use dotlrt_output
-
-  implicit none
-
-! input variables
-  type(profile_type) atm_loc(max_nlev) ! (variable) local atmospheric profile
-
-
-! local variables
-  integer ilev             ! (-) atm level index
-  integer frz_lev          ! (-) freezing level index
-  real(8) slope            ! (km/K) slope of height vs temp
-  real(8) hgt_frz          ! (km) freezing height
-  real(8) hgt_mix_top      ! (km) top of mixed ice/liquid layer
-  real(8) hgt_mix_bot      ! (km) bottom of mixed ice/liquid layer
-
+! calculate cloud fraction of total column cloud per layer
+  do ilev=1,nlev
+    cld_frac(ilev) = gaus_frac(ilev)/total
+  enddo
+  
 ! calculate freeze height
   do ilev = 1, nlev
     if (atm(ilev)%temp < t_frz) exit
     frz_lev = ilev
   enddo
-
-! Interpolate temperatures to exact freeze height 
-  slope = (atm_loc(frz_lev)%hgt_mid-atm_loc(frz_lev+1)%hgt_mid)/(atm_loc(frz_lev)%temp-atm_loc(frz_lev+1)%temp)
-  hgt_frz=atm_loc(frz_lev)%hgt_mid+slope*(t_frz-atm_loc(frz_lev)%temp)
-
-! calculate mixed layer as +-1 km around freeze height
+  slope = (atm(frz_lev)%hgt-atm(frz_lev+1)%hgt)/(atm(frz_lev)%temp-atm(frz_lev+1)%temp)
+  hgt_frz=atm(frz_lev)%hgt+slope*(t_frz-atm(frz_lev)%temp)
   hgt_mix_top = hgt_frz + 1.d0
   hgt_mix_bot = hgt_frz - 1.d0
 
-! calculate frozen fractions of total hydrometeor per layer 
-! assume liquid transitions linearly from bottom to top of mixed layer 
+! calculate clw and ice fraction of total cloud water per layer 
   do ilev=1,nlev
-    if (atm_loc(ilev)%hgt_mid < hgt_mix_bot) then
-      atm_loc(ilev)%f_froz = 0.d0
-    elseif (atm_loc(ilev)%hgt_mid > hgt_mix_top) then
-      atm_loc(ilev)%f_froz = 1.d0
+    if (atm(ilev)%hgt < hgt_mix_bot) then
+      clw_frac(ilev) = 1.d0
+      ice_frac(ilev) = 0.d0
+    elseif (atm(ilev)%hgt > hgt_mix_top) then
+      clw_frac(ilev) = 0.d0
+      ice_frac(ilev) = 1.d0
     else
-      atm_loc(ilev)%f_froz = 0.5d0*(atm_loc(ilev)%hgt_mid-hgt_frz)+0.5d0
+      ice_frac(ilev) = 0.5d0*(atm(ilev)%hgt-hgt_frz)+0.5d0
+      clw_frac(ilev) = 1.d0 - ice_frac(ilev)
     endif
   enddo
 
-  end subroutine fraction_frozen_hydro
+! calculate fraction of total column cloud water per species per layer
+  do ilev=1,nlev
+    atm(ilev)%clw%fcloud  = cld_frac(ilev)*clw_frac(ilev)
+    atm(ilev)%rain%fcloud = 0.d0
+    atm(ilev)%ice%fcloud  = cld_frac(ilev)*ice_frac(ilev)
+    atm(ilev)%snow%fcloud = 0.d0
+    atm(ilev)%grpl%fcloud = 0.d0
+  enddo
+
+! construct vertical density profiles
+  call construct_hydromet_profile (cld%cloud%tot,  atm(:)%clw%fcloud,  atm(:)%clw%dens)
+  call construct_hydromet_profile (cld%cloud%tot, atm(:)%rain%fcloud, atm(:)%rain%dens)
+  call construct_hydromet_profile (cld%cloud%tot,  atm(:)%ice%fcloud,  atm(:)%ice%dens)
+  call construct_hydromet_profile (cld%cloud%tot, atm(:)%snow%fcloud, atm(:)%snow%dens)
+  call construct_hydromet_profile (cld%cloud%tot, atm(:)%grpl%fcloud, atm(:)%grpl%dens)
+
+  return                                                                    
+  end
 
 !=======================================================================
   subroutine construct_hydromet_profile (col_tot, frac_lay, prof_den)
@@ -477,8 +312,6 @@
 !
 ! Modifications:
 !  2/28/2021 Kevin Schaefer created subroutine
-!  4/1/2021  Kevin Schaefer added max density and vertical redistribution
-!  5/23/2021 Kevin Schaefer removed max density and vertical redistribution
 !----------------------------------------------------------------------
   use scan_Variables
   use dotlrt_variables
@@ -492,30 +325,71 @@
   real(8) col_tot        ! (g/m2) column total mass  
 
 ! output variables
-  real(8) prof_den(nlev) ! (g/m3) hydrometeor density profile
+  real(8) prof_den(nlev) ! (g/m3) hydromet density profile
 
 ! local variables
   integer ilev      ! (-) atm level index
+  integer ibad      ! (-) bad value index
+  integer nbad      ! (-) total number of bad layers
+  real(8) mass_max(nlev) ! (g/m2) maximum mass per level
+  real(8) mass_lay(nlev) ! (g/m2) mass per level
+  real(8) mass_ext(nlev) ! (g/m2) extra mass per level
+  real(8) x_mass    ! (g/m2) extra hydromet mass
+  real(8) max_den   ! (g/m3) maximum possible hydromet density
+  real(8) frac_tot  ! (g/m3) maximum possible hydromet density
 
-! Calculate densities
+! maximum allowed density
+  max_den = 1d4
+
+! calculate initial mass per layer
   do ilev=1,nlev
-    prof_den(ilev) = frac_lay(ilev)*col_tot/atm(ilev)%hgt_del
+    mass_lay(ilev) = frac_lay(ilev)*col_tot
+    mass_max(ilev) = max_den*atm(ilev)%hgt_del
+  enddo
+
+! redistribute mass if required
+  do ibad = 1,10  ! Iterate a max of 10 times
+    nbad=0
+    x_mass = 0.d0
+    frac_tot=0.d0
+    do ilev=1,nlev
+      mass_ext(ilev) = 0.
+      if(mass_lay(ilev) > mass_max(ilev)) then
+        mass_ext(ilev) = mass_lay(ilev) - mass_max(ilev)
+        mass_lay(ilev) = mass_max(ilev)
+        x_mass = x_mass + mass_ext(ilev)
+        nbad = nbad+1.d0
+        frac_tot = frac_tot + frac_lay(ilev)
+      endif
+      !if (mass_lay(ilev) > 0.d0) print*, ilev, mass_lay(ilev), mass_max(ilev)
+    enddo
+
+    do ilev=1,nlev
+      if(mass_lay(ilev) > mass_max(ilev)) then
+        mass_lay(ilev) = mass_lay(ilev) + frac_lay(ilev)/frac_tot*x_mass
+      endif
+    enddo
+    
+    if (nbad == 0) exit
+  enddo
+
+! calculate density per layer
+  do ilev=1,nlev
+    prof_den(ilev) = mass_lay(ilev)/atm(ilev)%hgt_del
+    !if (prof_den(ilev) > 0.d0) print*, ilev, prof_den(ilev), max_den
   enddo
 
   return                                                                    
   end
 !
 !=======================================================================
-  subroutine construct_precip_density_profile (atm_loc, layer_loc)
+  subroutine assign_obs_variables ()
 !=======================================================================      
-!  Calculates precipitation fraction of mass and density per layer 
+! Constructs an atmospheric profile from generic cloud characteristics 
 !
 ! Modifications:
-!  3/16/2021 Kevin Schaefer created subroutine
-!  5/8/2021  Kevin Schaefer moved Gaussian fraction to separate routine 
-!  5/9/2021  Kevin Schaefer moved frozen fraction fraction to separate routine 
-!  5/9/2021  Kevin Schaefer separated cloud and precip profiles into separate routines 
-!  5/23/2021 Kevin Schaefer corrected fraction calculations to atm_loc
+!  2/13/2021 Kevin Schaefer created subroutine
+!  2/21/2021 Kevin Schaefer added all hydrometeor species
 !----------------------------------------------------------------------
   use scan_Variables
   use dotlrt_variables
@@ -523,231 +397,116 @@
   use dotlrt_output
 
   implicit none
-
-! input/output variables
-  type(profile_type) atm_loc(max_nlev) ! (variable) local atmospheric profile
-  type(hydro_layers) layer_loc   ! (variable) local hydrometeor layer variables
 
 ! local variables
-  integer ilev             ! (-) atm level index
-  real(8) f_pre(max_nlev)  ! (-) precip fraction of total column precip per layer
+  integer ichan   ! (-) channel index
+  integer ivar    ! (-) variable index
+  real(8) col_tot ! (g/m2) local column total value
+  logical do_prof ! (-) logical to construct vertical hydrometeor profile
 
-! calculate layer geometry
-!  call reconstruct_atm_layer_geometry()
+! print Message
+  print*, 'Create Psuedo Observation'
+  print*, 'obs_x=', obs_x, 'obs_y=', obs_y
 
-! calculate fractions per layer
-  call fraction_per_layer_gaussian(layer_loc%precip, f_pre)
+! calculate reduced dimension stuff
+  call construct_reduced_dim_atm_profile()
 
-! Calculate frozen fraction
-  call fraction_frozen_hydro(atm_loc)
-
-! calculate fraction of total column cloud water per species per layer
-  do ilev=1,nlev
-    atm_loc(ilev)%clw%fprecip  = 0.d0
-    atm_loc(ilev)%rain%fprecip = f_pre(ilev)*(1.d0-atm_loc(ilev)%f_froz)
-    atm_loc(ilev)%ice%fprecip  = 0.d0
-    atm_loc(ilev)%snow%fprecip = f_pre(ilev)*0.5d0*atm_loc(ilev)%f_froz
-    atm_loc(ilev)%grpl%fprecip = f_pre(ilev)*0.5d0*atm_loc(ilev)%f_froz
-    atm_loc(ilev)%precip%ftot  = f_pre(ilev)
-  enddo
-
-! construct vertical density profiles
-  call construct_hydromet_profile (layer_loc%precip%tot, atm_loc(:)%rain%fprecip, atm_loc(:)%rain%dens)
-  call construct_hydromet_profile (layer_loc%precip%tot, atm_loc(:)%snow%fprecip, atm_loc(:)%snow%dens)
-  call construct_hydromet_profile (layer_loc%precip%tot, atm_loc(:)%grpl%fprecip, atm_loc(:)%grpl%dens)
-  call construct_hydromet_profile (layer_loc%precip%tot, atm_loc(:)%precip%ftot,  atm_loc(:)%precip%dens)
-
-! calculate total hydrometeor density per layer
-  do ilev=1,nlev
-    atm_loc(ilev)%hydro%dens  = atm_loc(ilev)%precip%dens + atm_loc(ilev)%cloud%dens
-  enddo
-
-  return                                                                    
-  end subroutine construct_precip_density_profile
-
-!=======================================================================
-  subroutine construct_cloud_density_profile (atm_loc, layer_loc)
-!=======================================================================      
-!  Calculates cloud fraction of mass and density per layer
-!
-! Modifications:
-!  3/16/2021 Kevin Schaefer created subroutine
-!  5/9/2021  Kevin Schaefer moved Gaussian & frozen frac to separate routine 
-!  5/9/2021  Kevin Schaefer separated cloud and precip profiles into separate routines
-!  5/23/2021 Kevin Schaefer corrected fraction calculations to atm_loc
-!----------------------------------------------------------------------
-  use scan_Variables
-  use dotlrt_variables
-  use profiles
-  use dotlrt_output
-
-  implicit none
-
-! input/output variables
-  type(profile_type) atm_loc(max_nlev) ! (variable) local atmospheric profile
-  type(hydro_layers) layer_loc   ! (variable) local hydrometeor layer variables
-
-! local variables
-  integer ilev             ! (-) atm level index
-  real(8) f_cld(max_nlev)  ! (-) fraction of total column precip per layer
-
-! calculate layer geometry
-!  call reconstruct_atm_layer_geometry()
-
-! calculate fractions per layer
-  call fraction_per_layer_gaussian(layer_loc%cloud, f_cld)
-
-! Calculate frozen fraction
-  call fraction_frozen_hydro(atm_loc)
-
-! calculate fraction of total column cloud water per species per layer
-  do ilev=1,nlev
-    atm_loc(ilev)%clw%fcloud  = f_cld(ilev)*(1.d0-atm_loc(ilev)%f_froz)
-    atm_loc(ilev)%rain%fcloud = 0.d0
-    atm_loc(ilev)%ice%fcloud  = f_cld(ilev)*atm_loc(ilev)%f_froz
-    atm_loc(ilev)%snow%fcloud = 0.d0
-    atm_loc(ilev)%grpl%fcloud = 0.d0
-    atm_loc(ilev)%cloud%ftot  = f_cld(ilev)
-  enddo
-
-! construct vertical density profiles
-  call construct_hydromet_profile (layer_loc%cloud%tot, atm_loc(:)%clw%fcloud, atm_loc(:)%clw%dens)
-  call construct_hydromet_profile (layer_loc%cloud%tot, atm_loc(:)%ice%fcloud, atm_loc(:)%ice%dens)
-  call construct_hydromet_profile (layer_loc%cloud%tot, atm_loc(:)%cloud%ftot, atm_loc(:)%cloud%dens)
-
-! calculate total hydrometeor density per layer
-  do ilev=1,nlev
-    atm_loc(ilev)%hydro%dens  = atm_loc(ilev)%precip%dens + atm_loc(ilev)%cloud%dens
-  enddo
-
-  return                                                                    
-  end subroutine construct_cloud_density_profile
-!
-!=======================================================================
-  subroutine calculate_hydromet_layer_variables (atm_loc, dens, hydro_geo_loc)
-!=======================================================================      
-! assigns values to hydrometeor layer variables 
-!
-! Modifications:
-!  5/23/2021  Kevin Schaefer created subroutine from assign_hydromet_layer_variables
-!----------------------------------------------------------------------
-  use scan_Variables
-  use dotlrt_variables
-  use profiles
-  use dotlrt_output
-
-  implicit none
-
-! input variables
-  type(profile_type) atm_loc(max_nlev) ! (variable) local atmospheric profile
-  real(8) dens(max_nlev) ! (g/m3) hydrometeor density profile
-  type(hydro_lay_geo) hydro_geo_loc ! (-) local hydro layer geometry
-
-! internal variables
-  integer indx_top ! (-) level index
-  integer indx_bot ! (-) level index
-  integer ilev     ! (-) level index
-  real(8) peak    ! (km) height of peak hydrometeor density
-
-! calculate column total
-  hydro_geo_loc%tot = 0.d0
-  do ilev=1,nlev
-   hydro_geo_loc%tot = hydro_geo_loc%tot + dens(ilev)*atm_loc(ilev)%hgt_del
-  enddo
-
-! check if the column has any hydrometeors at all
-  if(hydro_geo_loc%tot == 0.d0) then
-    hydro_geo_loc%bot = 0.d0
-    hydro_geo_loc%top = 0.d0
-    hydro_geo_loc%pk  = 0.d0
-    hydro_geo_loc%std = 0.d0
-    return
+  if (obs_x == 17 .or. obs_y == 17) then ! total column clw
+    obs_den=typical(17)
+    print*, typical(17)
+    col_tot=10.d0**obs_den
+    print*, 'clw', obs_den, col_tot
+    call construct_hydromet_profile (col_tot, atm(:)%clw%ftot, atm(:)%clw%dens)
+    call construct_reduced_dim_atm_profile()
   endif
 
-! find bottom of hydrometeor layer
-  do ilev = 1, nlev
-    indx_bot=ilev
-    if(dens(ilev)/=0.d0) exit
-  end do
-  hydro_geo_loc%bot=atm_loc(indx_bot)%hgt_bot
+  if (obs_x == 18 .or. obs_y == 18) then ! total column rain
+    obs_den=typical(18)
+    col_tot=10.d0**obs_den
+    print*, 'rain', obs_den, col_tot
+    call construct_hydromet_profile (col_tot, atm(:)%rain%ftot, atm(:)%rain%dens)
+    call construct_reduced_dim_atm_profile()
+  endif
 
-! find top of hydrometeor layer
-  do ilev = nlev,1,-1
-    indx_top=ilev
-    if(dens(ilev)/=0.d0) exit
-  end do
-  hydro_geo_loc%top=atm_loc(indx_top)%hgt_top
+  if (obs_x == 19 .or. obs_y == 19) then ! total column ice
+    obs_den=typical(19)
+    col_tot=10.d0**obs_den
+    print*, 'ice', obs_den, col_tot
+    call construct_hydromet_profile (col_tot, atm(:)%ice%ftot, atm(:)%ice%dens)
+    call construct_reduced_dim_atm_profile()
+  endif
 
-! calculate height of peak hydrometeor density
-  peak=maxval(dens(indx_bot:indx_top))
-  hydro_geo_loc%pk=atm_loc(indx_bot)%hgt_mid
-  do ilev = indx_bot,indx_top
-    if (dens(ilev) == peak) hydro_geo_loc%pk=atm_loc(ilev)%hgt_mid
-  end do
+  if (obs_x == 20 .or. obs_y == 20) then ! total column snow
+    obs_den=typical(20)
+    col_tot=10.d0**obs_den
+    print*, 'snow', obs_den, col_tot
+    call construct_hydromet_profile (col_tot, atm(:)%snow%ftot, atm(:)%snow%dens)
+    call construct_reduced_dim_atm_profile()
+  endif
 
-! calculate std
-  hydro_geo_loc%std = (hydro_geo_loc%top - hydro_geo_loc%bot)/4.d0
+  if (obs_x == 21 .or. obs_y == 21) then ! total column graupel
+    obs_den=typical(21)
+    col_tot=10.d0**obs_den
+    print*, 'grpl', obs_den, col_tot
+    call construct_hydromet_profile (col_tot, atm(:)%grpl%ftot, atm(:)%grpl%dens)
+    call construct_reduced_dim_atm_profile()
+  endif
 
-  return                                                                    
-  end subroutine calculate_hydromet_layer_variables
-!
-!=======================================================================
-  subroutine assign_hydromet_layer_variables (hydro_geo_loc, col_tot, peak, std)
-!=======================================================================      
-! assigns values to hydrometeor layer variables 
-!
-! Modifications:
-!  5/9/2021  Kevin Schaefer created subroutine
-!  5/22/2021 Kevin Schaefer changed from psuedo dat only to generic
-!  5/22/2021 Kevin Schaefer changed to a single hydrometeor
-!----------------------------------------------------------------------
-  use scan_Variables
-  use dotlrt_variables
-  use profiles
-  use dotlrt_output
+  if (obs_x==22.or.obs_y==22) then  ! total column cloud
+    obs_den=typical(22)
+    col_tot=10.d0**obs_den
+    print*, 'cloud', obs_den, col_tot
+    call construct_hydromet_profile (col_tot, atm(:)%clw%fcloud,  atm(:)%clw%dens)
+    call construct_hydromet_profile (col_tot, atm(:)%ice%fcloud,  atm(:)%ice%dens)
+    call construct_reduced_dim_atm_profile()
+  endif
 
-  implicit none
+  if (obs_x==23.or.obs_y==23) then ! total column precip
+    obs_den=typical(23)
+    col_tot=10.d0**obs_den
+    print*, 'precip', obs_den, col_tot
+    call construct_hydromet_profile (col_tot, atm(:)%rain%fprecip, atm(:)%rain%dens)
+    call construct_hydromet_profile (col_tot, atm(:)%snow%fprecip, atm(:)%snow%dens)
+    call construct_hydromet_profile (col_tot, atm(:)%grpl%fprecip, atm(:)%grpl%dens)
+    call construct_reduced_dim_atm_profile()
+  endif
 
-! input variables
-  type(hydro_lay_geo) hydro_geo_loc ! (-) local hydro layer geometry
-  real(8) col_tot ! (g/m2) column total hydrometeor
-  real(8) peak    ! (km) height of peak hydrometeor density
-  real(8) std     ! (km) height standard deviation of hydrometeor layer
+  if (obs_x == 24 .or. obs_y == 24) then ! total column hydrometeor
+    obs_den=typical(24)
+    col_tot=10.d0**obs_den
+    print*, 'hydro', obs_den, col_tot
+    call construct_hydromet_profile (col_tot, atm(:)%clw%fhydro,  atm(:)%clw%dens)
+    call construct_hydromet_profile (col_tot, atm(:)%rain%fhydro, atm(:)%rain%dens)
+    call construct_hydromet_profile (col_tot, atm(:)%ice%fhydro,  atm(:)%ice%dens)
+    call construct_hydromet_profile (col_tot, atm(:)%snow%fhydro, atm(:)%snow%dens)
+    call construct_hydromet_profile (col_tot, atm(:)%grpl%fhydro, atm(:)%grpl%dens)
+    call construct_hydromet_profile (col_tot, atm(:)%hydro%ftot,  atm(:)%hydro%dens)
+    call construct_reduced_dim_atm_profile()
+  endif
+  
+  do_prof = .false.
+  if(obs_x==25) do_prof = .true.
+  if(obs_y==25) do_prof = .true.
+  if(obs_x==26) do_prof = .true.
+  if(obs_y==26) do_prof = .true.
+  if(obs_x==27) do_prof = .true.
+  if(obs_y==27) do_prof = .true.
+  if(obs_x==28) do_prof = .true.
+  if(obs_y==28) do_prof = .true.
+  if (do_prof) then
+    cloud%cloud%pk = typical(25)
+    cloud%cloud%std = typical(26)
+    cloud%precip%pk = typical(27)
+    cloud%precip%std = typical(28)
+    print*, cloud%cloud%pk, cloud%cloud%std, cloud%precip%pk, cloud%precip%std
+    call construct_precip_profile()
+  endif
 
-  hydro_geo_loc%tot = 10.d0**col_tot
-  hydro_geo_loc%pk  = peak
-  hydro_geo_loc%std = std
-  hydro_geo_loc%top = peak + 2.d0*std
-  hydro_geo_loc%bot = peak - 2.d0*std
-  if (hydro_geo_loc%bot < atm(1)%hgt_bot) hydro_geo_loc%bot = atm(1)%hgt_bot
+! recalculate reduced dimension stuff
+  call construct_reduced_dim_atm_profile()
+  call print_reduced_profile ()
 
-  return                                                                    
-  end subroutine assign_hydromet_layer_variables
-!
-!=======================================================================
-  subroutine calculate_brightness_temps (atm_loc)
-!=======================================================================      
-! prints observed brightness temperatures 
-!
-! Modifications:
-!  5/23/2021 Kevin Schaefer created subroutine
-!----------------------------------------------------------------------
-  use scan_Variables
-  use dotlrt_variables
-  use profiles
-  use dotlrt_output
-
-  implicit none
-
-! input variables
-  type(profile_type) atm_loc(max_nlev) ! (variable) local atmospheric profile
-
-! local variables
-  integer ivar  ! (-) variable index
-  integer ichan ! (-) channel index
-
-  temp_atm = atm
-  atm = atm_loc
+! calculate observed brightness temperatures
   ivar=0
   do ichan=minchan, maxchan
     ivar=ivar+1
@@ -756,47 +515,15 @@
     call mrt( )
     Tbo_obs(ivar,:) = Tbo_str_mat(1,:)
   enddo
-  atm = temp_atm
+
+  !call write_current_profile()
+  !stop
 
   return                                                                    
   end
 !
 !=======================================================================
-  subroutine print_observed_brightness_temps ()
-!=======================================================================      
-! prints observed brightness temperatures 
-!
-! Modifications:
-!  5/21/2021 Kevin Schaefer created subroutine
-!----------------------------------------------------------------------
-  use scan_Variables
-  use dotlrt_variables
-  use profiles
-  use dotlrt_output
-
-  implicit none
-
-! local variables
-  integer ivar  ! (-) variable index
-  integer ichan ! (-) channel index
-  character*100 fmt
-
-  ivar=0
-  fmt = '(a3,3x,a4,3x,3(a10,2x))'
-  print(fmt), 'Num', 'chan', 'freq (GHz)', 'Tb H (K)', 'Tb V (K)'
-  fmt = '(i3,3x,i4,3x,3(f10.3,2x))'
-  do ichan=minchan, maxchan
-    ivar = ivar+1
-    call extract_channel(ichan)
-    print(fmt), ivar, ichan, channel%lo_freq, Tbo_obs(ivar,:)
-  enddo
-
-  return                                                                    
-  end
-
-!
-!=======================================================================
-  subroutine print_reduced_profile (atm_loc, layer_loc)
+  subroutine print_reduced_profile ()
 !=======================================================================      
 ! prints reduced profile characteristics 
 !
@@ -810,37 +537,32 @@
 
   implicit none
 
-! input variables
-  type(profile_type) atm_loc(max_nlev) ! (variable) local atmospheric profile
-  type(hydro_layers) layer_loc ! local hydrometeor layer variables
-
 ! local variables
   integer ilev  ! (-) level index
   character*100 fmt
 
 ! recalculate reduced dimension stuff
   call construct_reduced_dim_atm_profile()
-  fmt = '(a6,2x,4(a10,2x))'
-  print(fmt),'phase', 'Col_tot', 'log10(tot)', 'h_peak', 'h_std'
+  fmt = '(a6,2x,5(a10,2x))'
+  print(fmt),'phase', 'Col_tot', 'log10(tot)', 'h_peak', 'h_ave', 'h_std'
 
-  fmt = '(a6,2x,4(f10.3,2x))'
-  print(fmt),'clw',  layer_loc%clw%tot,  log10(layer_loc%clw%tot), layer_loc%clw%pk, layer_loc%clw%std
-  print(fmt),'rain', layer_loc%rain%tot, log10(layer_loc%rain%tot), layer_loc%rain%pk, layer_loc%rain%std
-  print(fmt),'ice',  layer_loc%ice%tot,  log10(layer_loc%ice%tot), layer_loc%ice%pk, layer_loc%ice%std
-  print(fmt),'snow', layer_loc%snow%tot, log10(layer_loc%snow%tot), layer_loc%snow%pk, layer_loc%snow%std
-  print(fmt),'grpl', layer_loc%grpl%tot, log10(layer_loc%grpl%tot), layer_loc%grpl%pk, layer_loc%grpl%std
-  print(fmt),'cloud', layer_loc%cloud%tot, log10(layer_loc%cloud%tot), layer_loc%cloud%pk, layer_loc%cloud%std
-  print(fmt),'precip', layer_loc%precip%tot, log10(layer_loc%precip%tot), layer_loc%precip%pk, layer_loc%precip%std
-  print(fmt),'hydro',layer_loc%hydro%tot,log10(layer_loc%hydro%tot), layer_loc%hydro%pk, layer_loc%hydro%std
+  fmt = '(a6,2x,5(f10.3,2x))'
+  print(fmt),'clw',  cld%clw%tot,  log10(cld%clw%tot), cld%clw%h_max, cld%clw%h_ave, cld%clw%h_std
+  print(fmt),'rain', cld%rain%tot, log10(cld%rain%tot), cld%rain%h_max, cld%rain%h_ave, cld%rain%h_std
+  print(fmt),'ice',  cld%ice%tot,  log10(cld%ice%tot), cld%ice%h_max, cld%ice%h_ave, cld%ice%h_std
+  print(fmt),'snow', cld%snow%tot, log10(cld%snow%tot), cld%snow%h_max, cld%snow%h_ave, cld%snow%h_std
+  print(fmt),'grpl', cld%grpl%tot, log10(cld%grpl%tot), cld%grpl%h_max, cld%grpl%h_ave, cld%grpl%h_std
+  print(fmt),'cloud', cld%cloud%tot, log10(cld%cloud%tot), cld%cloud%h_max, cld%cloud%h_ave, cld%cloud%h_std
+  print(fmt),'precip', cld%precip%tot, log10(cld%precip%tot), cld%precip%h_max, cld%precip%h_ave, cld%precip%h_std
+  print(fmt),'hydro',cld%hydro%tot,log10(cld%hydro%tot), cld%hydro%h_max, cld%hydro%h_ave, cld%hydro%h_std
 
   print*, 'Hydrometeor densities (g/m3)'
-  fmt = '(a3,2x,10(a10,1x))'
-  print(fmt), 'lev', 'ht (km)', 'temp', 'clw', 'rain', 'ice', 'snow', 'grpl', 'cloud', 'precip', 'hydro'
-  fmt = '(i3,2x,10(f10.3,1x))'
-  do ilev = 1, 25
-    print(fmt), ilev, atm_loc(ilev)%hgt_mid,atm_loc(ilev)%temp, atm_loc(ilev)%clw%dens, atm_loc(ilev)%rain%dens, &
-    atm_loc(ilev)%ice%dens,  atm_loc(ilev)%snow%dens,atm_loc(ilev)%grpl%dens, &
-    atm_loc(ilev)%cloud%dens, atm_loc(ilev)%precip%dens, atm_loc(ilev)%hydro%dens
+  fmt = '(9(a10,1x))'
+  print(fmt), 'ht (km)', 'clw', 'rain', 'ice', 'snow', 'grpl', 'cloud', 'precip', 'hydro'
+  fmt = '(9(f10.3,1x))'
+  do ilev = 1, 20
+    print(fmt), atm(ilev)%hgt,atm(ilev)%clw%dens, atm(ilev)%rain%dens, atm(ilev)%ice%dens, atm(ilev)%snow%dens, &
+    atm(ilev)%grpl%dens, atm(ilev)%cloud%dens, atm(ilev)%precip%dens, atm(ilev)%hydro%dens
   enddo
 
   return                                                                    
@@ -876,7 +598,6 @@
       del2 = Tbo_obs(ivar,2)-Tbo_sim(ivar,2)
       cost_chan(ivar) = del1*del1 + del2*del2
       cost_tot = cost_tot + cost_chan(ivar)
-      !print*, Tbo_obs(ivar,1), Tbo_sim(ivar,1)
   enddo
   return                                                                    
   end
@@ -1319,15 +1040,15 @@
       ENDIF
 
 ! For OXYGEN
-      ZN=dcmplx(0.,0.)
+      ZN=CMPLX(0.,0.)
       DO 10 I=1,44
        GAMMA=0.
        S=A(1,I)*P*V**3*EXP(A(2,I)*(1.-V))*1.E-6
        GAMMA=A(3,I)*(P*V**(0.8-A(4,I))+1.1*E*V)*1.E-3
        GAMMA=(GAMMA**2+(25*0.6E-4)**2)**0.5
        DELTA=(A(5,I)+A(6,I)*V)*(P+E)*(V**0.8)*1.E-3
-       ZF=F/F0O2(I)*(dcmplx(1.,-DELTA)/dcmplx(F0O2(I)-F,-GAMMA)- &
-                    dcmplx(1.,DELTA)/dcmplx(F0O2(I)+F,GAMMA))
+       ZF=F/F0O2(I)*(CMPLX(1.,-DELTA)/CMPLX(F0O2(I)-F,-GAMMA)- &
+                    CMPLX(1.,DELTA)/CMPLX(F0O2(I)+F,GAMMA))
        ZN=ZN+S*ZF
 10    CONTINUE
 
@@ -1337,19 +1058,19 @@
       IF(AT1.LT.0.) AT1=0.
 !
 ! DRY AIR CONTINUUM
-      ZN=dcmplx(0.,0.)
+      ZN=CMPLX(0.,0.)
       So=6.14E-5*P*V**2
       GAMMAo=0.56E-3*(P+E)*V**.8
-      ZFo=-F/dcmplx(F,GAMMAo)
+      ZFo=-F/CMPLX(F,GAMMAo)
       Sn=1.40E-12*p**2*V**3.5
-      ZFn=dcmplx(0.,F/(1.93E-5*F**1.5+1.))
+      ZFn=CMPLX(0.,F/(1.93E-5*F**1.5+1.))
       ZN=So*ZFo+Sn*ZFn
 
 ! NONRESONAT DRY AIR ABSORPTION 
       AT2=.182*F*AIMAG(ZN)
 ! 
 ! WATER VAPOR
-      ZN=dcmplx(0.,0.)
+      ZN=CMPLX(0.,0.)
       DO 20 I=1,35
        GAMH=0.
        S=B(1,I)*E*V**3.5*EXP(B(2,I)*(1.-V))  
@@ -1358,8 +1079,8 @@
        GAMD2=1E-12/V*(1.46*F0H2O(I))**2
        GAMH=0.535*GAMH+(0.217*GAMH**2+GAMD2)**0.5
        DELH=0.
-       ZF=F/F0H2O(I)*(dcmplx(1.,-DELH)/dcmplx(F0H2O(I)-F,-GAMH)- &
-                   dcmplx(1.,DELH)/dcmplx(F0H2O(I)+F,GAMH))
+       ZF=F/F0H2O(I)*(CMPLX(1.,-DELH)/CMPLX(F0H2O(I)-F,-GAMH)- &
+                   CMPLX(1.,DELH)/CMPLX(F0H2O(I)+F,GAMH))
        ZN=ZN+S*ZF
 20           CONTINUE
 
@@ -1378,7 +1099,7 @@
         Epinf=0.0671*Eps
         Eopt=3.52
 ! Complex Permittivity of water (double-Debye model)
-        ZEp=Eps-f*((Eps-Epinf)/dcmplx(f,fD)+(Epinf-Eopt)/dcmplx(f,fS))
+        ZEp=Eps-f*((Eps-Epinf)/CMPLX(f,fD)+(Epinf-Eopt)/CMPLX(f,fS))
 !
 ! ICE PERMITTIVITY [8]
       ELSE
@@ -1388,7 +1109,7 @@
 ! Complex Permittivity of Ice 
         fice=f
         IF(f.LT..001)fice=.001
-        ZEp=dcmplx(3.15,Ai/fice+Bi*fice)
+        ZEp=CMPLX(3.15,Ai/fice+Bi*fice)
       ENDIF
 ! SUSPENDED PARTICLE RAYLEIGH APPROXIMATION [6]
       ZNw=1.5*W*((ZEp-1.)/(ZEp+2.)-1.+3./(Eps+2.))
@@ -1699,105 +1420,3 @@ enddo
 
 end subroutine dtess_eau
 
-!
-!====================================================================
-  subroutine fraction_per_layer_quad(layer_loc, f_lay)
-!====================================================================
-! Calculates the hydrometeor fraction per layer
-! assuming a quadratic verticle distribution
-!
-! History:
-!  5/26/2021 Kevin Schaefer created routine
-!--------------------------------------------------------------------
-  use scan_Variables
-  use dotlrt_variables
-  use profiles
-  use dotlrt_output
-  implicit none
-
-! input/output variable
-  type(hydro_lay_geo) layer_loc ! input hydrometeor layer geometry
-
-! output variable
-  real(8) f_lay(max_nlev) ! (-) hydrometeor fraction per layer of column total
-  real(8) dden_dtot(max_nlev) ! (1/m) Jacobian density wrt total column density
-  real(8) dden_dpk(max_nlev)  ! (g/m3/km) Jacobian density wrt peak height
-  real(8) dden_dstd(max_nlev) ! (g/m3/km) Jacobian density wrt height standard deviation
-
-! local variables
-  integer ilev            ! (-) atm level index
-  integer indx_top        ! (-) layer index top of hydrometeor layer
-  integer indx_bot        ! (-) layer index bottom of hydrometeor layer
-  real(8) z_top           ! (km) top of sublayer in physical coordinates
-  real(8) z_bot           ! (km) bottom of sublayer in physical coordinates
-  real(8) z_del(max_nlev) ! (m) thickness of sublayer in physical coordinates
-  real(8) z_mid(max_nlev) ! (km) middle of sublayer in physical coordinates
-  real(8) q_top(max_nlev) ! (-) top of sublayer in quadratic coordinates
-  real(8) q_bot(max_nlev) ! (-) bottom of sublayer in quadratic coordinates
-  real(8) fquad(max_nlev) ! (-) unscaled quadratic fraction per layer
-  real(8) total           ! (-) local total
-  real(8) dden_dq         ! (g/m3) Jacobian density wrt quadratic coordinate
-
-! find top and bottom indicies of hydrometeor layer
-  do ilev=1,nlev
-    indx_bot=ilev
-    if (atm(ilev)%hgt_top > layer_loc%bot) exit
-  enddo
-  do ilev=nlev,1,-1
-    indx_top=ilev
-    if (atm(ilev)%hgt_bot < layer_loc%top) exit
-  enddo
-
-! calculate unscaled fraction per layer
-  fquad(:) = 0.d0
-  z_del(:) = 0.d0
-  total=0.d0
-  do ilev=indx_bot,indx_top
-
-! top and bottom of sublayer in physical coordinates
-    if (ilev == indx_bot) then ! adjust for partial hydromet layer
-      z_top = atm(ilev)%hgt_top
-      z_bot = layer_loc%bot
-
-    elseif (ilev == indx_top) then ! adjust for partial hydromet layer
-      z_top = layer_loc%top
-      z_bot = atm(ilev)%hgt_bot
-
-    else
-      z_top = atm(ilev)%hgt_top
-      z_bot = atm(ilev)%hgt_bot
-    endif
-    z_del(ilev) = (atm(ilev)%hgt_top - atm(ilev)%hgt_bot)*1000
-    z_mid(ilev) = (z_top - z_bot)/2.d0
-
-! convert from physical to quadratic coordinates
-    q_top(ilev)= (z_top-layer_loc%pk)/layer_loc%std
-    q_bot(ilev)= (z_bot-layer_loc%pk)/layer_loc%std
-
-! calculate fraction
-    fquad(ilev) = 3.d0/8.d0*(q_top(ilev) - q_bot(ilev)) - (q_top(ilev)**3 - q_bot(ilev)**3)/12.d0
-    if (fquad(ilev) < 10.d-15) fquad(ilev) = 0.d0
-
-! calculate total
-    total = total + fquad(ilev)
-    !print*, ilev, layer_loc%pk, layer_loc%std, fquad(ilev)
-   enddo
-
-! Scale by dividing by the total integral to ensure all fractions sum to one
-  do ilev=1,nlev
-    f_lay(ilev) = fquad(ilev)/total
-    !if (ilev <20) print*, ilev, atm(ilev)%hgt, fquad(ilev), f_pre(ilev)
-  enddo
-
-! Calculate Jacobians
-  dden_dtot(:) = 0.d0
-  dden_dpk(:)  = 0.d0
-  dden_dstd(:) = 0.d0
-  do ilev=1,nlev
-    dden_dtot(ilev) = layer_loc%tot/z_del(ilev)
-    dden_dq = layer_loc%tot/z_del(ilev)*3.d0/32.d0*(q_bot(ilev)*q_bot(ilev) - q_top(ilev)*q_top(ilev))
-    dden_dpk(ilev)  = -1.d0/layer_loc%std*layer_loc%tot/z_del(ilev)*dden_dq
-    dden_dstd(ilev) = -(z_mid(ilev)- layer_loc%pk)/layer_loc%std/layer_loc%std*dden_dq
-  enddo
-
-  end subroutine fraction_per_layer_quad

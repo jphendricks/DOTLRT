@@ -696,7 +696,6 @@ end subroutine write_atm_profile
   close(unit=20)
 
   end subroutine write_text_profile
-
 !
 !====================================================================
   subroutine write_radiation_profile(ilon, ilat)
@@ -758,3 +757,76 @@ end subroutine write_atm_profile
   close(unit=20)
 
   end subroutine write_radiation_profile
+!
+!====================================================================
+  subroutine write_current_profile()
+!====================================================================
+! writes the current profile in DOTLRT variable tree to text file
+!
+! History:
+!  3/18/2021  Kevin Schaefer created routine
+!--------------------------------------------------------------------
+  use dotlrt_variables
+  use profiles
+  implicit none
+!
+! internal variables  
+  character*250 line     ! (-) output line
+  character*250 fmt      ! (-) output format spec
+  character*25 txt_val1  ! (-) text version of value
+  integer ilev           ! (-) level index
+  integer ivar           ! (-) value index
+  character*25 values(nvar_prof)! (varies) temporary write variable
+!
+! profile values
+! values(1) (km) height
+! values(2) (mb) atmospheric pressure
+! values(3) (K) atmospheric temperature
+! values(4) (g/m^3) water vapor density
+! values(5) (g/m^3) cloud liquid water density
+! values(6) (g/m^3) rain density
+! values(7) (g/m^3) ice density
+! values(8) (g/m^3) snow density
+! values(9) (g/m^3) graupel density
+
+! print message
+  print*, 'Write Single Text Atmospheric Profile'
+  print*, '    ', trim(out_path)
+!
+! open profile file
+  open(unit=20, file=trim(out_path), form='formatted')
+
+! write number of levels
+  fmt='(i3.0)'
+  write(txt_val1, fmt) nlev
+  fmt='(a3)'  
+  write(20,fmt) trim(adjustl(txt_val1))
+
+! convert level values to text and write to file
+  do ilev = 1, nlev
+    fmt = '(f15.8)'
+    write(values(1), fmt) atm(ilev)%hgt    ! (km)
+    write(values(2), fmt) atm(ilev)%press  ! (mb)
+    write(values(3), fmt) atm(ilev)%temp   ! (K)
+    fmt = '(e15.8)'
+    write(values(4), fmt) atm(ilev)%humid     ! (g/m^3)
+    write(values(5), fmt) atm(ilev)%clw%dens  ! (g/m^3)
+    write(values(6), fmt) atm(ilev)%rain%dens ! (g/m^3)
+    write(values(7), fmt) atm(ilev)%ice%dens  ! (g/m^3)
+    write(values(8), fmt) atm(ilev)%snow%dens ! (g/m^3)
+    write(values(9), fmt) atm(ilev)%grpl%dens ! (g/m^3)
+
+    do ivar =1, nvar_prof
+      if(ivar==1) then
+        line=trim(values(ivar))
+      else
+        line=trim(line)//','//trim(values(ivar))
+      endif
+    enddo
+    write(20,*) trim(adjustl(line))
+  end do
+
+! close profile file
+  close(unit=20)
+
+  end subroutine write_current_profile

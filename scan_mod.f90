@@ -7,19 +7,22 @@
   IMPLICIT NONE
 
 ! program control variables
+  integer scanflag   ! do generalized scanning
   character*25 scantype   ! type of scan
-  logical calc_psuedo ! flag to calculate psuedo data
-  logical calc_init  ! flag to calculate psuedo data
   Integer DevFlag    ! send plot to screen or postscript file
+  integer sla_flag   ! scan calculations of specific leaf area
   Integer PlotFlag   ! plot data 
   Integer color_con  ! plot color contours 
-  integer nline      ! number of plotted variables
-  integer max_nline  ! max number of plotted variables
+  integer NumY       ! number of plotted variables
+  integer max_NumY   ! max number of plotted variables
   integer LegFlag    ! flag to plot legends
-  integer nLeg       ! number of legends
   integer flagDim    ! scan in 2-D or 3-D
   integer save_2d    ! save 2-dimensional data from scan
   integer save_3d    ! save 3-dimensional data from scan
+  integer obs_calc   ! calculate psuedo-obs
+  integer obs_num    ! number variables for observations (1 or 2)
+  integer obs_x      ! x variable number for observations 
+  integer obs_y      ! x variable number for observations
   integer Yvar       ! flag for which Y variable to vary
   integer Xvar       ! flag for which X variable to vary
   integer numpts     ! total number of points in scan
@@ -28,15 +31,17 @@
   Character *45 Junk ! junk variable for reading input descriptors
   Character *100 Plotfile ! file name for output plot
 
-! channel variables
-  integer nchannel  ! (-) total number of channels
-  Integer minchan   ! (-) minimum channel number
-  Integer maxchan   ! (-) maximum channel number
+! program control variables
+  integer nchannel ! (-) total number of channels
+  Integer minchan  ! (-) minimum channel number
+  Integer maxchan  ! (-) maximum channel number
+  integer nsib     ! (-) number of points
+  integer ns       ! (-) total number of possible soil types
 
 ! scan output variables
   character*25 LabX                  ! Label for x-axis
   character*25 LabY                  ! Label for y-axis
-  character*25 legend(100)           ! legends for plotted lines
+  character*25 legend(10)            ! legends for plotted lines
   Character*100 Titlebase            ! title for individual plot
   Character*100 Title                ! title for individual plot
   Integer Scale                      ! Contour interval scaling factor for plotting
@@ -49,6 +54,12 @@
   real(8), allocatable :: X3(:)      ! generic x values
   real(8), allocatable :: Y3(:)      ! generic y values
   real(8), allocatable :: zval(:,:,:)! generic Z values
+  real(8), allocatable :: myvals(:)  ! values from hydrometior_master_5
+  real(8), allocatable :: myarray(:,:,:,:,:)! values from hydrometior_master_5
+  real(8), allocatable :: tparray(:,:,:,:)! values from hydrometior_master_5
+  real(8), allocatable :: tarray(:)! values from hydrometior_master_5
+  real(8), allocatable :: parray(:)! values from hydrometior_master_5
+  integer myphase ! values from hydrometior_master_5
   integer NumScanVar                 ! number of variables in table
   character (len=25), allocatable :: Label(:) ! labels for plotting
   real(8), allocatable :: Range(:)   ! range of scanned data values
@@ -64,7 +75,12 @@
   real(8) Xmin, Xmax, Ymin, Ymax, Xval, Yval
   real(8) mincont, maxcont
   integer maxi, maxj
-  real(8) test, test10(100) ! testing variables
+  real(8) xacc
+  real(8) meanval
+  real(8) test, test10(10) ! testing variables
+  character*8 stuff
+  integer kkk
+  integer soilspec    ! specified soil number
   Character *40 file  ! Filename
 
 ! grid parameters
@@ -79,40 +95,34 @@
   integer jmin   ! (-) minimum latitude index for subset of domain grid
   integer jmax   ! (-) maximum latitude index for subset of domain grid
 
-! profile setup specifications
-  integer n_psuedo      ! (-) number variables for for pseudo-data calculation
-  integer n_init        ! (-) number variables for for pseudo-data calculation
-  integer nout_man      ! (-) number of manipulations
-  integer n_up_man      ! (-) number of manipulations in update
+! manipulation specifications
+  integer nout_man  ! number of manipulations
   type manipulation
-    logical doit        ! perform the manipulation
-    character*20 typ    ! type
-    real(8) val1        ! 1st value
-    real(8) val2        ! 2nd value
-    real(8) val3        ! 3rd value
-    real(8) val4        ! 4th value
-    integer ind1        ! index value 1
-    integer ind2        ! index value 2
-    integer ind3        ! index value 3
-    integer npath1      ! 1st path number
-    integer npath2      ! 2nd path number
-    integer npath3      ! 3rd path number
-    Character*100 path1 ! 1st path
-    Character*100 path2 ! 2st path
-    Character*100 path3 ! 3st path
-    integer null1       ! index of 1st null value
-    integer null2       ! index of 2nd null value
-    integer null3       ! index of 3rd null value
-    character*20 txt1   ! text 1
-    character*20 txt2   ! text 2
-    character*20 txt3   ! text 3
-    character*20 txt4   ! text 4
-    logical saveit      ! save to file
+    logical doit      ! perform the manipulation
+    character*20 typ  ! type
+    real(8) val1         ! 1st value
+    real(8) val2         ! 2nd value
+    real(8) val3         ! 3rd value
+    real(8) val4         ! 4th value
+    integer ind1      ! index value 1
+    integer ind2      ! index value 2
+    integer ind3      ! index value 3
+    integer npath1    ! 1st path number
+    integer npath2    ! 2nd path number
+    integer npath3    ! 3rd path number
+    Character *100 path1       ! 1st path
+    Character *100 path2       ! 2st path
+    Character *100 path3       ! 3st path
+    integer null1     ! index of 1st null value
+    integer null2     ! index of 2nd null value
+    integer null3     ! index of 3rd null value
+    character*20 txt1 ! text 1
+    character*20 txt2 ! text 2
+    character*20 txt3 ! text 3
+    character*20 txt4 ! text 4
+    logical saveit    ! save to file
   end type manipulation
-  type(manipulation) out_man(1000)    ! manipulations for output
-  type(manipulation) psuedo_man(1000) ! manipulations for psedo data
-  type(manipulation) init_man(1000)   ! manipulations for initial profile
-  type(manipulation) update_man(1000) ! manipulations for profile update
+  type(manipulation) out_man(1000) ! maps manipulations
 
 ! biophysical parameters
   real(8), parameter :: Plank        = 6.63e-34                  ! (J s) plank's constant
@@ -125,7 +135,7 @@
   real(8), parameter :: omega        = 2.0d0*pi/86400.0d0        ! (1/s) earth angular velocity 
   real(8), parameter :: earth_area   = 5.100996990707616d+14     ! (m2) surface area of earth 
   real(8), parameter :: gas_const_R  = 287.000d0                 ! (J/kg/K))gas constant for dry air 
-  real(8), parameter :: heat_cp      = 1005.000d0                ! (J/kg/K)) specific heat at constant pressure 
+  real(8), parameter :: heat_cp = 1005.000d0                     ! (J/kg/K)) specific heat at constant pressure 
   real(8), parameter :: kappa        = gas_const_R/heat_cp       ! (?) gas_const_R/spec_heat_cp
   real(8), parameter :: inv_kappa    = 1.0d0 / kappa             ! (?) inverse kappa
   real(8), parameter :: p0_sfc       = 1.0d+05                   ! (Pa) surface pressure
@@ -155,22 +165,20 @@
   real(8) Time         ! Execution time in seconds
   real(8) TotalTime         ! Execution time in seconds
 
-! input/output files
+! input files
   integer numfiles ! number of input files
   type in_files
     integer       num   ! file number
     character*20  type  ! file type
-    character*250 path  ! file name
+    character*100 path  ! file name
   end type in_files
   type(in_files), allocatable :: files(:) ! input file information
-  character*250 obs_path  ! file name
 
 ! cost function variables
-  integer nlev_ref   ! (-) number of layers for reference atmosphere profile
-  real(8), allocatable :: Tbo_obs(:,:) ! (K) (nchannel,npol) observed brightness temperature at top of atmosphere
-  real(8), allocatable :: Tbo_sim(:,:) ! (K) (nchannel,npol) simulated brightness temperature at top of atmosphere
-  real(8), allocatable :: cost_chan(:) ! (K) cost function per channel
+  real(8), allocatable :: Tbo_obs(:,:) ! (K) (nchan,npol) observed brightness temperature at top of atmosphere
+  real(8), allocatable :: Tbo_sim(:,:) ! (K) (nchan,npol) simulated brightness temperature at top of atmosphere
   real(8) cost_tot                     ! (K) total cost function
+  real(8), allocatable :: cost_chan(:) ! (K) cost function per channel
   real(8) obs_den                      ! (g/m2) observed hydrometeor column total
 
 ! hydrometeor_ph5 variables
@@ -185,27 +193,25 @@
   double complex epsil     ! (-) ice dielectric constant
   double complex depsil_dt ! (1/K) derivative of ice dielectric constant wrt temperature
 
-! hydrometeor profile variables
-  type hydro_lay_geo
+! generic cloud variables
+  type hydrometeor_layer
     real(8) bot  ! (km) height of bottom of hydrometeor layer
-    real(8) top  ! (km) height of top of hydrometeor layer
     real(8) std  ! (km) height of peak value of hydrometeor layer
     real(8) pk   ! (km) height of peak value of hydrometeor layer
+    real(8) top  ! (km) height of top of hydrometeor layer
     real(8) tot  ! (g/m2) total column mass of hydrometeor
-  end type hydro_lay_geo
-  type hydro_layers
-    type(hydro_lay_geo) clw    ! (-) cloud liquid water layer
-    type(hydro_lay_geo) rain   ! (-) rain layer
-    type(hydro_lay_geo) ice    ! (-) ice layer
-    type(hydro_lay_geo) snow   ! (-) snow layer
-    type(hydro_lay_geo) grpl   ! (-) graupel layer
-    type(hydro_lay_geo) cloud  ! (-) cloud layer (clw + ice)
-    type(hydro_lay_geo) precip ! (-) precip layer (rain + snow + grpl)
-    type(hydro_lay_geo) hydro  ! (-) total hydromet layer (clw + rain + ice + snow + grpl)
-  end type hydro_layers
-  type(hydro_layers) cur_lay    ! hydrometeor layer variables for current profile
-  type(hydro_layers) psuedo_lay ! hydrometeor layer variables for psuedo-data
-  type(hydro_layers) init_lay   ! hydrometeor layer variables for initial guess
+  end type hydrometeor_layer
+  type generic_cloud
+    type(hydrometeor_layer) clw    ! (-) cloud liquid water layer
+    type(hydrometeor_layer) rain   ! (-) rain layer
+    type(hydrometeor_layer) ice    ! (-) ice layer
+    type(hydrometeor_layer) snow   ! (-) snow layer
+    type(hydrometeor_layer) grpl   ! (-) graupel layer
+    type(hydrometeor_layer) cloud  ! (-) cloud layer (clw + ice)
+    type(hydrometeor_layer) precip ! (-) precip layer (rain + snow + grpl)
+    type(hydrometeor_layer) hydro  ! (-) total hydromet layer
+  end type generic_cloud
+  type(generic_cloud) cloud ! generic cloud variable
 
 ! planks law
   real(8) Tplank  ! (K) temperature used in plank's law
@@ -213,6 +219,7 @@
   real(8) wave    ! (m) wavelength
   real(8) Dwave   ! (m) wavelength increment
   real(8) freq    ! (Ghz) frequency
+  real(8) myfreq  ! (Ghz) frequency
   real(8) Dfreq   ! (1/s) frequency increment
   real(8) Black   ! (w/m2) blackbody emission
   real(8) RH      ! (%) relative humidity
@@ -269,3 +276,4 @@
 
   end Module scan_Variables
 !
+

@@ -1,4 +1,9 @@
 **/*.o
 **/*.mod
+**/*.nc
 **/WRF_Output
-dot.out
+**.out
+scan
+dot
+
+

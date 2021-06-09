@@ -136,16 +136,16 @@ SUBROUTINE calc_mon_temp_weight_scat( ifreq, Tb_inp, tau, tb_pl_inp, tb_mn_inp, 
 ! check for valid observation height
   height = obs_height
   if( height < 0.0d0 ) height = 0.0d0
-  if( height < ( atm(1)%hgt_mid + 0.0001d0 ) ) then
-    height = ( atm(1)%hgt_mid + 0.0001d0 )
+  if( height < ( atm(1)%hgt + 0.0001d0 ) ) then
+    height = ( atm(1)%hgt + 0.0001d0 )
   end if
-  if( height > ( atm(nlev)%hgt_mid - 0.0001d0 ) ) then
-    height = ( atm(nlev)%hgt_mid - 0.0001d0 )
+  if( height > ( atm(nlev)%hgt - 0.0001d0 ) ) then
+    height = ( atm(nlev)%hgt - 0.0001d0 )
   end if
 
 ! determine level boundaries at height
   next_level = 2
-  do while( ( atm(next_level)%hgt_mid < height ) .and. ( next_level < nlev ) )
+  do while( ( atm(next_level)%hgt < height ) .and. ( next_level < nlev ) )
     next_level = next_level + 1
   end do
   last_level = next_level-1
@@ -155,7 +155,7 @@ SUBROUTINE calc_mon_temp_weight_scat( ifreq, Tb_inp, tau, tb_pl_inp, tb_mn_inp, 
 
 ! calculate absorption, scattering, extinction, and albedo at height - start
 ! linear interpolation coefficients for height
-  llw = (atm(next_level)%hgt_mid - height) / (atm(next_level)%hgt_mid - atm(last_level)%hgt_mid)
+  llw = (atm(next_level)%hgt - height) / (atm(next_level)%hgt - atm(last_level)%hgt)
   nlw = 1.0d0 - llw
       
 ! interpolate to height temperature, pressure, water vapor
@@ -197,7 +197,7 @@ SUBROUTINE calc_mon_temp_weight_scat( ifreq, Tb_inp, tau, tb_pl_inp, tb_mn_inp, 
   call hydrometeor_master_5ph_d( frequency, phase, temp, lp, lq, lk0, la0, &
                                      abs_cloud_liq, scat_cloud_liq, g_cloud_liq,      &
                                      dhab, dhsc, dg,                                  &
-                                     atm(next_level)%clw%a0_const)
+                                     atm(next_level)%clw%a0_const, testvar1, testvar2, testvar3)
 
 ! rain------------------------------------------------------------
   phase = 2 ! rain
@@ -227,7 +227,7 @@ SUBROUTINE calc_mon_temp_weight_scat( ifreq, Tb_inp, tau, tb_pl_inp, tb_mn_inp, 
   call hydrometeor_master_5ph_d( frequency, phase, temp, ip, iq, ik0, ia0, &
                                      abs_cloud_rn, scat_cloud_rn, g_cloud_rn,         &
                                      dhab, dhsc, dg,                                  &
-                                     atm(next_level)%rain%a0_const)
+                                     atm(next_level)%rain%a0_const, testvar1, testvar2, testvar3)
 
 ! ice------------------------------------------------------------
   phase = 3 ! ice
@@ -257,7 +257,7 @@ SUBROUTINE calc_mon_temp_weight_scat( ifreq, Tb_inp, tau, tb_pl_inp, tb_mn_inp, 
   call hydrometeor_master_5ph_d( frequency, phase, temp, ip, iq, ik0, ia0, &
                                      abs_cloud_ice, scat_cloud_ice, g_cloud_ice,      &
                                      dhab, dhsc, dg,                                  &
-                                     atm(next_level)%ice%a0_const)
+                                     atm(next_level)%ice%a0_const, testvar1, testvar2, testvar3)
 
 ! snow------------------------------------------------------------
   phase = 4 ! snow
@@ -287,7 +287,7 @@ SUBROUTINE calc_mon_temp_weight_scat( ifreq, Tb_inp, tau, tb_pl_inp, tb_mn_inp, 
   call hydrometeor_master_5ph_d( frequency, phase, temp, ip, iq, ik0, ia0, &
                                      abs_cloud_snow, scat_cloud_snow, g_cloud_snow,   &
                                      dhab, dhsc, dg,                                  &
-                                     atm(next_level)%snow%a0_const)
+                                     atm(next_level)%snow%a0_const, testvar1, testvar2, testvar3)
 
 ! graupel------------------------------------------------------------
   phase = 5 ! graupel
@@ -317,7 +317,7 @@ SUBROUTINE calc_mon_temp_weight_scat( ifreq, Tb_inp, tau, tb_pl_inp, tb_mn_inp, 
   call hydrometeor_master_5ph_d( frequency, phase, temp, ip, iq, ik0, ia0, &
                                      abs_cloud_grpl, scat_cloud_grpl, g_cloud_grpl,   &
                                      dhab, dhsc, dg,                                  &
-                                     atm(next_level)%grpl%a0_const)
+                                     atm(next_level)%grpl%a0_const, testvar1, testvar2, testvar3)
 
 ! total extinction
   abs_tot = cabs_o2 + cabs_h2o + abs_cloud_liq + abs_cloud_ice &
@@ -331,14 +331,14 @@ SUBROUTINE calc_mon_temp_weight_scat( ifreq, Tb_inp, tau, tb_pl_inp, tb_mn_inp, 
 ! calculate opacity - start
 ! tau(1) = opacity from obs_height downward to surface at obs_theta
 ! tau(2) = opacity from obs_height upward              at obs_theta
-  tau(1) = atm(1)%ext_tot * atm(1)%hgt_mid ! opacity of first layer
+  tau(1) = atm(1)%ext_tot * atm(1)%hgt ! opacity of first layer
   do j = 2, last_level
-    tau(1) = tau(1) + atm(j)%ext_tot * ( atm(j)%hgt_mid- atm(j-1)%hgt_mid )
+    tau(1) = tau(1) + atm(j)%ext_tot * ( atm(j)%hgt- atm(j-1)%hgt )
   end do
   tau(2) = tau(1) ! opacity from surface up to last level
-  tau(1) = tau(1) + ext_tot * ( obs_height - atm(last_level)%hgt_mid )
+  tau(1) = tau(1) + ext_tot * ( obs_height - atm(last_level)%hgt )
   do j = next_level, nlev
-    tau(2) = tau(2) + atm(j)%ext_tot * ( atm(j)%hgt_mid- atm(j-1)%hgt_mid )
+    tau(2) = tau(2) + atm(j)%ext_tot * ( atm(j)%hgt- atm(j-1)%hgt )
   end do
   tau(2) = tau(2) - tau(1)
   cos_observ_angle = cos( obs_theta * pi / 180.0d0 )

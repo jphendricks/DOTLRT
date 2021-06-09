@@ -1,0 +1,30 @@
+Scantype
+
+Value        type
+cosz         cosz
+ext_coef     extinction coeficient
+L_band_VWC   calculate volumetric water content from L-band
+plank        Plank's law
+Sun          Sunrise/set
+mrt_func     MRT model continuous functional response
+mrt_chan     MRT model response by channel
+hm_ph5       scan hydrometeor_master_5ph_d
+dielectric   scan MRT dielectric calculations
+cloud        scan MRT with generic cloud
+
+Manipulations
+doit  type         map      ind2      Val1      val2
+f     'sum'        biostrt  biostp    unused    unused    ! sum all values  
+
+
+
+
+
+
+
+
+
+
+
+
+

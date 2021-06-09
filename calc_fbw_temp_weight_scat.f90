@@ -78,12 +78,10 @@ subroutine calc_fbw_temp_weight_scat( Tbo, tau, &
   integer j, k, jud
   integer iphase ! (-) hydrometeor phase index
   integer ilev ! (-) vertical level index
-
   real(8) quadweight, norm
 
 ! Calculate passband quadrature frequencies
 ! num_freqs: number of freq points for passband quadrature
-
   call calc_passband_freq()
 
 ! Normalization of passband quadrature weights
@@ -175,7 +173,6 @@ subroutine calc_fbw_temp_weight_scat( Tbo, tau, &
         quadweight = 1.0d0
       end if
       quadweight = quadweight / norm
-
       ! Compute weighting vector quadrature over passband frequencies using trapezoid rule
       call calc_mon_temp_weight_scat( ifreq, Tb_inp, tau, tb_pl_inp, tb_mn_inp, dtb_pl_inp, dtb_mn_inp, Tbo_streams_inp )
 
@@ -271,7 +268,7 @@ subroutine calc_fbw_temp_weight_scat( Tbo, tau, &
     end do ! ifreq
 
     ! step through frequencies in channel - end
-    ! brigthness temperature and Jacobian profiles for stream angles - start
+    ! brightness temperature and Jacobian profiles for stream angles - start
     do ilev = 0, nlev
        Tb_obs(ilev,1) = cTb(ilev,1)
        Tb_obs(ilev,2) = cTb(ilev,2)
@@ -290,5 +287,4 @@ subroutine calc_fbw_temp_weight_scat( Tbo, tau, &
     end do ! ilev
     ! brightness temperature and Jacobian profiles for stream angles - end
   end if ! num_freqs
-
 end subroutine calc_fbw_temp_weight_scat

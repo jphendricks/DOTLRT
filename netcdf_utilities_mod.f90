@@ -60,8 +60,7 @@ public :: nc_check,                       &
           nc_close_file,                  &
           nc_begin_define_mode,           &
           nc_end_define_mode,             &
-          nc_synchronize_file,            &
-          get_var_index_table
+          nc_synchronize_file
 
 
 ! note here that you only need to distinguish between
@@ -2244,161 +2243,29 @@ end subroutine find_name_from_fh
 !------------------------------------------------------------------
 
 !:========================================================================
-subroutine get_var_index_table(ncid,mfreq,mtair,mdens,mphase)
-!,varname,vals)
+subroutine get_var_index_table(ncid,varname,vals)
   use netcdf
-  use dotlrt_variables
-
   implicit none
 
   integer                  , intent(in)  :: ncid
-  real(8)                  , intent(in)  :: mfreq
-  real(8)                  , intent(in)  :: mtair
-  real(8)                  , intent(in)  :: mdens
-  integer                  , intent(in)  :: mphase
-  !real(8), dimension(:,:,:), intent(out) :: vals
+  character(len=*)         , intent(in)  :: varname
+  real(8), dimension(:,:,:), intent(out) :: vals
 
   integer :: ivals, jdens, ktemp
   integer :: vsize, dsize, tsize
   integer,                  dimension(3) :: varsize
   character(NF90_MAX_NAME), dimension(3) :: dimnames
-  real(8) :: freak
 
-  call scan_read_input
-
-  call extract_channel(2)
-  freak = channel%lo_freq 
-
-  print *, 'mfreq   = ', mfreq
-  print *, 'ncid    = ', ncid
-  print *, 'freak   = ', freak
-  print *, 'mdens   = ', mdens
-  print *, 'mtair   = ', mtair
-  print *, 'mphase  = ', mphase
-  !vsize =  nc_get_dimension_size(ncid, 'values')
-  !dsize =  nc_get_dimension_size(ncid, 'density')
-  !tsize =  nc_get_dimension_size(ncid, 'temperature')
-
-  !call nc_get_variable_size(ncid, varname, varsize)
-  !call nc_get_variable_dimension_names(ncid, varname, dimnames)
-  !call nc_get_variable(ncid, varname, vals)
-
-  2000 format('chann_',i0.2,'_',A)
-
-end subroutine get_var_index_table
-!:========================================================================
-!:========================================================================
-! subroutine get_var_index_table(ncid,varname,vals)
-!   use netcdf
-!   implicit none
-! 
-!   integer                  , intent(in)  :: ncid
-!   character(len=*)         , intent(in)  :: varname
-!   real(8), dimension(:,:,:), intent(out) :: vals
-! 
-!   integer :: ivals, jdens, ktemp
-!   integer :: vsize, dsize, tsize
-!   integer,                  dimension(3) :: varsize
-!   character(NF90_MAX_NAME), dimension(3) :: dimnames
-! 
-!   vsize =  nc_get_dimension_size(ncid, 'values')
-!   dsize =  nc_get_dimension_size(ncid, 'density')
-!   tsize =  nc_get_dimension_size(ncid, 'temperature')
-! 
-!   call nc_get_variable_size(ncid, varname, varsize)
-!   call nc_get_variable_dimension_names(ncid, varname, dimnames)
-!   call nc_get_variable(ncid, varname, vals)
-! 
-! end subroutine get_var_index_table
-! !:========================================================================
-
-subroutine read_index_table(infile)
-  use netcdf
-  implicit none
-
-  character(len=*), intent(in) :: infile
-  integer :: ncid, ndims, varid
-  integer :: ivals, jdens, ktemp
-  real(8),    dimension(:,:,:), allocatable :: vals
-  character(NF90_MAX_NAME), dimension(3) :: dimnames
-  integer, dimension(3)                  :: varsize
-  integer :: vsize, dsize, tsize
-  character(NF90_MAX_NAME) :: varname
-
-  !Open netCDF file
-  !:-------:-------:-------:-------:-------:-------:-------:-------:
-  allocate(vals(75,75,12))
-
-  ncid = nc_open_file_readonly(infile)
-
-
-  !Get the values of the coordinates and put them in xpos & ypos
-  !netcdf index_table_25 {
-  !dimensions:
-  !	temperature = 75 ;
-  !	density = 75 ;
-  !	values = 12 ;
-  !variables:
-  !	float temperature(temperature) ;
-  !		temperature:units = "kelven" ;
-  !	float density(density) ;
-  !		density:units = "g/m^3" ;
-  !	float values(values) ;
-  !		values:units = "some-unit" ;
-  !	float chann_01_clw(values, density, temperature) ;
-  !		chann_01_clw:units = "some-unit" ;
-  !	float chann_01_rain(values, density, temperature) ;
-  !		chann_01_rain:units = "some-unit" ;
-  !	float chann_01_snow(values, density, temperature) ;
-  !		chann_01_snow:units = "some-unit" ;
-  !	float chann_01_ice(values, density, temperature) ;
-  !		chann_01_ice:units = "some-unit" ;
-  !	float chann_01_graupel(values, density, temperature) ;
-  !		chann_01_graupel:units = "some-unit" ;
   vsize =  nc_get_dimension_size(ncid, 'values')
   dsize =  nc_get_dimension_size(ncid, 'density')
   tsize =  nc_get_dimension_size(ncid, 'temperature')
 
-  print *, 'vsize  = ', vsize
-  print *, 'dsize  = ', dsize
-  print *, 'tsize  = ', tsize
-
-  varname='chann_01_snow'
   call nc_get_variable_size(ncid, varname, varsize)
-
-  print *, 'varsize  = ', varsize(1), varsize(2), varsize(3)
-  !call exit(0) 
   call nc_get_variable_dimension_names(ncid, varname, dimnames)
-  print *, 'dimnames  = ', dimnames(1), dimnames(2), dimnames(3)
-  call  nc_get_variable(ncid, varname, vals)
-  do ktemp=1,75
-    do jdens=1,75
-      do ivals=1,12
-        if(vals(ktemp,jdens,ivals) .gt. 0.0) then
-           print *, 'vals(ktemp,jdens,ivals) = ', vals(ktemp,jdens,ivals), ivals, jdens, ktemp
-        endif
-      enddo
-    enddo
-  enddo
+  call nc_get_variable(ncid, varname, vals)
 
-  !:-------:-------:-------:-------:-------:-------:-------:-------:
-  !call check(nf90_inquire_variable(ncid,1,vname,xtype,ndims,dimids))
-  !call check(nf90_inq_varid(ncid,vname,varid))
-  !call check(nf90_get_var(ncid,varid,xpos))
-  !call check(nf90_inquire_variable(ncid,2,vname,xtype,ndims,dimids))
-  !call check(nf90_inq_varid(ncid,vname,varid))
-  !call check(nf90_get_var(ncid,varid,ypos))
-  !Get the values of the perturbations and put them in idata
-  !:-------:-------:-------:-------:-------:-------:-------:-------:
-  !call check(nf90_inquire_variable(ncid,3,vname,xtype,ndims,dimids))
-  !call check(nf90_inq_varid(ncid,vname,varid))
-  !call check(nf90_get_var(ncid,varid,idata))
-  !Close netCDF file
-  !:-------:-------:-------:-------:-------:-------:-------:-------:
-  call nc_close_file(ncid)
-  deallocate(vals)
-
-end subroutine read_index_table
+end subroutine get_var_index_table
+!:========================================================================
 
 end module netcdf_utilities_mod
 

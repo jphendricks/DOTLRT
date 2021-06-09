@@ -183,7 +183,7 @@ implicit none
   endif
 
 ! execution time diagnostics
-  print_ex = .true.
+  print_ex = .false.
   nseg=20
   time_seg=0.d0
   num_call=0.d0
