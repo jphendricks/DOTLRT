@@ -71,6 +71,7 @@ SCAN = \
 	Tb94.f90 \
 	write_output.f90 \
 	scan_control.f90 \
+	scan_control_ind.f90 \
 	scan_read_input.f90 \
 	scan_routines.f90 \
 	scan_var_assign.f90 \
@@ -116,11 +117,11 @@ scan: $(OBJS) scan.f90
 dot: $(OBJS) DOTLRT_main.f90
 	$(FC) $(FFLAGS) $(OBJS) DOTLRT_main.f90 $(LIBS) -o dot 
 
-ind: $(OBJS) simple_read.f90
-	$(FC) $(FFLAGS) $(OBJS) simple_read.f90 $(LIBS) -o test_index_table 
-
 ncread: $(OBJS) ncread.f90
 	$(FC) $(FFLAGS) $(OBJS) ncread.f90 $(LIBS) -o ncread 
+
+genind: $(OBJS) generate_index_table.f90
+	$(FC) $(FFLAGS) $(OBJS) generate_index_table.f90 $(LIBS) -o genind 
 
 %.o: %.f90
 	$(FC) $(FFLAGS) -c $<

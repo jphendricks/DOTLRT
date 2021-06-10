@@ -6,9 +6,9 @@ $dotlrt_control
 /
 
 $dotlrt_input_files
-  file_instr       = '/home/johe6518/code/DOTLRTv2.1/inputs/Inst_Generic.instr'
-  file_var         = '/home/johe6518/code/DOTLRTv2.1/inputs/var_def.txt'
-  file_index_table = '/home/johe6518/index_tables/index_table_25.nc'
+  file_instr       = '/home/johe6518/DOTLRT/inputs/Inst_GEMS2.instr'
+  file_var         = '/home/johe6518/DOTLRT/inputs/var_def.txt'
+  file_index_table = '/home/johe6518/DOTLRT/index_table_GEMS2_50.nc'
 /
 
 $dotlrt_rad_tran_param

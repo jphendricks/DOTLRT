@@ -2,7 +2,7 @@
 module dotlrt_variables
 ! ==============================================================
 ! Defines all input and internal variables for MRT
-! 
+!
 ! History:
 !  9/29/2020  Kevin Schaefer cleaned up code
 !  10/5/2020  Kevin Schaefer cleaned up surf_inp_type
@@ -29,10 +29,10 @@ logical flag_print_full  ! (-) flag to print full messages
 logical flag_read_anc    ! (-) flag to read in ancillary data from WRF
 logical flag_reduce_nvar ! (-) flag to use only part of atmos profile from WRF
 integer new_nlev         ! (-) number of levels to use in reduced profile
-character(20) prof_src   ! (-) source of atmospheric profile data 
+character(20) prof_src   ! (-) source of atmospheric profile data
                          ! 'single' single column text file
                          ! 'WRF'    WRF output netcdf file
-character(20) ocean_mod  ! (-) ocean model type 
+character(20) ocean_mod  ! (-) ocean model type
                          ! 'Fresnel' Fresnel reflectivity model
                          ! 'Wilheit' Wilheit reflectivity model
                          ! 'ITRA'    ITRA reflectivity model
@@ -139,7 +139,7 @@ type gas_type
     real(8) do2abs_dp  ! pressure derivative
     real(8) do2abs_dw  ! water vapor derivative
 end type gas_type
-type (gas_type), dimension(max_nlev) :: gas_prof 
+type (gas_type), dimension(max_nlev) :: gas_prof
 
 type hydro_type
     real(8) cloudab         ! cloud particle absorption in nepers/km
@@ -157,7 +157,7 @@ type hydro_type
     real(8) dcloudg_dk0     ! k0 derivative
     real(8) dcloudg_da0     ! a0 derivative ! not temperature or microwave frequency
 end type hydro_type
-type (hydro_type), dimension(max_nlev,max_nphase) :: hydro_prof 
+type (hydro_type), dimension(max_nlev,max_nphase) :: hydro_prof
 
 ! brightness temperature and Jacobian in observation direction
 real(8), allocatable :: Tb_obs_mat(:,:)         ! (K)      (nlev,npol)              Brightness temperature in sensor direction
@@ -165,15 +165,15 @@ real(8), allocatable :: dTb_dT_obs_mat(:,:)     ! (K/K)    (nlev,npol)          
 real(8), allocatable :: dTb_dp_obs_mat(:,:)     ! (K/mb)   (nlev,npol)              Jacobian brightness temp wrt pressure in sensor direction
 real(8), allocatable :: dTb_dq_obs_mat(:,:)     ! (K m3/g) (nlev,npol)              Jacobian brightness temp wrt specific humidity in sensor direction
 real(8), allocatable :: dTb_dw_obs_mat(:,:,:)   ! (K m3/g) (nvar,nlev,npol)         Jacobian brightness temp wrt hydrometeor in sensor direction
-real(8)  Tbo_mat(2)                             ! (K)      (npol)                   Brightness temperature at sensor nadir angle 
+real(8)  Tbo_mat(2)                             ! (K)      (npol)                   Brightness temperature at sensor nadir angle
 real(8)  tau_mat(2)                             ! (-)      (npol)                   opacity at sensor
 
 ! brightness temperature and Jacobian as function of stream angle
-real(8), allocatable :: Tbo_str_mat(:,:)        ! (K)      (nstream,npol)           Brightness temperature at top of atmosphere 
-real(8), allocatable :: dTb_dT_str_mat(:,:,:)   ! (K/K)    (nlev,nstream,npol)      Jacobian brightness temp wrt air temperature 
+real(8), allocatable :: Tbo_str_mat(:,:)        ! (K)      (nstream,npol)           Brightness temperature at top of atmosphere
+real(8), allocatable :: dTb_dT_str_mat(:,:,:)   ! (K/K)    (nlev,nstream,npol)      Jacobian brightness temp wrt air temperature
 real(8), allocatable :: dTb_dp_str_mat(:,:,:)   ! (K/mb)   (nlev,nstream,npol)      Jacobian brightness temp wrt pressure
 real(8), allocatable :: dTb_dq_str_mat(:,:,:)   ! (K m3/g) (nlev,nstream,npol)      Jacobian brightness temp wrt specific humidity
-real(8), allocatable :: dTb_dw_str_mat(:,:,:,:) ! (K m3/g) (nvar,nlev,nstream,npol) Jacobian brightness temp wrt hydrometeor 
+real(8), allocatable :: dTb_dw_str_mat(:,:,:,:) ! (K m3/g) (nvar,nlev,nstream,npol) Jacobian brightness temp wrt hydrometeor
 
 ! geophysical Jacobian
 real(8), dimension(max_nlev) :: dKab_dT
@@ -212,13 +212,13 @@ type hydrometeor_characteristics
     real(8) q        ! (?) hydrometeor particle size variance parameter
     real(8) k0       ! (num/m3/mm) reference hydrometeor number density in radius
     real(8) a0       ! (mm) mean hydrometeor radius
-    real(8) dk0_dw   ! (?) k0 derivative wrt hydrometeor density 
+    real(8) dk0_dw   ! (?) k0 derivative wrt hydrometeor density
     real(8) da0_dw   ! (?) a0 derivative wrt hydrometeor density
     real(8) ftot     ! (-) fraction of total column value
     real(8) fprecip  ! (-) fraction of total precipitation per layer (rain + snow + graupel)
     real(8) fcloud   ! (-) fraction of total cloud per layer (CLW + ice)
     real(8) fhydro   ! (-) fraction of total hydrometeor per layer (CLW + ice + rain + snow + graupel)
-    logical a0_const ! (-) true if density is zero 
+    logical a0_const ! (-) true if density is zero
 end type hydrometeor_characteristics
 type(hydrometeor_characteristics) gen_hm
 
@@ -314,7 +314,7 @@ real(8), dimension(max_nang) :: surf_reflec ! (-) generic surface reflectivity f
 
 ! Instrument specifications branch
 integer nchan  ! (-) number of channels
-type chan_spec_type 
+type chan_spec_type
      real(8) lo_freq    ! (GHz) LO frequency
      real(8) if1_freq   ! (GHz) IF1 frequency
      real(8) if2_freq   ! (GHz) IF2 frequency
@@ -322,7 +322,7 @@ type chan_spec_type
      real(8) dtrms      ! (K) observation noise
      integer desig      ! (-) channel designation
      integer num        ! (-) channel number
-     character(50) name ! (-) instrument or satellite name 
+     character(50) name ! (-) instrument or satellite name
 end type chan_spec_type
 type (chan_spec_type), dimension(max_nchan) :: instr_spec
 type (chan_spec_type) :: channel
@@ -330,13 +330,13 @@ type (chan_spec_type) :: channel
 real(8), dimension(max_nlev) :: temperature
 real(8), dimension(max_nlev) :: abs_O2
 real(8), dimension(max_nlev) :: abs_H2O
-real(8), dimension(max_nlev) :: abs_cloud 
+real(8), dimension(max_nlev) :: abs_cloud
 real(8), dimension(max_nlev) :: scat_cloud
 real(8), dimension(max_nlev) :: temperature1
 real(8), dimension(max_nlev) :: abs_O2_1
 real(8), dimension(max_nlev) :: abs_H2O_1
 real(8), dimension(max_nlev) :: abs_cloud1
-real(8), dimension(max_nlev) :: scat_cloud1 
+real(8), dimension(max_nlev) :: scat_cloud1
 real(8), dimension(max_nlev) :: al_gas1 ! (-) gas absorbtion (1/length) at a layer
 real(8), dimension(max_nlev) :: dtemperature1
 real(8), dimension(max_nlev) :: dabs_cloud1

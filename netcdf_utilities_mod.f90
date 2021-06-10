@@ -6,20 +6,20 @@
 
 module netcdf_utilities_mod
 
-!> a module to streamline the code that calls netcdf routines. 
+!> a module to streamline the code that calls netcdf routines.
 !>
 !> calling code should NOT have to use the netcdf module, nor see
-!> any netcdf ID values, types, lengths, etc.  this code does error 
-!> checking and reports the offending call, filename, and user-supplied 
+!> any netcdf ID values, types, lengths, etc.  this code does error
+!> checking and reports the offending call, filename, and user-supplied
 !> context (often the 'routine' variable with the calling subroutine name).
-!> 
+!>
 !> isolates access to the netcdf libs to routines inside this module.
 !>
 !> routines in this file are prefixed with nc_ and attempt to say
 !> in english what they do.  the intent is someone who does not know
 !> anything about netcdf can still use these.
 !>
-!> The 'put_var' and 'get_var' routines take optional start, count, 
+!> The 'put_var' and 'get_var' routines take optional start, count,
 !> stride, and map variables.
 !>
 
@@ -60,12 +60,13 @@ public :: nc_check,                       &
           nc_close_file,                  &
           nc_begin_define_mode,           &
           nc_end_define_mode,             &
-          nc_synchronize_file
-
+          nc_synchronize_file,            &
+          get_var_index_table,            &
+          get_hydro_d
 
 ! note here that you only need to distinguish between
 ! 4 (float) and 8 (double) when defining or adding
-! a new variable or attribute.  the get and query routines 
+! a new variable or attribute.  the get and query routines
 ! will coerce the values to the destination precision correctly.
 
 interface nc_add_global_attribute
@@ -166,12 +167,12 @@ character(len=*), parameter :: revdate  = "$Date$"
 
 character(len=512) :: msgstring1
 
-!> make a derived type that is (ncid, filename) 
+!> make a derived type that is (ncid, filename)
 !> store filename on file open, delete it on file close. cache the
 !> last N filenames - look them up on error and stop
 !> having to keep the filename around.
 
-! NOTE this is the max number of concurrently 
+! NOTE this is the max number of concurrently
 ! open netcdf files on a single task.
 integer, parameter :: MAX_NCFILES = 50
 integer, parameter :: FH_EMPTY = -1
@@ -187,13 +188,13 @@ end type
 type(ncinfo_type) :: ncinfo(MAX_NCFILES)
 
 ! do we need one of these?
-!namelist /netcdf_utilities_nml/ 
+!namelist /netcdf_utilities_nml/
 
 contains
 
 !------------------------------------------------------------------
 !> check return code from previous call. on error, print and stop.
-!> if you want to continue after an error don't use this call. 
+!> if you want to continue after an error don't use this call.
 
 subroutine nc_check(istatus, subr_name, context, context2, filename, ncid)
 
@@ -203,7 +204,7 @@ character(len=*), intent(in), optional :: context
 character(len=*), intent(in), optional :: context2
 character(len=*), intent(in), optional :: filename
 integer,          intent(in), optional :: ncid
-  
+
 character(len=256) :: saved_filename
 
 if (istatus == nf90_noerr) return
@@ -226,7 +227,7 @@ else
    saved_filename = ''
 endif
 
-! this does not return 
+! this does not return
 print *, subr_name, msgstring1
 !call error_handler(E_ERR, subr_name, msgstring1, source, revision, revdate, &
 !                   text2=context2, text3=saved_filename)
@@ -745,8 +746,8 @@ end function nc_get_dimension_size
 
 !> unfortunately, the scalar versions of these routines cannot be
 !> overloaded with the Nd versions.  the optional arguments make
-!> the signatures (combinations of arguments) inseperable. 
-!> it's less common to define scalars in netcdf files, so those ones 
+!> the signatures (combinations of arguments) inseperable.
+!> it's less common to define scalars in netcdf files, so those ones
 !> get a separate entry point.
 
 !--------------------------------------------------------------------
@@ -855,7 +856,7 @@ call nc_check(ret, routine, 'define integer variable '//trim(varname), context, 
 end subroutine nc_define_var_int_1d
 
 !--------------------------------------------------------------------
-! fortran supports up to 7 dimensional arrays.  but in this set of 
+! fortran supports up to 7 dimensional arrays.  but in this set of
 ! routines we only go up to 4D arrays.
 
 subroutine nc_define_var_int_Nd(ncid, varname, dimnames, context, filename)
@@ -978,7 +979,7 @@ subroutine nc_define_var_double_1d(ncid, varname, dimname, context, filename)
 integer,          intent(in) :: ncid
 character(len=*), intent(in) :: varname
 character(len=*), intent(in) :: dimname
-character(len=*), intent(in), optional :: context 
+character(len=*), intent(in), optional :: context
 character(len=*), intent(in), optional :: filename
 
 character(len=*), parameter :: routine = 'nc_define_var_double_1d'
@@ -1035,7 +1036,7 @@ logical                      :: nc_global_attribute_exists
 integer :: ret
 
 ret = nf90_inquire_attribute(ncid, NF90_GLOBAL, attname)
-nc_global_attribute_exists = (ret == NF90_NOERR) 
+nc_global_attribute_exists = (ret == NF90_NOERR)
 
 end function nc_global_attribute_exists
 
@@ -1051,11 +1052,11 @@ logical                      :: nc_variable_attribute_exists
 integer :: varid, ret
 
 ret = nf90_inq_varid(ncid, varname, varid)
-nc_variable_attribute_exists = (ret == NF90_NOERR) 
+nc_variable_attribute_exists = (ret == NF90_NOERR)
 if (ret /= NF90_NOERR) return
 
 ret = nf90_inquire_attribute(ncid, varid, attname)
-nc_variable_attribute_exists = (ret == NF90_NOERR) 
+nc_variable_attribute_exists = (ret == NF90_NOERR)
 
 end function nc_variable_attribute_exists
 
@@ -1085,7 +1086,7 @@ logical                      :: nc_variable_exists
 integer :: ret, varid
 
 ret = nf90_inq_varid(ncid, varname, varid)
-nc_variable_exists = (ret == NF90_NOERR) 
+nc_variable_exists = (ret == NF90_NOERR)
 
 end function nc_variable_exists
 
@@ -1513,7 +1514,7 @@ end subroutine nc_get_single_real_1d
 subroutine nc_get_real_1d(ncid, varname, varvals, context, filename, &
    nc_start, nc_count, nc_stride, nc_map)
 
-! This will match 4 and if 8=4 
+! This will match 4 and if 8=4
 
 integer,          intent(in)  :: ncid
 character(len=*), intent(in)  :: varname
@@ -1801,7 +1802,7 @@ end subroutine nc_get_real_4d
 
 !--------------------------------------------------------------------
 !> Query and return information about a netCDF variable given the variable name.
-!> Optionally returns the type of variable, the number of dimensions, 
+!> Optionally returns the type of variable, the number of dimensions,
 !> the dimension names and lengths, the number of attributes (but not the attribute values (yet))
 
 subroutine nc_get_variable_info(ncid, varname, xtype, ndims, dimlens, dimnames, natts, &
@@ -1829,10 +1830,10 @@ ret = nf90_inq_varid(ncid, varname, varid)
 call nc_check(ret, routine, 'inq_varid for '//trim(varname), context, filename)
 
 ret = nf90_inquire_variable(ncid, varid, xtype=xtype, ndims=myndims, &
-                            dimids=mydimids, natts=natts) 
+                            dimids=mydimids, natts=natts)
 call nc_check(ret, routine, 'inquire_variable for '//trim(varname), context, filename)
 
-if (present(dimlens) .or. present(dimnames)) then  ! more work to do 
+if (present(dimlens) .or. present(dimnames)) then  ! more work to do
 
    !>@todo do we want to make sure dimlens, dimnames are long enough
    if (present(dimlens))  dimlens  = 0
@@ -1857,7 +1858,7 @@ end subroutine nc_get_variable_info
 
 !--------------------------------------------------------------------
 
-subroutine nc_get_variable_size_1d(ncid, varname, varsize, context, filename)      
+subroutine nc_get_variable_size_1d(ncid, varname, varsize, context, filename)
 
 integer,          intent(in)  :: ncid
 character(len=*), intent(in)  :: varname
@@ -1885,7 +1886,7 @@ end subroutine nc_get_variable_size_1d
 
 !--------------------------------------------------------------------
 
-subroutine nc_get_variable_size_Nd(ncid, varname, varsize, context, filename)      
+subroutine nc_get_variable_size_Nd(ncid, varname, varsize, context, filename)
 
 integer,          intent(in)  :: ncid
 character(len=*), intent(in)  :: varname
@@ -1919,7 +1920,7 @@ end subroutine nc_get_variable_size_Nd
 
 !------------------------------------------------------------------
 
-subroutine nc_get_variable_num_dimensions(ncid, varname, numdims, context, filename) 
+subroutine nc_get_variable_num_dimensions(ncid, varname, numdims, context, filename)
 
 integer, intent(in) :: ncid
 character(len=*), intent(in):: varname
@@ -1936,11 +1937,11 @@ call nc_check(ret, routine, 'inquire variable id for '//trim(varname), context, 
 ret = nf90_inquire_variable(ncid, varid, ndims=numdims)
 call nc_check(ret, routine, 'inquire dimensions for variable '//trim(varname), context, filename, ncid)
 
-end subroutine nc_get_variable_num_dimensions 
+end subroutine nc_get_variable_num_dimensions
 
 !------------------------------------------------------------------
 
-subroutine nc_get_variable_dimension_names(ncid, varname, dimnames, context, filename) 
+subroutine nc_get_variable_dimension_names(ncid, varname, dimnames, context, filename)
 
 integer, intent(in) :: ncid
 character(len=*), intent(in):: varname
@@ -1970,7 +1971,7 @@ do i=1, ndims
                  context, filename, ncid)
 enddo
 
-end subroutine nc_get_variable_dimension_names 
+end subroutine nc_get_variable_dimension_names
 
 !--------------------------------------------------------------------
 !--------------------------------------------------------------------
@@ -2153,11 +2154,11 @@ logical :: has_scale_off
 integer :: ret
 
 ret = nf90_inquire_attribute(ncid, varid, "scale_factor")
-has_scale_off = (ret == NF90_NOERR) 
+has_scale_off = (ret == NF90_NOERR)
 if (ret == NF90_NOERR) return
 
 ret = nf90_inquire_attribute(ncid, varid, "add_offset")
-has_scale_off = (ret == NF90_NOERR) 
+has_scale_off = (ret == NF90_NOERR)
 
 end function has_scale_off
 
@@ -2197,7 +2198,7 @@ do i=1, MAX_NCFILES
 
    ncinfo(i)%file_handle = ncid
    ncinfo(i)%file_name = filename
-   return 
+   return
 enddo
 
 end subroutine add_fh_to_list
@@ -2215,7 +2216,7 @@ do i=1, MAX_NCFILES
 
    ncinfo(i)%file_handle = FH_EMPTY
    ncinfo(i)%file_name = ''
-   return 
+   return
 enddo
 
 end subroutine del_fh_from_list
@@ -2232,8 +2233,8 @@ integer :: i
 do i=1, MAX_NCFILES
    if (ncinfo(i)%file_handle /= ncid) cycle
 
-   filename = ncinfo(i)%file_name 
-   return 
+   filename = ncinfo(i)%file_name
+   return
 enddo
 
 filename = ''
@@ -2266,6 +2267,187 @@ subroutine get_var_index_table(ncid,varname,vals)
 
 end subroutine get_var_index_table
 !:========================================================================
+
+!:========================================================================
+subroutine get_hydro_d(ncid,mfreq,mtair,mdens,mphase, mchan, mid, vals)
+!,varname,vals)
+  use netcdf
+  !use dotlrt_variables
+  !use scan_Variables
+
+  implicit none
+
+  integer , intent(in)   :: ncid
+  real(8) , intent(in)   :: mfreq
+  real(8) , intent(in)   :: mtair
+  real(8) , intent(in)   :: mdens
+  integer , intent(in)   :: mphase
+  integer , intent(in)   :: mchan
+  integer , intent(in)   :: mid
+  real(8) , intent(out)  :: vals(:,:,:)
+
+  integer :: ivals, jdens, ktemp
+  integer :: vsize, dsize, tsize
+  integer :: ind
+  integer,                  dimension(3) :: varsize
+  character(NF90_MAX_NAME), dimension(3) :: dimnames
+  character(NF90_MAX_NAME) :: varname
+  character(len=21) :: FMT1
+
+  real(8), allocatable :: dens(:)
+  real(8), allocatable :: temp(:)
+
+  allocate(dens(2))
+  allocate(temp(2))
+  !real(8), allocatable :: vals(:,:,:)
+
+  !print *, 'ncid    = ', ncid
+  !print *, 'freq   = ', mfreq
+  !print *, 'dens   = ', mdens
+  !print *, 'tair   = ', mtair
+  !print *, 'phase  = ', mphase
+  !print *, 'chann  = ', mchan
+
+  vsize =  nc_get_dimension_size(ncid, 'values')
+  dsize =  nc_get_dimension_size(ncid, 'density')
+  tsize =  nc_get_dimension_size(ncid, 'temperature')
+  !allocate(vals(tsize,dsize,vsize))
+
+  !print *, ''
+  !print *, 'vsize   = ', vsize
+  !print *, 'dsize   = ', dsize
+  !print *, 'tsize   = ', tsize
+  !print *, ''
+
+  FMT1 = "('chann_',i0.2,'_',A)"
+  write(varname,FMT1) mchan, get_hydro_name(mphase)
+  !print*, 'varname  = ', varname
+
+  call nc_get_variable_size(ncid, varname, varsize)
+  !print*, 'varsize  = ', varsize
+
+  call nc_get_variable_dimension_names(ncid, varname, dimnames)
+  !print*, 'dimnames = ', dimnames
+
+  call nc_get_variable(ncid, varname, vals)
+
+  call nc_get_variable(ncid, 'density', dens)
+  ind = get_index_to_array(dens, mdens)
+  print*, 'dens = ', dens
+  print*, 'dens(',ind,')-mdens = ', dens(ind)-mdens, '::', dens(ind), mdens
+
+  call nc_get_variable(ncid, 'temperature', temp)
+  ind = get_index_to_array(temp, mtair)
+  print*, 'temp = ', temp
+  print*, 'temp(',ind,')-mtemp = ', temp(ind)-mtair, '::', temp(ind), mtair
+
+end subroutine get_hydro_d
+
+function get_index_to_array(array, target_value) result(loc)
+  real(8), dimension(2), intent ( in) :: array
+  real(8), intent ( in) :: target_value
+
+  integer :: loc
+
+  loc = minloc(abs(array-target_value),1)
+
+end function get_index_to_array
+
+function get_hydro_name(ihydro)
+  integer, intent ( in) :: ihydro
+  character(7) :: get_hydro_name
+
+  select case (ihydro)
+      case (1)
+         get_hydro_name = 'clw'
+      case (2)
+         get_hydro_name = 'rain'
+      case (3)
+         get_hydro_name = 'snow'
+      case (4)
+         get_hydro_name = 'ice'
+      case (5)
+         get_hydro_name = 'graupel'
+      case default
+         get_hydro_name = 'invalid'
+   end select
+end function get_hydro_name
+
+function get_d_name(id)
+  integer, intent ( in) :: id
+  character(7) :: get_d_name
+
+  select case (id)
+      case (1)
+         get_d_name = 'hab'
+      case (2)
+         get_d_name = 'hsc'
+      case (3)
+         get_d_name = 'g'
+      case (4)
+         get_d_name = 'dhab(1)'
+      case (5)
+         get_d_name = 'dhsc(1)'
+      case (6)
+         get_d_name = 'dg(1)'
+      case (7)
+         get_d_name = 'dhab(2)'
+      case (8)
+         get_d_name = 'dhsc(2)'
+      case (9)
+         get_d_name = 'dg(2)'
+      case (10)
+         get_d_name = 'dhab(3)'
+      case (11)
+         get_d_name = 'dhsc(3)'
+      case (12)
+         get_d_name = 'dg(3)'
+      case default
+         get_d_name = 'invalid'
+   end select
+end function get_d_name
+
+!=======================================================================
+subroutine interpolate(x1, x, Dx, y1, y, Dy, z11, z21, z12, z22, z)
+!=======================================================================
+! calculates the value of z=f(x,y) by linearly interpolating
+! between the 4 closest data points on a uniform grid.  The subroutine
+! requires a grid point (x1, y1), the grid spacing (Dx and Dy), and the
+! 4 closest data points (z11, z21, z12, and z22).
+
+! begin input variables
+real(8) x1  ! the x grid location of z11
+real(8) x   ! x-value at which you will interpolate z=f(x,y)
+real(8) Dx  ! grid spacing in the x direction
+real(8) y1  ! the y grid location of z11
+!real(8) y   ! y-value at which you will interpolate z=f(x,y)
+real(8) y   ! y-value at which you will interpolate z=f(x,y)
+real(8) Dy  ! grid spacing in the y direction
+real(8) z11 ! f(x1, y1)
+real(8) z21 ! f(x1+Dx, y1)
+real(8) z12 ! f(x1, y1+Dy)
+real(8) z22 ! f(x1+Dx, y1+Dy)
+
+! begin output variables
+real(8) z   ! f(x,y), the desired interpolated value
+
+! begin internal variables
+real(8) zp  ! z'=first interpolated value at (x, y1)
+real(8) zpp ! z''=second interpolated value at (x, Y1+Dy)
+
+
+   ! interpolate between z11 and z21 to calculate z' (zp) at (x, y1)
+   zp=z11+(x-x1)*(z21-z11)/Dx
+
+   ! interpolate between z12 and z22 to calculate z'' (zpp) at (x, Y1+Dy)
+   zpp=z12+(x-x1)*(z22-z12)/Dx
+
+   ! interpolate between zp and zpp to calculate z at (x,y)
+   z=zp+(y-y1)*(zpp-zp)/Dy
+
+   return
+
+end subroutine interpolate
 
 end module netcdf_utilities_mod
 

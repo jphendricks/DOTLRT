@@ -2,13 +2,13 @@ start input in column 46--------------------|
 generalized scanning?            1=yes 2=no =1
                                    scan type=hm_ph5
 Scan options--------------------------------|
-  scan 2-D or 3-D?              2=2-D 3=3-D =2
+  scan 2-D or 3-D?              2=2-D 3=3-D =3
   X var(see SibscanDat)?                    =16
   Y var(see SibscanDat)?                    =6
   number y-variables           (2-D only)   =1
-  Number of points in scan                  =4
-  min channel number                        =10
-  max channel number                        =12
+  Number of points in scan                  =25
+  min channel number                        =1
+  max channel number                        =24
   Save data?               0=no 1=txt 2=csv =2
   Save 3D data?            0=no 1=txt 2=csv =2
   Calc psuedo-data?              1=yes 2=no =1

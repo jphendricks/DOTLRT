@@ -3,7 +3,11 @@
 **/*.nc
 **/WRF_Output
 **.out
+**/*.txt
+**/*.log
 scan
 dot
-
-
+genind
+ncread
+fort.*
+mymake

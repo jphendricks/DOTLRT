@@ -1,5 +1,5 @@
 !=========================================================================
-     program scan
+     program gen_index_table
 !=========================================================================
 ! calculates output for various subroutines by scanning through ranges of input variables
 !
@@ -24,14 +24,9 @@
 
 ! allocate sib variable tree
   nsib=1
-  call clock
 
 ! read inputs
   call scan_read_input
-
-  !call write_netcdf('myfilename.nc')
-  !open (unit=444, file='results.txt', status='unknown')
-  !write(444,*) '['
 
 ! set start values X variable
   call Plot2D3D('StartX  ')
@@ -42,7 +37,7 @@
     do iy=1,maxj
 
 ! call scan control
-      call scan_control(ix,iy)
+      call scan_control_ind(ix,iy)
 
 ! assign plotting variables
       call Plot2D3D('AssXval ')
@@ -59,9 +54,6 @@
         zval(2,ix,iy)=testvar1
         x3(ix)=value(xvar)
         y3(iy)=value(yvar)
-        !print*, trim(Label(xvar)), value(xvar), " :: ", trim(Label(yvar)), value(yvar)
-        !tarray(ix) = value(xvar)
-        !parray(iy) = value(yvar)
       endif
 
 ! increment Y variable
@@ -106,7 +98,7 @@
 !
     end subroutine clock
 
-    end program scan
+    end program gen_index_table
 !
 !=======================================================================
     subroutine output_manipulation
@@ -272,6 +264,7 @@
   end
 
 !
+
 !=======================================================================
     subroutine write_netcdf(filename)
 !=========================================================================
@@ -421,18 +414,15 @@
       indx = ihydro + NHYDROS*(ichan-1)
       vals = myarray(ihydro, ichan,:,:,:)
 
-      !print*, 'chan_varid(indx) = ', chan_varid(indx)
-      !print*, 'indx             = ', indx
-      !print*, 'shape(vals)      = ', shape(vals)
       call check( nf90_put_var(ncid, chan_varid(indx), vals) , 'nf90_put_var: chan_varid')
     end do
   end do
 
   ! Close the file.
-  call check( nf90_close(ncid) , 'nf90_close')
+  call check( nf90_close(ncid), 'nf90_close')
 
 contains
-  subroutine check(status, context)
+  subroutine check(status,context)
     integer, intent ( in) :: status
     character(len=*), intent ( in) :: context
     !print*, 'running - ', context
@@ -463,3 +453,4 @@ contains
   end function get_hydro_name
 
 end subroutine write_netcdf
+

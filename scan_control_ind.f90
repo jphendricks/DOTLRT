@@ -1,6 +1,6 @@
 !
 !=======================================================================
-  subroutine scan_control(ix,iy)
+  subroutine scan_control_ind(ix,iy)
 !=========================================================================
 ! controls all calls to all scan subroutines
 !
@@ -52,7 +52,7 @@ integer, intent(in) :: iy
 ! hydrometeor scattering
 ! hm 5 phases
   if (scantype=='hm_ph5') then
-    ncid = nc_open_file_readonly(file_index_table)
+    !ncid = nc_open_file_readonly(file_index_table)
 
     ichanidx = 0
 
@@ -126,18 +126,6 @@ integer, intent(in) :: iy
            print*, '-----------------------------'
         endif
 
-        myvals(1) = hab
-        myvals(2) = hsc
-        myvals(3) = g
-        myvals(4) = dhab(1)
-        myvals(5) = dhsc(1)
-        myvals(6) = dg(1)
-        myvals(7) = dhab(2)
-        myvals(8) = dhsc(2)
-        myvals(9) = dg(2)
-        myvals(10) = dhab(3)
-        myvals(11) = dhsc(3)
-        myvals(12) = dg(3)
 
         !if (hab /= 0.) then
         !  test10(iph)=dlog10(hab)
@@ -154,7 +142,7 @@ integer, intent(in) :: iy
       enddo
       !print*, 't_tot_chan = ', t_tot_chan, value(xvar), value(yvar)
     enddo
-  call nc_close_file(ncid)
+  !call nc_close_file(ncid)
   endif
 
 ! MRT functional response
