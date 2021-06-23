@@ -2269,7 +2269,7 @@ end subroutine get_var_index_table
 !:========================================================================
 
 !:========================================================================
-subroutine get_hydro_d(ncid,mfreq,mtair,mdens,mphase, mchan, mid, vals)
+subroutine get_hydro_d(ncid, mdens, mtair, mphase, mchan, vals, hydro_d, z)
 !,varname,vals)
   use netcdf
   !use dotlrt_variables
@@ -2278,17 +2278,17 @@ subroutine get_hydro_d(ncid,mfreq,mtair,mdens,mphase, mchan, mid, vals)
   implicit none
 
   integer , intent(in)   :: ncid
-  real(8) , intent(in)   :: mfreq
-  real(8) , intent(in)   :: mtair
   real(8) , intent(in)   :: mdens
+  real(8) , intent(in)   :: mtair
   integer , intent(in)   :: mphase
   integer , intent(in)   :: mchan
-  integer , intent(in)   :: mid
   real(8) , intent(out)  :: vals(:,:,:)
+  real(8) , intent(out)  :: hydro_d(12)
+  real(8) , intent(out)  :: z
 
   integer :: ivals, jdens, ktemp
   integer :: vsize, dsize, tsize
-  integer :: ind
+  integer :: dind, tind, dind_p1, tind_p1
   integer,                  dimension(3) :: varsize
   character(NF90_MAX_NAME), dimension(3) :: dimnames
   character(NF90_MAX_NAME) :: varname
@@ -2296,9 +2296,10 @@ subroutine get_hydro_d(ncid,mfreq,mtair,mdens,mphase, mchan, mid, vals)
 
   real(8), allocatable :: dens(:)
   real(8), allocatable :: temp(:)
+  real(8) :: x1, x, Dx, y1, y, Dy, z11, z21, z12, z22
+  real(8) :: x2, y2
+  integer :: i,j
 
-  allocate(dens(2))
-  allocate(temp(2))
   !real(8), allocatable :: vals(:,:,:)
 
   !print *, 'ncid    = ', ncid
@@ -2311,13 +2312,9 @@ subroutine get_hydro_d(ncid,mfreq,mtair,mdens,mphase, mchan, mid, vals)
   vsize =  nc_get_dimension_size(ncid, 'values')
   dsize =  nc_get_dimension_size(ncid, 'density')
   tsize =  nc_get_dimension_size(ncid, 'temperature')
-  !allocate(vals(tsize,dsize,vsize))
 
-  !print *, ''
-  !print *, 'vsize   = ', vsize
-  !print *, 'dsize   = ', dsize
-  !print *, 'tsize   = ', tsize
-  !print *, ''
+  allocate(dens(dsize))
+  allocate(temp(tsize))
 
   FMT1 = "('chann_',i0.2,'_',A)"
   write(varname,FMT1) mchan, get_hydro_name(mphase)
@@ -2332,19 +2329,89 @@ subroutine get_hydro_d(ncid,mfreq,mtair,mdens,mphase, mchan, mid, vals)
   call nc_get_variable(ncid, varname, vals)
 
   call nc_get_variable(ncid, 'density', dens)
-  ind = get_index_to_array(dens, mdens)
-  print*, 'dens = ', dens
-  print*, 'dens(',ind,')-mdens = ', dens(ind)-mdens, '::', dens(ind), mdens
+  dens = dens
+  dind = get_index_to_array(dens, mdens)
 
   call nc_get_variable(ncid, 'temperature', temp)
-  ind = get_index_to_array(temp, mtair)
-  print*, 'temp = ', temp
-  print*, 'temp(',ind,')-mtemp = ', temp(ind)-mtair, '::', temp(ind), mtair
+  tind = get_index_to_array(temp, mtair)
+
+  hydro_d = vals(tind,dind,:)
+
+  if (tind .eq. 1) then
+     !print*, 'tind == 1'
+     tind    = 1
+     tind_p1 = 2
+  else if (tind .eq. tsize) then
+     !print*, tind, ' = tind == tsize =', tsize
+     tind    = tsize-1
+     tind_p1 = tsize
+  else if (tind < tsize) then
+     !print*, tind, '= tind < tsize =', tsize
+     tind_p1 = tind+1
+  else
+     !print*, 'something wrong ', 'tind = ', tind, 'tind_p1 = ', tind_p1
+  endif
+
+  if (dind .eq. 1) then
+     !print*, 'dind == 1'
+     dind    = 1
+     dind_p1 = 2
+  else if (dind .eq. dsize) then
+     !print*, dind, ' = dind == dsize =', dsize
+     dind    = dsize-1
+     dind_p1 = dsize
+  else if (dind < dsize) then
+     !print*, dind, '= dind < dsize =', dsize
+     dind_p1 = dind+1
+  else
+     !print*, 'something wrong ', 'dind = ', dind, 'dind_p1 = ', dind_p1
+  endif
+
+  Dx  = (dens(dind_p1)-dens(dind))
+  Dy  = (temp(tind_p1)-temp(tind))
+  x1  = dens(dind)
+  y1  = temp(tind)
+  x2  = dens(dind_p1)
+  y2  = temp(tind_p1)
+  x   = mdens
+  y   = mtair
+  z11 = vals(tind,    dind,    1)
+  z21 = vals(tind_p1, dind,    1)
+  z12 = vals(tind,    dind_p1, 1)
+  z22 = vals(tind_p1, dind_p1, 1)
+
+  if(.true.) then
+     print*, '--------------'
+     !print*, 'temp    = ', temp
+     print*, 'tind    = ', tind
+     print*, 'tind_p1 = ', tind_p1
+     !print*, 'dens    = ', dens
+     print*, 'dind    = ', dind
+     print*, 'dind_p1 = ', dind_p1
+     print*, '--------------'
+     print*, 'Dx  = ', Dx
+     print*, 'Dy  = ', Dy
+     print*, 'x1  = ', x1
+     print*, 'y1  = ', y1
+     print*, 'x2  = ', x2
+     print*, 'y2  = ', y2
+     print*, 'x   = ', x
+     print*, 'mdens= ', 10**mdens
+     print*, 'y   = ', y
+     print*, 'mtair= ', mtair
+     print*, 'z11 = ', z11
+     print*, 'z21 = ', z21
+     print*, 'z12 = ', z12
+     print*, 'z22 = ', z22
+     print*, '--------------'
+  endif
+
+  call interpolate(x1, x, Dx, y1, y, Dy, z11, z21, z12, z22, z)
 
 end subroutine get_hydro_d
 
 function get_index_to_array(array, target_value) result(loc)
-  real(8), dimension(2), intent ( in) :: array
+  real(8), intent ( in) :: array(:)
   real(8), intent ( in) :: target_value
 
   integer :: loc

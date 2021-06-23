@@ -3,13 +3,18 @@ $dotlrt_control
   flag_read_anc   = .false.
   ocean_mod       = 'Fresnel'
   prof_src        = 'single'
+  use_index_table = .true.
+  gen_index_table = .false.
+  dbg_index_table = .true.
 /
 
 $dotlrt_input_files
   file_instr       = '/home/johe6518/DOTLRT/inputs/Inst_GEMS2.instr'
   file_var         = '/home/johe6518/DOTLRT/inputs/var_def.txt'
-  file_index_table = '/home/johe6518/DOTLRT/index_table_GEMS2_50.nc'
+  file_index_table = '/home/johe6518/DOTLRT/index_table.nc'
 /
+  file_index_table = '/home/johe6518/DOTLRT/inputs/index_table_100_conv.nc'
+  file_index_table = '/home/johe6518/DOTLRT/inputs/index_table_10_conv.nc'
 
 $dotlrt_rad_tran_param
   nstream = 16

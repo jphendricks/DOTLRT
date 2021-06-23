@@ -13,13 +13,13 @@ subroutine read_namel_dotlrt
 !
 ! Namelists
 namelist /dotlrt_control/ & ! execution configuration control
-  flag_print_full, flag_read_anc, ocean_mod, prof_src
+  flag_print_full, flag_read_anc, ocean_mod, prof_src, gen_index_table, use_index_table, dbg_index_table
 
 namelist /dotlrt_input_files/ & ! input file names
   file_instr, file_var, file_index_table
-  
+
 namelist /dotlrt_rad_tran_param/ & ! input radiative transfer parameters
-  nstream, nstream_surf, obs_height, obs_theta, nsub_freq 
+  nstream, nstream_surf, obs_height, obs_theta, nsub_freq
 
 namelist /dotlrt_grid_param/ & ! input grid indeces
   chan_strt, chan_stop, lon_strt, lon_stop, lat_strt, lat_stop, flag_reduce_nvar, new_nlev

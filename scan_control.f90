@@ -27,9 +27,10 @@ integer, intent(in) :: iy
   integer ichanidx, ncid, id
   real(8) :: starthydro, finishhydro, t_time, t_tot_chan
   real(8), allocatable :: vals(:,:,:)
-  logical, parameter :: debug = .false.
+  real(8) :: hydro_d(12), z
+  !logical, parameter :: debug = .false.
+  !logical, parameter :: use_index_table = .false.
 
-  allocate(vals(maxi,maxj,nchannel))
 
 ! scasn MRT with generic cloud
   if (scantype=='cloud') then
@@ -52,7 +53,21 @@ integer, intent(in) :: iy
 ! hydrometeor scattering
 ! hm 5 phases
   if (scantype=='hm_ph5') then
-    ncid = nc_open_file_readonly(file_index_table)
+    !ncid = nc_open_file_readonly('/home/johe6518/DOTLRT/index_table_GEMS2_10.nc')
+    if (use_index_table) then
+        ncid = nc_open_file_readonly(file_index_table)
+
+        vsize =  nc_get_dimension_size(ncid, 'values')
+        dsize =  nc_get_dimension_size(ncid, 'density')
+        tsize =  nc_get_dimension_size(ncid, 'temperature')
+
+        !print*, 'tsize = ', tsize
+        !print*, 'dsize = ', dsize
+        !print*, 'vsize = ', vsize
+
+        allocate(vals(tsize,dsize,vsize))
+
+    end if
 
     ichanidx = 0
 
@@ -68,7 +83,8 @@ integer, intent(in) :: iy
       ichanidx = ichanidx+1
       call extract_channel(ichan)
       myfreq = channel%lo_freq
-      do iph = 1, 5
+      !do iph = 1, 5
+      iph = 1
         phase=iph
         if(phase == 1) gen_hm=atm(1)%clw
         if(phase == 2) gen_hm=atm(1)%rain
@@ -86,58 +102,55 @@ integer, intent(in) :: iy
         t_time=finishhydro-starthydro
 
         write(444,*) '[', value(xvar), ',', value(yvar), ',', myfreq, ',', t_time, ',', phase, '],'
-        print*,      '[', value(xvar), ',', value(yvar), ',', myfreq, ',', t_time, ',', phase, '],'
+        !print*,      '[', value(xvar),      value(xvar), ',', tair, value(yvar), ',', myfreq, ',', t_time, ',', phase, '],'
         t_tot_chan = t_tot_chan + t_time
 
         myphase=iph
-        tarray(ix) = value(xvar)
-        parray(iy) = value(yvar)
-        myarray(iph,ichanidx,ix,iy,1) = hab
-        myarray(iph,ichanidx,ix,iy,2) = hsc
-        myarray(iph,ichanidx,ix,iy,3) = g
-        myarray(iph,ichanidx,ix,iy,4) = dhab(1)
-        myarray(iph,ichanidx,ix,iy,5) = dhsc(1)
-        myarray(iph,ichanidx,ix,iy,6) = dg(1)
-        myarray(iph,ichanidx,ix,iy,7) = dhab(2)
-        myarray(iph,ichanidx,ix,iy,8) = dhsc(2)
-        myarray(iph,ichanidx,ix,iy,9) = dg(2)
-        myarray(iph,ichanidx,ix,iy,10) = dhab(3)
-        myarray(iph,ichanidx,ix,iy,11) = dhsc(3)
-        myarray(iph,ichanidx,ix,iy,12) = dg(3)
-
-        !do id = 1,12
-           !call get_hydro_d(ncid,myfreq,value(xvar),value(yvar),phase, ichan, id, vals)
-        !enddo
-
-        if(.false.) then
-           print*, '-----------------------------'
-           print*, '    hab = ', hab
-           print*, '    hsc = ', hsc
-           print*, '      g = ', g
-           print*, 'dhab(1) = ', dhab(1)
-           print*, 'dhsc(1) = ', dhsc(1)
-           print*, '  dg(1) = ', dg(1)
-           print*, 'dhab(2) = ', dhab(2)
-           print*, 'dhsc(2) = ', dhsc(2)
-           print*, '  dg(2) = ', dg(2)
-           print*, 'dhab(3) = ', dhab(3)
-           print*, 'dhsc(3) = ', dhsc(3)
-           print*, '  dg(3) = ', dg(3)
-           print*, '-----------------------------'
+        if (gen_index_table) then
+           parray(ix) = value(xvar)
+           tarray(iy) = value(yvar)
+           myarray(iph,ichanidx,ix,iy,1) = hab
+           myarray(iph,ichanidx,ix,iy,2) = hsc
+           myarray(iph,ichanidx,ix,iy,3) = g
+           myarray(iph,ichanidx,ix,iy,4) = dhab(1)
+           myarray(iph,ichanidx,ix,iy,5) = dhsc(1)
+           myarray(iph,ichanidx,ix,iy,6) = dg(1)
+           myarray(iph,ichanidx,ix,iy,7) = dhab(2)
+           myarray(iph,ichanidx,ix,iy,8) = dhsc(2)
+           myarray(iph,ichanidx,ix,iy,9) = dg(2)
+           myarray(iph,ichanidx,ix,iy,10) = dhab(3)
+           myarray(iph,ichanidx,ix,iy,11) = dhsc(3)
+           myarray(iph,ichanidx,ix,iy,12) = dg(3)
         endif
 
-        myvals(1) = hab
-        myvals(2) = hsc
-        myvals(3) = g
-        myvals(4) = dhab(1)
-        myvals(5) = dhsc(1)
-        myvals(6) = dg(1)
-        myvals(7) = dhab(2)
-        myvals(8) = dhsc(2)
-        myvals(9) = dg(2)
-        myvals(10) = dhab(3)
-        myvals(11) = dhsc(3)
-        myvals(12) = dg(3)
+        if (use_index_table) then
+           call get_hydro_d(ncid,value(xvar),value(yvar),phase, ichan, vals, hydro_d, z)
+           test10(iph) = hab
+           if(dbg_index_table) then
+              !print*, '-----------------------------'
+              !print*, 'ichan       (     dens                       temp                  )'!   hab-hydro_d(1)             hab                       hydro_d(1)                z'
+              !print*, ichan, "(",value(xvar),",",value(yvar),")"!, hab-hydro_d(1), hab, hydro_d(1), z
+              print*,       abs(hab-     hydro_d(1)), hab,     hydro_d(1), value(xvar), value(yvar)
+              !print*, '  hab-z              ,      hab,                      z'
+              !print*,       hab-z, hab,     z
+!                     if ((abs(abs(hab-hydro_d(1)) ) > 0.00001) .and. (abs(abs(hab-z) ) > 0.00001)) call exit(0)
+
+              !print*, '     hab-     hydro_d(1),  hab-z, hab,     hydro_d(1), z'
+              !print*,       hab-     hydro_d(1),  hab-z, hab,     hydro_d(1), z
+              !print*, '    hsc = ', hsc-     hydro_d(2),  hsc,     hydro_d(2)
+              !print*, '      g = ', g-       hydro_d(3),  g,       hydro_d(3)
+              !print*, 'dhab(1) = ', dhab(1)- hydro_d(4),  dhab(1), hydro_d(4)
+              !print*, 'dhsc(1) = ', dhsc(1)- hydro_d(5),  dhsc(1), hydro_d(5)
+              !print*, '  dg(1) = ', dg(1)-   hydro_d(6),  dg(1),   hydro_d(6)
+              !print*, 'dhab(2) = ', dhab(2)- hydro_d(7),  dhab(2), hydro_d(7)
+              !print*, 'dhsc(2) = ', dhsc(2)- hydro_d(8),  dhsc(2), hydro_d(8)
+              !print*, '  dg(2) = ', dg(2)-   hydro_d(9),  dg(2),   hydro_d(9)
+              !print*, 'dhab(3) = ', dhab(3)- hydro_d(10), dhab(3), hydro_d(10)
+              !print*, 'dhsc(3) = ', dhsc(3)- hydro_d(11), dhsc(3), hydro_d(11)
+              !print*, '  dg(3) = ', dg(3)-   hydro_d(12), dg(3),   hydro_d(12)
+              !print*, '-----------------------------'
+           endif
+        endif
 
         !if (hab /= 0.) then
         !  test10(iph)=dlog10(hab)
@@ -151,10 +164,12 @@ integer, intent(in) :: iy
         !test = hsc
         ! asymetry
         !test = g
-      enddo
+      !enddo
       !print*, 't_tot_chan = ', t_tot_chan, value(xvar), value(yvar)
     enddo
-  call nc_close_file(ncid)
+
+  if (use_index_table) call nc_close_file(ncid)
+
   endif
 
 ! MRT functional response

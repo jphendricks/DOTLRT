@@ -28,6 +28,9 @@ integer lat_stop  ! stop index for latitude
 logical flag_print_full  ! (-) flag to print full messages
 logical flag_read_anc    ! (-) flag to read in ancillary data from WRF
 logical flag_reduce_nvar ! (-) flag to use only part of atmos profile from WRF
+logical gen_index_table  ! (-) flag to use only part of atmos profile from WRF
+logical use_index_table  ! (-) flag to use only part of atmos profile from WRF
+logical dbg_index_table  ! (-) flag to use only part of atmos profile from WRF
 integer new_nlev         ! (-) number of levels to use in reduced profile
 character(20) prof_src   ! (-) source of atmospheric profile data
                          ! 'single' single column text file

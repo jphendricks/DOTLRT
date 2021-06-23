@@ -11,8 +11,8 @@
   character*25 scantype   ! type of scan
   Integer DevFlag    ! send plot to screen or postscript file
   integer sla_flag   ! scan calculations of specific leaf area
-  Integer PlotFlag   ! plot data 
-  Integer color_con  ! plot color contours 
+  Integer PlotFlag   ! plot data
+  Integer color_con  ! plot color contours
   integer NumY       ! number of plotted variables
   integer max_NumY   ! max number of plotted variables
   integer LegFlag    ! flag to plot legends
@@ -21,7 +21,7 @@
   integer save_3d    ! save 3-dimensional data from scan
   integer obs_calc   ! calculate psuedo-obs
   integer obs_num    ! number variables for observations (1 or 2)
-  integer obs_x      ! x variable number for observations 
+  integer obs_x      ! x variable number for observations
   integer obs_y      ! x variable number for observations
   integer Yvar       ! flag for which Y variable to vary
   integer Xvar       ! flag for which X variable to vary
@@ -132,10 +132,10 @@
   real(8), parameter :: a            = 6.37122d+06               ! (m) earth radius
   real(8), parameter :: grav         = 9.8100d0                  ! (m/s) gravity constant
   real(8), parameter :: gravi        = 1.0d0/grav                ! (s/m) inverse grav constant
-  real(8), parameter :: omega        = 2.0d0*pi/86400.0d0        ! (1/s) earth angular velocity 
-  real(8), parameter :: earth_area   = 5.100996990707616d+14     ! (m2) surface area of earth 
-  real(8), parameter :: gas_const_R  = 287.000d0                 ! (J/kg/K))gas constant for dry air 
-  real(8), parameter :: heat_cp = 1005.000d0                     ! (J/kg/K)) specific heat at constant pressure 
+  real(8), parameter :: omega        = 2.0d0*pi/86400.0d0        ! (1/s) earth angular velocity
+  real(8), parameter :: earth_area   = 5.100996990707616d+14     ! (m2) surface area of earth
+  real(8), parameter :: gas_const_R  = 287.000d0                 ! (J/kg/K))gas constant for dry air
+  real(8), parameter :: heat_cp = 1005.000d0                     ! (J/kg/K)) specific heat at constant pressure
   real(8), parameter :: kappa        = gas_const_R/heat_cp       ! (?) gas_const_R/spec_heat_cp
   real(8), parameter :: inv_kappa    = 1.0d0 / kappa             ! (?) inverse kappa
   real(8), parameter :: p0_sfc       = 1.0d+05                   ! (Pa) surface pressure
@@ -144,7 +144,7 @@
   real(8), parameter :: hltm         = 2.25d+06                  ! (J/kg) latent heat of vaporization
   real(8), parameter :: gamfac       = hltm*5417.9827d0/heat_cp  ! a moist thermodynamic variable
   real(8), parameter :: delta        = 0.608d0                   ! (-) molecular_weight_air/molecular_weight_water
-  real(8), parameter :: stefan       = 5.67d-08                  ! (W/m^2/K^4) stefan boltzmann constant 
+  real(8), parameter :: stefan       = 5.67d-08                  ! (W/m^2/K^4) stefan boltzmann constant
   real(8), parameter :: rv           = 4.61d+02                  ! gas constant for water vapor
   real(8), parameter :: pi2          = 2*pi                      ! (-) 2*pi
   real(8), parameter :: dtr          = pi/180.0d0                ! (deg/rad) Degrees To Radians conversion constant
@@ -235,18 +235,18 @@
   real(8) Q10        ! soil respiration Q10 value
   real(8) respg      ! ground respiration (mole m-2 m-1)
   real(8) respT      ! total respiration (mole m-2 m-1)
-  real(8) respfactor(7) 
-  real(8) soilscale(7) 
+  real(8) respfactor(7)
+  real(8) soilscale(7)
   real(8) Moist(2)   ! respiration efficiency
   real(8) RconWat    ! (mol/m2/s) contribution of water to respg
   real(8) RconTem    ! (mol/m2/s) contribution of Temperature to respg
   real(8) xroot(7)   ! root fraction per soil layer
   real(8) kroot(12)  ! root density decay constant (1/m)
-  logical forcerestore 
+  logical forcerestore
 
 ! Misc variables
   real(8) poros_om  ! (-) organic matter porosity
-  complex(kind=8), allocatable ::  diel(:) ! dielectric constant 
+  complex(kind=8), allocatable ::  diel(:) ! dielectric constant
   real(8), allocatable :: len_lay(:)  ! (m) correlation length scales of layer boundaries
   real(8), allocatable :: std_lay(:)  ! (m) standard deviation of layer boundaries
   real(8), allocatable :: dlayer(:)   ! (m) average z coordinate of layer boundaries

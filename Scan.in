@@ -6,9 +6,9 @@ Scan options--------------------------------|
   X var(see SibscanDat)?                    =16
   Y var(see SibscanDat)?                    =6
   number y-variables           (2-D only)   =1
-  Number of points in scan                  =25
+  Number of points in scan                  =100
   min channel number                        =1
-  max channel number                        =24
+  max channel number                        =1
   Save data?               0=no 1=txt 2=csv =2
   Save 3D data?            0=no 1=txt 2=csv =2
   Calc psuedo-data?              1=yes 2=no =1

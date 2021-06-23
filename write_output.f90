@@ -52,7 +52,7 @@ end subroutine write_atm_profile
   use dotlrt_output
   use profiles
   use netcdf
-    
+
   implicit none
 !
 ! local variables
@@ -96,7 +96,7 @@ end subroutine write_atm_profile
 ! define variables common to all files
   do ivar = 1, n_out_var
     if (var(ivar)%file =='All') then
-      status = nf90_def_var( filid, var(ivar)%name, nf90_float, (/did_lon, did_lat/), varid(ivar))
+      status = nf90_def_var( filid, var(ivar)%name, nf90_double, (/did_lon, did_lat/), varid(ivar))
       if(status/=nf90_noerr) call handle_err(status,subname,7)
 
       status = nf90_put_att( filid, varid(ivar), 'units', trim(var(ivar)%units) )
@@ -104,7 +104,7 @@ end subroutine write_atm_profile
 
       status = nf90_put_att( filid, varid(ivar), 'long_name', trim(var(ivar)%long_name) )
       if(status/=nf90_noerr) call handle_err(status,subname,9)
-    
+
       status = nf90_put_att( filid, varid(ivar), 'missing_value', var(ivar)%missing )
       if(status/=nf90_noerr) call handle_err(status,subname,10)
     endif
@@ -114,7 +114,7 @@ end subroutine write_atm_profile
   do ivar = 1, n_out_var
     if (var(ivar)%file =='Profile') then
       varname = trim(var(ivar)%name)
-      status = nf90_def_var( filid, trim(varname), nf90_float, (/did_lon, did_lat, did_lev/), varid(ivar))
+      status = nf90_def_var( filid, trim(varname), nf90_double, (/did_lon, did_lat, did_lev/), varid(ivar))
       if(status/=nf90_noerr) call handle_err(status,subname,11)
 
       status = nf90_put_att( filid, varid(ivar), 'units', trim(var(ivar)%units) )
@@ -122,7 +122,7 @@ end subroutine write_atm_profile
 
       status = nf90_put_att( filid, varid(ivar), 'long_name', trim(var(ivar)%long_name) )
       if(status/=nf90_noerr) call handle_err(status,subname,14)
-    
+
       status = nf90_put_att( filid, varid(ivar), 'missing_value', var(ivar)%missing )
       if(status/=nf90_noerr) call handle_err(status,subname,15)
     endif
@@ -133,17 +133,17 @@ end subroutine write_atm_profile
   if(status/=nf90_noerr) call handle_err(status,subname,18)
 
 ! write latitude
-  varname='XLAT' 
+  varname='XLAT'
   status = nf90_put_var(filid, varid(1), xlat)
   if(status/=nf90_noerr) call handle_err(status,trim(subname),19)
 
 ! write longitude
-  varname='XLONG' 
+  varname='XLONG'
   status = nf90_put_var(filid, varid(2), xlong)
   if(status/=nf90_noerr) call handle_err(status,trim(subname),20)
 
 ! write variables
-  varname='height' 
+  varname='height'
   call write_atm_profile(filid, varname, nlon, nlat, nlev_max, height_mid)
 
 ! close file
@@ -163,7 +163,7 @@ end subroutine write_atm_profile
   use dotlrt_output
   use profiles
   use netcdf
-    
+
   implicit none
 
 ! inputs
@@ -187,7 +187,7 @@ end subroutine write_atm_profile
 ! create file name
   filename = trim(out_path)//'Tb.nc'
 !  if(flag_print_full) print*, '    ', trim(filename)
-  
+
 ! open file
   status=nf90_open(trim(filename),nf90_write,filid)
   if(status/=nf90_noerr) then
@@ -226,7 +226,7 @@ end subroutine write_atm_profile
   use dotlrt_output
   use profiles
   use netcdf
-    
+
   implicit none
 
 ! inputs
@@ -290,7 +290,7 @@ end subroutine write_atm_profile
 
     if(flag_var) then ! create a variable
       if(trim(var(ivar)%dim)=='(nlat,nlon)') then
-        status = nf90_def_var( filid, var(ivar)%name, nf90_float, (/did_lon, did_lat/), varid(ivar))
+        status = nf90_def_var( filid, var(ivar)%name, nf90_double, (/did_lon, did_lat/), varid(ivar))
         if(status/=nf90_noerr) call handle_err(status,subname,7)
       endif
 
@@ -299,7 +299,7 @@ end subroutine write_atm_profile
 
       status = nf90_put_att( filid, varid(ivar), 'long_name', trim(var(ivar)%long_name) )
       if(status/=nf90_noerr) call handle_err(status,subname,9)
-    
+
       status = nf90_put_att( filid, varid(ivar), 'missing_value', var(ivar)%missing )
       if(status/=nf90_noerr) call handle_err(status,subname,10)
     endif
@@ -317,11 +317,11 @@ end subroutine write_atm_profile
         varname = trim(var(ivar)%name)//'_'//chan_txt
         if(trim(var(ivar)%dim)=='(nlat,nlon,npol)') then
           print*, trim(varname), filid
-          status = nf90_def_var( filid, trim(varname), nf90_float, (/did_lon, did_lat, did_pol/), var_id)
+          status = nf90_def_var( filid, trim(varname), nf90_double, (/did_lon, did_lat, did_pol/), var_id)
           if(status/=nf90_noerr) call handle_err(status,subname,11)
 
         elseif(trim(var(ivar)%dim)=='(nlat,nlon,nstream,npol)') then
-          status = nf90_def_var( filid, trim(varname), nf90_float, (/did_lon, did_lat, did_stream, did_pol/), var_id)
+          status = nf90_def_var( filid, trim(varname), nf90_double, (/did_lon, did_lat, did_stream, did_pol/), var_id)
           if(status/=nf90_noerr) call handle_err(status,subname,12)
         endif
 
@@ -331,10 +331,10 @@ end subroutine write_atm_profile
         text = trim(var(ivar)%long_name)//' for channel '//trim(chan_txt)
         status = nf90_put_att( filid, var_id, 'long_name', trim(text) )
         if(status/=nf90_noerr) call handle_err(status,subname,14)
-    
+
         status = nf90_put_att( filid, var_id, 'missing_value', var(ivar)%missing )
         if(status/=nf90_noerr) call handle_err(status,subname,15)
-	
+
         status = nf90_put_att( filid, var_id, 'frequency', instr_spec(ichan)%lo_freq )
         if(status/=nf90_noerr) call handle_err(status,subname,16)
 
@@ -373,7 +373,7 @@ end subroutine write_atm_profile
   use dotlrt_variables
   use dotlrt_output
   use netcdf
-    
+
   implicit none
 
 ! local variables
@@ -404,7 +404,7 @@ end subroutine write_atm_profile
   use dotlrt_variables
   use dotlrt_output
   use netcdf
-    
+
   implicit none
 
 ! local variables
@@ -418,7 +418,7 @@ end subroutine write_atm_profile
 ! open variable definition file
   open(unit=20, file=trim(file_var), form='formatted', status='old')
   read(20,*) junk
-  
+
 ! count variables
   n_out_var=0
   do ivar=1,max_out_var
@@ -434,7 +434,7 @@ end subroutine write_atm_profile
 ! re-open variable definition file
   open(unit=20, file=trim(file_var), form='formatted', status='old')
   read(20,*) junk
-  
+
 ! read variable defitions
   do ivar=1,n_out_var
     read(20,*, iostat=status) var(ivar)%file,var(ivar)%name, var(ivar)%units, var(ivar)%ndim, var(ivar)%dim, var(ivar)%long_name
@@ -457,13 +457,13 @@ end subroutine write_atm_profile
 !
 ! History:
 !  10/20/2020 Kevn Schaefer created routine from create_qp2 from SiBCASA
-!  1/27/2021  Kevin Schaefer changed to Jacobian 
+!  1/27/2021  Kevin Schaefer changed to Jacobian
 !-----------------------------------------------------------------------------------
   use dotlrt_variables
   use dotlrt_output
   use profiles
   use netcdf
-    
+
   implicit none
 
 ! inputs
@@ -523,7 +523,7 @@ end subroutine write_atm_profile
 
     if(flag_var) then ! create a variable
       if(trim(var(ivar)%dim)=='(nlat,nlon)') then
-        status = nf90_def_var( filid, var(ivar)%name, nf90_float, (/did_lon, did_lat/), varid(ivar))
+        status = nf90_def_var( filid, var(ivar)%name, nf90_double, (/did_lon, did_lat/), varid(ivar))
         if(status/=nf90_noerr) call handle_err(status,subname,7)
       endif
 
@@ -532,7 +532,7 @@ end subroutine write_atm_profile
 
       status = nf90_put_att( filid, varid(ivar), 'long_name', trim(var(ivar)%long_name) )
       if(status/=nf90_noerr) call handle_err(status,subname,9)
-    
+
       status = nf90_put_att( filid, varid(ivar), 'missing_value', var(ivar)%missing )
       if(status/=nf90_noerr) call handle_err(status,subname,10)
     endif
@@ -546,19 +546,19 @@ end subroutine write_atm_profile
 
     if (flag_var) then
       if(trim(var(ivar)%dim)=='(nlat,nlon)') then
-        status = nf90_def_var( filid, var(ivar)%name, nf90_float, (/did_lon, did_lat/), varid(ivar))
+        status = nf90_def_var( filid, var(ivar)%name, nf90_double, (/did_lon, did_lat/), varid(ivar))
         if(status/=nf90_noerr) call handle_err(status,subname,7)
 
       elseif(trim(var(ivar)%dim)=='(nlat,nlon,npol)') then
-        status = nf90_def_var( filid, var(ivar)%name, nf90_float, (/did_lon, did_lat, did_pol/), varid(ivar))
+        status = nf90_def_var( filid, var(ivar)%name, nf90_double, (/did_lon, did_lat, did_pol/), varid(ivar))
         if(status/=nf90_noerr) call handle_err(status,subname,8)
 
       elseif(trim(var(ivar)%dim)=='(nlat,nlon,nstream,npol)') then
-        status = nf90_def_var( filid, var(ivar)%name, nf90_float, (/did_lon, did_lat, did_stream, did_pol/), varid(ivar))
+        status = nf90_def_var( filid, var(ivar)%name, nf90_double, (/did_lon, did_lat, did_stream, did_pol/), varid(ivar))
         if(status/=nf90_noerr) call handle_err(status,subname,9)
 
       elseif(trim(var(ivar)%dim)=='(nlat,nlon,nlev,nstream,npol)') then
-        status = nf90_def_var( filid, var(ivar)%name, nf90_float, (/did_lon, did_lat, did_lev, did_stream, did_pol/), varid(ivar))
+        status = nf90_def_var( filid, var(ivar)%name, nf90_double, (/did_lon, did_lat, did_lev, did_stream, did_pol/), varid(ivar))
         if(status/=nf90_noerr) call handle_err(status,subname,10)
     endif
 
@@ -567,7 +567,7 @@ end subroutine write_atm_profile
 
     status = nf90_put_att( filid, varid(ivar), 'long_name', trim(var(ivar)%long_name) )
     if(status/=nf90_noerr) call handle_err(status,subname,12)
-    
+
     status = nf90_put_att( filid, varid(ivar), 'missing_value', var(ivar)%missing )
     if(status/=nf90_noerr) call handle_err(status,subname,13)
     endif
@@ -627,7 +627,7 @@ end subroutine write_atm_profile
   use profiles
   implicit none
 !
-! internal variables  
+! internal variables
   character*250 filename ! (-) output filename
   character*250 line     ! (-) output line
   character*250 fmt      ! (-) output format spec
@@ -665,7 +665,7 @@ end subroutine write_atm_profile
 ! write number of levels
   fmt='(i3.0)'
   write(txt_val1, fmt) nlev
-  fmt='(a3)'  
+  fmt='(a3)'
   write(20,fmt) trim(adjustl(txt_val1))
 
 ! convert level values to text and write to file
@@ -715,7 +715,7 @@ end subroutine write_atm_profile
   integer ilat         ! (-) latitude index
 
 !
-! internal variables  
+! internal variables
   logical flag_write     ! (-) flag to write the file
   character*250 filename ! (-) output filename
   character*250 fmt      ! (-) output format spec
@@ -770,7 +770,7 @@ end subroutine write_atm_profile
   use profiles
   implicit none
 !
-! internal variables  
+! internal variables
   character*250 line     ! (-) output line
   character*250 fmt      ! (-) output format spec
   character*25 txt_val1  ! (-) text version of value
@@ -799,7 +799,7 @@ end subroutine write_atm_profile
 ! write number of levels
   fmt='(i3.0)'
   write(txt_val1, fmt) nlev
-  fmt='(a3)'  
+  fmt='(a3)'
   write(20,fmt) trim(adjustl(txt_val1))
 
 ! convert level values to text and write to file

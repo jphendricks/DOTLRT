@@ -34,6 +34,8 @@
   !write(444,*) '['
 
 ! set start values X variable
+  print*, '-----------------------------'
+  print*, '  hab-     hydro_d(1),      hab,                      hydro_d(1)              (dens                       temp                  )'
   call Plot2D3D('StartX  ')
   do ix=1,maxi
 !
@@ -80,8 +82,10 @@
   !print*, 'tarray = ', tarray
   !print*, 'parray = ', parray
   !print*, 'myarray = ', myarray
-  call write_netcdf(file_index_table)
-
+  if (gen_index_table) then
+     !call write_netcdf('index_table_10_conv.nc')
+     call write_netcdf('index_table.nc')
+  end if
 
 !--------------------------------------------------
 ! INTERNAL SUBROUTINES
@@ -353,7 +357,7 @@
 
 
   allocate(chan_varid(NCHANNS*NHYDROS))
-  allocate(vals(npts,npts,nchannel))
+  allocate(vals(npts,npts,NHYDROS))
 
   ! Create the file.
   call check( nf90_create(filename, nf90_clobber, ncid) , 'nf90_create')
@@ -367,9 +371,9 @@
   ! Define the coordinate variables. They will hold the coordinate
   ! information, that is, the latitudes and longitudes. A varid is
   ! returned for each.
-  call check( nf90_def_var(ncid, TEMP_DIM_NAME, NF90_REAL, temp_dimid, temp_varid) ,'nf90_def_var')
-  call check( nf90_def_var(ncid, DENS_DIM_NAME, NF90_REAL, dens_dimid, dens_varid) ,'nf90_def_var')
-  call check( nf90_def_var(ncid, VALS_DIM_NAME, NF90_REAL, vals_dimid, vals_varid) ,'nf90_def_var')
+  call check( nf90_def_var(ncid, TEMP_DIM_NAME, NF90_DOUBLE, temp_dimid, temp_varid) ,'nf90_def_var')
+  call check( nf90_def_var(ncid, DENS_DIM_NAME, NF90_DOUBLE, dens_dimid, dens_varid) ,'nf90_def_var')
+  call check( nf90_def_var(ncid, VALS_DIM_NAME, NF90_DOUBLE, vals_dimid, vals_varid) ,'nf90_def_var')
 
   ! Assign units attributes to coordinate var data. This attaches a
   ! text attribute to each of the coordinate variables, containing the
@@ -385,7 +389,7 @@
     do ihydro=1,NHYDROS
       write(var_name, '(A5,"_",I2.2,"_",A)') "chann", ichan, trim(get_hydro_name(ihydro))
       indx = ihydro + NHYDROS*(ichan-1)
-      call check( nf90_def_var(ncid, trim(var_name), NF90_REAL, dimids, chan_varid(indx) ) , 'nf90_def_var')
+      call check( nf90_def_var(ncid, trim(var_name), NF90_DOUBLE, dimids, chan_varid(indx) ) , 'nf90_def_var')
     end do
   end do
 
