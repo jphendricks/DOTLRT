@@ -13,7 +13,8 @@ subroutine read_namel_dotlrt
 !
 ! Namelists
 namelist /dotlrt_control/ & ! execution configuration control
-  flag_print_full, flag_read_anc, ocean_mod, prof_src, gen_index_table, use_index_table, dbg_index_table
+  flag_print_full, flag_read_anc, ocean_mod, prof_src, &
+  use_index_table, gen_index_table, dbg_index_table
 
 namelist /dotlrt_input_files/ & ! input file names
   file_instr, file_var, file_index_table

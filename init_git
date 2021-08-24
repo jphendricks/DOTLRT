@@ -1,0 +1,4 @@
+#!/bin/bash
+
+git config --global user.name "Kevin Schaefer"
+git config --global user.email kevin.schaefer@orbitalmicro.com

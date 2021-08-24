@@ -40,7 +40,7 @@ character(len = nf90_max_name) :: dimnam
 character*50 subroutine ! subroutine name
 !
 ! set subroutine name
-  subroutine='read_WRF_netcdf'
+  subroutine='read_WRF_netcdf_dim'
 !
 ! Open file
   status = nf90_open(file_in, NF90_NOWRITE, ncdfID)
@@ -61,28 +61,28 @@ character*50 subroutine ! subroutine name
     status = nf90_inquire_dimension( ncdfID,idim,dimnam,dimlen )
     if (status /= nf90_noerr) call handle_err(status, subroutine, 3)
 
-    if( dimnam.eq.'Time' ) then
+    if( dimnam == 'Time' ) then
       ntime=dimlen
       write(6,*) 'Number of times in file:         ', ntime
-    elseif( dimnam.eq.'DateStrLen' ) then
+    elseif( dimnam == 'DateStrLen' ) then
       ndate=dimlen
       if(flag_print_full) write(6,*) 'Length of date string:           ', ndate
-    elseif( dimnam.eq.'west_east_stag') then
+    elseif( dimnam == 'west_east_stag') then
       nlon_st=dimlen
       if(flag_print_full) write(6,*) 'West-east staggered gridpoints:  ', nlon_st
-    elseif( dimnam.eq.'west_east') then
+    elseif( dimnam == 'west_east') then
       nlon=dimlen
       write(6,*) 'West-east gridpoints (nlon):     ', nlon
-    elseif( dimnam.eq.'south_north') then
+    elseif( dimnam == 'south_north') then
       nlat=dimlen
       write(6,*) 'South-north gridpoints (nlat):   ', nlat
-    elseif( dimnam.eq.'bottom_top') then
+    elseif( dimnam == 'bottom_top') then
       nlev_max=dimlen
       write(6,*) 'Number of half eta levels (nlev_max):', nlev_max
-    elseif( dimnam.eq.'south_north_stag') then
+    elseif( dimnam == 'south_north_stag') then
       nlat_st=dimlen
       if(flag_print_full) write(6,*) 'South-north staggered gridpoints:', nlat_st
-    elseif( dimnam.eq.'bottom_top_stag') then
+    elseif( dimnam == 'bottom_top_stag') then
       nlev_st=dimlen
       if(flag_print_full) write(6,*) 'Number of full eta levels:       ', nlev_st
     endif
@@ -121,8 +121,8 @@ character*50 subroutine ! subroutine name
   allocate(landmask(nlon, nlat))
   allocate(lakemask(nlon, nlat))
   allocate(TSK(nlon, nlat))
-  allocate(sref_hor(nlon, nlat, max_nchan, max_nang))
-  allocate(sref_ver(nlon, nlat, max_nchan, max_nang))
+  allocate(sref_hor(nlon, nlat, max_nang))
+  allocate(sref_ver(nlon, nlat, max_nang))
   
 ! allocate variables required for output files
   if(save_rad_file) then

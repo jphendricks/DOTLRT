@@ -1,4 +1,153 @@
 !
+!===================================================================================
+  subroutine create_retrieval_output_file()
+!===================================================================================
+! creates a netcdf retieval output file
+!
+! History:
+!  7/4/2021 Kevn Schaefer created routine
+!-----------------------------------------------------------------------------------
+  use scan_Variables
+  use dotlrt_variables
+  use dotlrt_output
+  use profiles
+  use netcdf
+    
+  implicit none
+!
+! local variables
+  integer filid            ! (-) netcdf file id number
+  integer status           ! (-) return status of netcdf functions
+  integer did_npts         ! (-) latitude dimension id number
+  integer ivar             ! (-) variable index
+  integer varid(n_out_var) ! (-) variable id number
+  character(250) filename  ! (-) filename string
+  integer ifil       ! (-) file index
+  character*50 subname     ! (-) subroutine name
+  type (variable_spec) ret_var(max_out_var) !(varies) retrieval output variable tree
+
+! print message
+  print*, '    Create netcdf retrieval output file'
+
+! set subroutine name
+  subname='create_retrieval_output_file'
+
+! find masked observation swath file
+  print*, '    Read variable definitions'
+  do ifil=1,numfiles
+    if (trim(files(ifil)%type) == 'FY3_var')  filename = trim(files(ifil)%path)
+  enddo
+
+! open variable definition file
+  open(unit=20, file=trim(filename), form='formatted', status='old')
+  read(20,*) junk
+  
+! count variables
+  n_out_var=0
+  do ivar=1,max_out_var
+    read(20,*, iostat=status) junk
+    if(status<0) exit
+    n_out_var=n_out_var+1
+  enddo
+  print*, '    Number output variables:', n_out_var
+
+! close variable definition file
+  close(unit=20)
+
+! re-open variable definition file
+  open(unit=20, file=trim(filename), form='formatted', status='old')
+  read(20,*) junk
+  
+! read variable defitions
+  do ivar=1,n_out_var
+    read(20,*, iostat=status) ret_var(ivar)%file,ret_var(ivar)%name, ret_var(ivar)%units,&
+      ret_var(ivar)%ndim, ret_var(ivar)%dim, ret_var(ivar)%long_name
+  enddo
+!
+! close variable definition file
+  close(unit=20)
+
+! set standard stuff
+  do ivar = 1, n_out_var
+    ret_var(ivar)%missing=missing
+  enddo
+
+! find masked observation swath file
+  do ifil=1,numfiles
+    if (trim(files(ifil)%type) == 'FY3_out')  filename = trim(files(ifil)%path)//'FY3_out.nc'
+  enddo
+  print*, '    write out FY: ', trim(filename)
+
+  status = nf90_create( trim(filename), cmode=or(nf90_clobber,nf90_64bit_offset), ncid=filid)
+  if(status/=nf90_noerr) then
+    print*, trim(filename)
+    call handle_err(status,subname,1)
+  endif
+
+! define dimensions
+  status = nf90_def_dim( filid, 'swath_npts', swath_npts, did_npts )
+  if(status/=nf90_noerr) call handle_err(status,subname,2)
+
+! define variables common to all files
+  do ivar = 1, n_out_var
+    status = nf90_def_var( filid, ret_var(ivar)%name, nf90_float, (/did_npts/), varid(ivar))
+    if(status/=nf90_noerr) call handle_err(status,subname,7)
+
+    status = nf90_put_att( filid, varid(ivar), 'units', trim(ret_var(ivar)%units) )
+    if(status/=nf90_noerr) call handle_err(status,subname,8)
+
+    status = nf90_put_att( filid, varid(ivar), 'long_name', trim(ret_var(ivar)%long_name) )
+    if(status/=nf90_noerr) call handle_err(status,subname,9)
+    
+    status = nf90_put_att( filid, varid(ivar), 'missing_value', ret_var(ivar)%missing )
+    if(status/=nf90_noerr) call handle_err(status,subname,10)
+  enddo
+
+! switch from definition mode to data mode
+  status = nf90_enddef( filid )
+  if(status/=nf90_noerr) call handle_err(status,subname,18)
+
+! write output
+! varid index
+! 1 swath_precip(swath_npts)
+! 2 swath_point(swath_npts)
+! 3 swath_iter(swath_npts)
+! 4 swath_cost(swath_npts)
+! 5 swath_tb_sim(swath_npts)
+! 6 swath_res(swath_npts)
+! 7 swath_ex(swath_npts)
+
+! write estimated precipitation and metrics
+  status = nf90_put_var(filid, varid(1), swath_precip)
+  if(status/=nf90_noerr) call handle_err(status,trim(subname),19)
+
+  status = nf90_put_var(filid, varid(2), swath_point)
+  if(status/=nf90_noerr) call handle_err(status,trim(subname),20)
+
+  status = nf90_put_var(filid, varid(3), swath_iter)
+  if(status/=nf90_noerr) call handle_err(status,trim(subname),21)
+
+  status = nf90_put_var(filid, varid(4), swath_cost)
+  if(status/=nf90_noerr) call handle_err(status,trim(subname),22)
+
+  status = nf90_put_var(filid, varid(5), swath_tb_sim)
+  if(status/=nf90_noerr) call handle_err(status,trim(subname),23)
+
+  status = nf90_put_var(filid, varid(6), swath_res)
+  if(status/=nf90_noerr) call handle_err(status,trim(subname),24)
+
+  status = nf90_put_var(filid, varid(7), swath_ex)
+  if(status/=nf90_noerr) call handle_err(status,trim(subname),25)
+
+  status = nf90_put_var(filid, varid(8), swath_bad)
+  if(status/=nf90_noerr) call handle_err(status,trim(subname),26)
+
+! close file
+  status = nf90_close(filid)
+  if(status/=nf90_noerr) call handle_err(status,subname,27)
+
+  end subroutine create_retrieval_output_file
+
 !==============================================================================
 subroutine write_atm_profile(filid, varname, nlon, nlat, nlev_max, atm_profile)
 !==============================================================================
@@ -52,7 +201,7 @@ end subroutine write_atm_profile
   use dotlrt_output
   use profiles
   use netcdf
-
+    
   implicit none
 !
 ! local variables
@@ -96,7 +245,7 @@ end subroutine write_atm_profile
 ! define variables common to all files
   do ivar = 1, n_out_var
     if (var(ivar)%file =='All') then
-      status = nf90_def_var( filid, var(ivar)%name, nf90_double, (/did_lon, did_lat/), varid(ivar))
+      status = nf90_def_var( filid, var(ivar)%name, nf90_float, (/did_lon, did_lat/), varid(ivar))
       if(status/=nf90_noerr) call handle_err(status,subname,7)
 
       status = nf90_put_att( filid, varid(ivar), 'units', trim(var(ivar)%units) )
@@ -104,7 +253,7 @@ end subroutine write_atm_profile
 
       status = nf90_put_att( filid, varid(ivar), 'long_name', trim(var(ivar)%long_name) )
       if(status/=nf90_noerr) call handle_err(status,subname,9)
-
+    
       status = nf90_put_att( filid, varid(ivar), 'missing_value', var(ivar)%missing )
       if(status/=nf90_noerr) call handle_err(status,subname,10)
     endif
@@ -114,7 +263,7 @@ end subroutine write_atm_profile
   do ivar = 1, n_out_var
     if (var(ivar)%file =='Profile') then
       varname = trim(var(ivar)%name)
-      status = nf90_def_var( filid, trim(varname), nf90_double, (/did_lon, did_lat, did_lev/), varid(ivar))
+      status = nf90_def_var( filid, trim(varname), nf90_float, (/did_lon, did_lat, did_lev/), varid(ivar))
       if(status/=nf90_noerr) call handle_err(status,subname,11)
 
       status = nf90_put_att( filid, varid(ivar), 'units', trim(var(ivar)%units) )
@@ -122,7 +271,7 @@ end subroutine write_atm_profile
 
       status = nf90_put_att( filid, varid(ivar), 'long_name', trim(var(ivar)%long_name) )
       if(status/=nf90_noerr) call handle_err(status,subname,14)
-
+    
       status = nf90_put_att( filid, varid(ivar), 'missing_value', var(ivar)%missing )
       if(status/=nf90_noerr) call handle_err(status,subname,15)
     endif
@@ -133,17 +282,17 @@ end subroutine write_atm_profile
   if(status/=nf90_noerr) call handle_err(status,subname,18)
 
 ! write latitude
-  varname='XLAT'
+  varname='XLAT' 
   status = nf90_put_var(filid, varid(1), xlat)
   if(status/=nf90_noerr) call handle_err(status,trim(subname),19)
 
 ! write longitude
-  varname='XLONG'
+  varname='XLONG' 
   status = nf90_put_var(filid, varid(2), xlong)
   if(status/=nf90_noerr) call handle_err(status,trim(subname),20)
 
 ! write variables
-  varname='height'
+  varname='height' 
   call write_atm_profile(filid, varname, nlon, nlat, nlev_max, height_mid)
 
 ! close file
@@ -163,7 +312,7 @@ end subroutine write_atm_profile
   use dotlrt_output
   use profiles
   use netcdf
-
+    
   implicit none
 
 ! inputs
@@ -187,7 +336,7 @@ end subroutine write_atm_profile
 ! create file name
   filename = trim(out_path)//'Tb.nc'
 !  if(flag_print_full) print*, '    ', trim(filename)
-
+  
 ! open file
   status=nf90_open(trim(filename),nf90_write,filid)
   if(status/=nf90_noerr) then
@@ -226,7 +375,7 @@ end subroutine write_atm_profile
   use dotlrt_output
   use profiles
   use netcdf
-
+    
   implicit none
 
 ! inputs
@@ -290,7 +439,7 @@ end subroutine write_atm_profile
 
     if(flag_var) then ! create a variable
       if(trim(var(ivar)%dim)=='(nlat,nlon)') then
-        status = nf90_def_var( filid, var(ivar)%name, nf90_double, (/did_lon, did_lat/), varid(ivar))
+        status = nf90_def_var( filid, var(ivar)%name, nf90_float, (/did_lon, did_lat/), varid(ivar))
         if(status/=nf90_noerr) call handle_err(status,subname,7)
       endif
 
@@ -299,7 +448,7 @@ end subroutine write_atm_profile
 
       status = nf90_put_att( filid, varid(ivar), 'long_name', trim(var(ivar)%long_name) )
       if(status/=nf90_noerr) call handle_err(status,subname,9)
-
+    
       status = nf90_put_att( filid, varid(ivar), 'missing_value', var(ivar)%missing )
       if(status/=nf90_noerr) call handle_err(status,subname,10)
     endif
@@ -317,11 +466,11 @@ end subroutine write_atm_profile
         varname = trim(var(ivar)%name)//'_'//chan_txt
         if(trim(var(ivar)%dim)=='(nlat,nlon,npol)') then
           print*, trim(varname), filid
-          status = nf90_def_var( filid, trim(varname), nf90_double, (/did_lon, did_lat, did_pol/), var_id)
+          status = nf90_def_var( filid, trim(varname), nf90_float, (/did_lon, did_lat, did_pol/), var_id)
           if(status/=nf90_noerr) call handle_err(status,subname,11)
 
         elseif(trim(var(ivar)%dim)=='(nlat,nlon,nstream,npol)') then
-          status = nf90_def_var( filid, trim(varname), nf90_double, (/did_lon, did_lat, did_stream, did_pol/), var_id)
+          status = nf90_def_var( filid, trim(varname), nf90_float, (/did_lon, did_lat, did_stream, did_pol/), var_id)
           if(status/=nf90_noerr) call handle_err(status,subname,12)
         endif
 
@@ -331,10 +480,10 @@ end subroutine write_atm_profile
         text = trim(var(ivar)%long_name)//' for channel '//trim(chan_txt)
         status = nf90_put_att( filid, var_id, 'long_name', trim(text) )
         if(status/=nf90_noerr) call handle_err(status,subname,14)
-
+    
         status = nf90_put_att( filid, var_id, 'missing_value', var(ivar)%missing )
         if(status/=nf90_noerr) call handle_err(status,subname,15)
-
+	
         status = nf90_put_att( filid, var_id, 'frequency', instr_spec(ichan)%lo_freq )
         if(status/=nf90_noerr) call handle_err(status,subname,16)
 
@@ -373,7 +522,7 @@ end subroutine write_atm_profile
   use dotlrt_variables
   use dotlrt_output
   use netcdf
-
+    
   implicit none
 
 ! local variables
@@ -404,7 +553,7 @@ end subroutine write_atm_profile
   use dotlrt_variables
   use dotlrt_output
   use netcdf
-
+    
   implicit none
 
 ! local variables
@@ -418,7 +567,7 @@ end subroutine write_atm_profile
 ! open variable definition file
   open(unit=20, file=trim(file_var), form='formatted', status='old')
   read(20,*) junk
-
+  
 ! count variables
   n_out_var=0
   do ivar=1,max_out_var
@@ -434,7 +583,7 @@ end subroutine write_atm_profile
 ! re-open variable definition file
   open(unit=20, file=trim(file_var), form='formatted', status='old')
   read(20,*) junk
-
+  
 ! read variable defitions
   do ivar=1,n_out_var
     read(20,*, iostat=status) var(ivar)%file,var(ivar)%name, var(ivar)%units, var(ivar)%ndim, var(ivar)%dim, var(ivar)%long_name
@@ -457,13 +606,13 @@ end subroutine write_atm_profile
 !
 ! History:
 !  10/20/2020 Kevn Schaefer created routine from create_qp2 from SiBCASA
-!  1/27/2021  Kevin Schaefer changed to Jacobian
+!  1/27/2021  Kevin Schaefer changed to Jacobian 
 !-----------------------------------------------------------------------------------
   use dotlrt_variables
   use dotlrt_output
   use profiles
   use netcdf
-
+    
   implicit none
 
 ! inputs
@@ -523,7 +672,7 @@ end subroutine write_atm_profile
 
     if(flag_var) then ! create a variable
       if(trim(var(ivar)%dim)=='(nlat,nlon)') then
-        status = nf90_def_var( filid, var(ivar)%name, nf90_double, (/did_lon, did_lat/), varid(ivar))
+        status = nf90_def_var( filid, var(ivar)%name, nf90_float, (/did_lon, did_lat/), varid(ivar))
         if(status/=nf90_noerr) call handle_err(status,subname,7)
       endif
 
@@ -532,7 +681,7 @@ end subroutine write_atm_profile
 
       status = nf90_put_att( filid, varid(ivar), 'long_name', trim(var(ivar)%long_name) )
       if(status/=nf90_noerr) call handle_err(status,subname,9)
-
+    
       status = nf90_put_att( filid, varid(ivar), 'missing_value', var(ivar)%missing )
       if(status/=nf90_noerr) call handle_err(status,subname,10)
     endif
@@ -546,19 +695,19 @@ end subroutine write_atm_profile
 
     if (flag_var) then
       if(trim(var(ivar)%dim)=='(nlat,nlon)') then
-        status = nf90_def_var( filid, var(ivar)%name, nf90_double, (/did_lon, did_lat/), varid(ivar))
+        status = nf90_def_var( filid, var(ivar)%name, nf90_float, (/did_lon, did_lat/), varid(ivar))
         if(status/=nf90_noerr) call handle_err(status,subname,7)
 
       elseif(trim(var(ivar)%dim)=='(nlat,nlon,npol)') then
-        status = nf90_def_var( filid, var(ivar)%name, nf90_double, (/did_lon, did_lat, did_pol/), varid(ivar))
+        status = nf90_def_var( filid, var(ivar)%name, nf90_float, (/did_lon, did_lat, did_pol/), varid(ivar))
         if(status/=nf90_noerr) call handle_err(status,subname,8)
 
       elseif(trim(var(ivar)%dim)=='(nlat,nlon,nstream,npol)') then
-        status = nf90_def_var( filid, var(ivar)%name, nf90_double, (/did_lon, did_lat, did_stream, did_pol/), varid(ivar))
+        status = nf90_def_var( filid, var(ivar)%name, nf90_float, (/did_lon, did_lat, did_stream, did_pol/), varid(ivar))
         if(status/=nf90_noerr) call handle_err(status,subname,9)
 
       elseif(trim(var(ivar)%dim)=='(nlat,nlon,nlev,nstream,npol)') then
-        status = nf90_def_var( filid, var(ivar)%name, nf90_double, (/did_lon, did_lat, did_lev, did_stream, did_pol/), varid(ivar))
+        status = nf90_def_var( filid, var(ivar)%name, nf90_float, (/did_lon, did_lat, did_lev, did_stream, did_pol/), varid(ivar))
         if(status/=nf90_noerr) call handle_err(status,subname,10)
     endif
 
@@ -567,7 +716,7 @@ end subroutine write_atm_profile
 
     status = nf90_put_att( filid, varid(ivar), 'long_name', trim(var(ivar)%long_name) )
     if(status/=nf90_noerr) call handle_err(status,subname,12)
-
+    
     status = nf90_put_att( filid, varid(ivar), 'missing_value', var(ivar)%missing )
     if(status/=nf90_noerr) call handle_err(status,subname,13)
     endif
@@ -627,7 +776,7 @@ end subroutine write_atm_profile
   use profiles
   implicit none
 !
-! internal variables
+! internal variables  
   character*250 filename ! (-) output filename
   character*250 line     ! (-) output line
   character*250 fmt      ! (-) output format spec
@@ -665,7 +814,7 @@ end subroutine write_atm_profile
 ! write number of levels
   fmt='(i3.0)'
   write(txt_val1, fmt) nlev
-  fmt='(a3)'
+  fmt='(a3)'  
   write(20,fmt) trim(adjustl(txt_val1))
 
 ! convert level values to text and write to file
@@ -715,7 +864,7 @@ end subroutine write_atm_profile
   integer ilat         ! (-) latitude index
 
 !
-! internal variables
+! internal variables  
   logical flag_write     ! (-) flag to write the file
   character*250 filename ! (-) output filename
   character*250 fmt      ! (-) output format spec
@@ -759,25 +908,30 @@ end subroutine write_atm_profile
   end subroutine write_radiation_profile
 !
 !====================================================================
-  subroutine write_current_profile()
+  subroutine write_atmospheric_profile(atm_loc, filename)
 !====================================================================
-! writes the current profile in DOTLRT variable tree to text file
+! writes atmospheric profile to standard text file
 !
 ! History:
-!  3/18/2021  Kevin Schaefer created routine
+!  3/18/2021 Kevin Schaefer created routine
+!  5/23/2021 Kevin Schaefer switched to local atmospheric profile
 !--------------------------------------------------------------------
   use dotlrt_variables
   use profiles
   implicit none
-!
-! internal variables
+
+! input variables
+  type(profile_type) atm_loc(max_nlev) ! (variable) local atmospheric profile
+  character*250 filename
+
+! internal variables  
   character*250 line     ! (-) output line
   character*250 fmt      ! (-) output format spec
   character*25 txt_val1  ! (-) text version of value
   integer ilev           ! (-) level index
   integer ivar           ! (-) value index
   character*25 values(nvar_prof)! (varies) temporary write variable
-!
+
 ! profile values
 ! values(1) (km) height
 ! values(2) (mb) atmospheric pressure
@@ -791,30 +945,30 @@ end subroutine write_atm_profile
 
 ! print message
   print*, 'Write Single Text Atmospheric Profile'
-  print*, '    ', trim(out_path)
+  print*, '    ', trim(filename)
 !
 ! open profile file
-  open(unit=20, file=trim(out_path), form='formatted')
+  open(unit=20, file=trim(filename), form='formatted')
 
 ! write number of levels
   fmt='(i3.0)'
   write(txt_val1, fmt) nlev
-  fmt='(a3)'
+  fmt='(a3)'  
   write(20,fmt) trim(adjustl(txt_val1))
 
 ! convert level values to text and write to file
   do ilev = 1, nlev
     fmt = '(f15.8)'
-    write(values(1), fmt) atm(ilev)%hgt    ! (km)
-    write(values(2), fmt) atm(ilev)%press  ! (mb)
-    write(values(3), fmt) atm(ilev)%temp   ! (K)
+    write(values(1), fmt) atm_loc(ilev)%hgt_mid   ! (km)
+    write(values(2), fmt) atm_loc(ilev)%press     ! (mb)
+    write(values(3), fmt) atm_loc(ilev)%temp      ! (K)
     fmt = '(e15.8)'
-    write(values(4), fmt) atm(ilev)%humid     ! (g/m^3)
-    write(values(5), fmt) atm(ilev)%clw%dens  ! (g/m^3)
-    write(values(6), fmt) atm(ilev)%rain%dens ! (g/m^3)
-    write(values(7), fmt) atm(ilev)%ice%dens  ! (g/m^3)
-    write(values(8), fmt) atm(ilev)%snow%dens ! (g/m^3)
-    write(values(9), fmt) atm(ilev)%grpl%dens ! (g/m^3)
+    write(values(4), fmt) atm_loc(ilev)%humid     ! (g/m^3)
+    write(values(5), fmt) atm_loc(ilev)%clw%dens  ! (g/m^3)
+    write(values(6), fmt) atm_loc(ilev)%rain%dens ! (g/m^3)
+    write(values(7), fmt) atm_loc(ilev)%ice%dens  ! (g/m^3)
+    write(values(8), fmt) atm_loc(ilev)%snow%dens ! (g/m^3)
+    write(values(9), fmt) atm_loc(ilev)%grpl%dens ! (g/m^3)
 
     do ivar =1, nvar_prof
       if(ivar==1) then
@@ -829,4 +983,4 @@ end subroutine write_atm_profile
 ! close profile file
   close(unit=20)
 
-  end subroutine write_current_profile
+  end subroutine write_atmospheric_profile

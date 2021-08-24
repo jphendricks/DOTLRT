@@ -67,8 +67,8 @@ use dotlrt_variables
                         gamh = (term2-term1) / (term2+term1)
                         term2 = surf%diel * term2
                         gamv = (term2-term1) / (term2+term1)
-                        rv_k = gamv * conjg(gamv)
-                        rh_k = gamh * conjg(gamh)
+                        rv_k = dble(gamv * conjg(gamv))
+                        rh_k = dble(gamh * conjg(gamh))
                         if( theta_k .gt. 0.0d0 .and. phi_k .gt. 0.0d0 .and. phi_k .lt. two_pi ) then
                              v_dot_q_s = 1.0d0/(1.0d0+((sin_theta_i*cos_theta_k-cos_theta_i*sin_theta_k*cos_phi_k) &
                                          /(sin_theta_k*sin_phi_k))**2)
@@ -92,8 +92,8 @@ use dotlrt_variables
                     norm = norm+int_d*sec_exp
                 end if
             end do
-            surf%vref(iang) = surf%vref(iang) / norm
-            surf%href(iang) = surf%href(iang) / norm
+            surf%vref(iang) = dble(surf%vref(iang) / norm)
+            surf%href(iang) = dble(surf%href(iang) / norm)
         else
             ! specular ocean surface}
             cos_theta_i = dcos(surf%theta(iang)*pi/180.0d0)
@@ -102,8 +102,8 @@ use dotlrt_variables
             gamh = (term2-term1) / (term2+term1)
             term2 = surf%diel * term2
             gamv = (term2-term1) / (term2+term1)
-            surf%vref(iang) = gamv * conjg(gamv)
-            surf%href(iang) = gamh * conjg(gamh)
+            surf%vref(iang) = dble(gamv * conjg(gamv))
+            surf%href(iang) = dble(gamh * conjg(gamh))
         end if
     end if
 end subroutine kirchoff_ocean_refl

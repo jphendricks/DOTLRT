@@ -1,12 +1,12 @@
 !====================================================================
- SUBROUTINE core95 (nlev,nang,h,a0,b0,f,r,u,v,da0,db0,df,du0,dv0,obs_lev,nvar,LP)
+ subroutine core95 (nlev,nang,thick,a0,b0,f,r,u,v, &
+                    da0,db0,df,dtb_up_dp,dtb_dn_dp,obs_lev,nvar,diagonal)
 !====================================================================
 ! This subroutine solves radiative transfer equation,
-! specifics are below the list of modifications.
 ! Written and modified by Alex Voronovich,Alexander.Voronovich@noaa.gov
 !
 ! Histoy:
-! 1/31/2003 Logical matrix input argument LP(0:nlev,nvar+3)  (layers' profile)
+! 1/31/2003 Logical matrix input argument diagonal(0:nlev,nvar+3)  (layers' profile)
 ! is added. Its _ilev row contains the following information:
 ! To calculate _u,_v  ;  To calculate _du,_dv  ; Is it diagonal layer;
 ! Is it diagonal layer with respect to _ivar-th parameter variation
@@ -17,9 +17,13 @@
 ! is taken into account Subroutine md_inv9 => md_inv31    - includes argument lama12  
 ! 05/08/2003 Symmetries of matrices _t,_r (i.e.,p1 and p2),_rup,_rdn and
 ! the relations: S11^T=S22,S12^T=S12,S21^T=S21 are taken into account
-! 05/15/2003 Subroutine CORE95.F90 is renamed subroutine DTB32.F90 from ACCEL6
-! 9/26/2020 Kevin Schaefer deleted unused variables,arguments,and tabs
-! 1/27/2021 Kevin Schaefer deleted commented code,cleaned up code
+! 5/15/2003 Subroutine CORE95.F90 is renamed subroutine DTB32.F90 from ACCEL6
+! 9/26/2020 Kevin Schaefer deleted unused variables, arguments, and tabs
+! 1/27/2021 Kevin Schaefer deleted commented and unused code
+! 5/14/2021 Kevin Schaefer cleaned up variable definitions and code
+! 5/15/2021 Kevin Schaefer changed Jacobian variable names
+! 5/16/2021 Kevin Schaefer changed logical LP to diagonal
+!
 ! This subroutine solves radiative transfer equation taken in the form:
 ! boundary condition at level n=N :    v_N (z=H) =  f_(N+1)
 ! withiin layer n=N :
@@ -41,57 +45,127 @@
 ! where R(i),i=1,..,nang is reflection coefficient.
 !
 ! The solution is calculated by adding layer technique.
-! Output values _du0(ilev,n,nvar),_dv0(ilev,n,nvar) are derivatives of
+! Output values dtb_up_dp(ilev,n,nvar), dtb_dn_dp(ilev,n,nvar) are derivatives of
 ! the up- and downwelling  brightness temperatures at the observation
 ! level _obs_lev  corresponding to variations of the level properties
 ! at level _ilev. Here _obs_lev could be equal to  any number within
 ! interval
 !                      0 <= obs_lev <= nrl
-! and 1 <= ilev <= nlev. For future use _du0,_dv0 are defined in fact
+! and 1 <= ilev <= nlev. For future use dtb_up_dp, dtb_dn_dp are defined in fact
 ! for ilev=0 also (when reflectivity properties will be varied).
-! However,in the present version of the code _du0(0,n,ivar) and
-! _dv0(0,n,ivar) do not have meaning.
+! However,in the present version of the code dtb_up_dp(0,n,ivar) and
+! dtb_dn_dp(0,n,ivar) do not have meaning.
 ! Index _ivar corresponds to vector of different variations.
 !----------------------------------------------------------------------
+! use dotlrt_variables, only: testval ! for debugging only
 
 IMPLICIT NONE
 
-integer*4 nrot
-INTEGER,INTENT(IN) :: nlev,nang,obs_lev,nvar
-DOUBLE PRECISION,DIMENSION(nlev),INTENT(IN) ::   h
-DOUBLE PRECISION,DIMENSION(0:nlev+1,nang),INTENT(IN) ::   f
-DOUBLE PRECISION,DIMENSION(0:nlev+1,nang,nvar),INTENT(IN) ::   df
-DOUBLE PRECISION,DIMENSION(nlev,nang,nang),INTENT(IN) ::  a0,b0
-DOUBLE PRECISION,DIMENSION(nlev,nang,nang,nvar),INTENT(IN) :: da0,db0
-DOUBLE PRECISION,DIMENSION(nang,nang),INTENT(IN) ::   r
-LOGICAL,DIMENSION(0:nlev,nvar+3),INTENT(IN) :: LP
-DOUBLE PRECISION,DIMENSION(0:nlev,nang),INTENT(OUT) :: u,v
-DOUBLE PRECISION,DIMENSION(0:nlev,nang,nvar),INTENT(OUT) :: du0,dv0
-DOUBLE PRECISION,allocatable :: a(:,:,:),b(:,:,:),am1(:,:,:),p1(:,:,:),p2(:,:,:),q(:,:,:)
-DOUBLE PRECISION,allocatable :: da(:,:,:,:),db(:,:,:,:),dp1(:,:,:,:),dp2(:,:,:,:)
-DOUBLE PRECISION,DIMENSION(0:nlev,nang,nang) ::rup,rdn,s11,s12,s21,s22
-DOUBLE PRECISION,DIMENSION(0:nlev,nang) :: ust,vst
-DOUBLE PRECISION,DIMENSION(0:nlev,nang,nvar) :: dz2,dz3
-DOUBLE PRECISION,DIMENSION(nlev,nang) :: unh
-DOUBLE PRECISION,DIMENSION(nlev,nang,nvar) :: dunh
-DOUBLE PRECISION,DIMENSION(nang) :: y0,y1,y2,dy0,b1,b2  
-DOUBLE PRECISION,DIMENSION(nang,nang) ::  t0,t1,t2,w0,w1,ma,mab,&
-                                         a11,a12,a21,a22,a11m1,&
-                                         a22m1,w2,t3,w3,lama12nm
-DOUBLE PRECISION,DIMENSION(nang,nang,nvar) ::  dt0,dt1,dt2,dma,dmab,&
-                                              da11,da12,da21,da22,&
-                                              da11m1,da22m1,dw0,dw1
-DOUBLE PRECISION,DIMENSION(nang) :: lama,lamab,lama12
-DOUBLE PRECISION,DIMENSION(nang,nvar) :: dlama,dlamab,db1,db2
-DOUBLE PRECISION,DIMENSION(nang,nvar) :: dy0v,dy1v,dy2v
-INTEGER :: ilev,n,m,k,oblv,ivar
-DOUBLE PRECISION :: s1,s2
-LOGICAL,DIMENSION(nlev) :: q_d
-LOGICAL,DIMENSION(0:nlev) :: rup_d,rdn_d,s_d
-LOGICAL :: a_d
-integer alloc_err
+! Input variables
+integer,intent(in) :: nlev         ! (-) number of layers
+integer,intent(in) :: nang         ! (-) number quadrature angles
+integer,intent(in) :: obs_lev      ! (-) observation layer
+integer,intent(in) :: nvar         ! (-) number of variables
+real(8),intent(in) :: thick(nlev)  ! (km) layer thickness
+real(8),intent(in) :: f(0:nlev+1,nang)
+real(8),intent(in) :: r(nang,nang)       ! (1/km) reflectivity
+real(8),intent(in) :: df(0:nlev+1,nang,nvar)
+real(8),intent(in) :: a0(nlev,nang,nang)
+real(8),intent(in) :: b0(nlev,nang,nang)
+real(8),intent(in) :: da0(nlev,nang,nang,nvar)
+real(8),intent(in) :: db0(nlev,nang,nang,nvar)
+logical,intent(in) :: diagonal(0:nlev,nvar+3)  ! (-) true if diagonal case
 
-EXTERNAL md_inv32
+! output variables
+real(8),intent(out) :: u(0:nlev,nang)        ! (K) upwelling brightness temperature at observation height
+real(8),intent(out) :: v(0:nlev,nang)        ! (K) upwelling brightness temperature at observation height
+real(8),intent(out) :: dtb_up_dp(0:nlev,nang,nvar) ! (K param) jacobian upwelling brightness temperature wrt parameter
+real(8),intent(out) :: dtb_dn_dp(0:nlev,nang,nvar) ! (K param) jacobian downwelling brightness temperature wrt parameter
+
+! local variables
+integer*4 nrot
+real(8),allocatable :: a(:,:,:)
+real(8),allocatable :: b(:,:,:)
+real(8),allocatable :: am1(:,:,:)
+real(8),allocatable :: p1(:,:,:)
+real(8),allocatable :: p2(:,:,:)
+real(8),allocatable :: q(:,:,:)
+real(8),allocatable :: da(:,:,:,:)
+real(8),allocatable :: db(:,:,:,:)
+real(8),allocatable :: dp1(:,:,:,:)
+real(8),allocatable :: dp2(:,:,:,:)
+real(8) rup(0:nlev,nang,nang)
+real(8) rdn(0:nlev,nang,nang)
+real(8) s11(0:nlev,nang,nang)
+real(8) s12(0:nlev,nang,nang)
+real(8) s21(0:nlev,nang,nang)
+real(8) s22(0:nlev,nang,nang)
+real(8) ust(0:nlev,nang)
+real(8) vst(0:nlev,nang)
+real(8) dz2(0:nlev,nang,nvar)
+real(8) dz3(0:nlev,nang,nvar)
+real(8) unh(nlev,nang)
+real(8) dunh(nlev,nang,nvar)
+real(8) y0(nang)
+real(8) y1(nang)
+real(8) y2(nang)
+real(8) dy0(nang)
+real(8) b1(nang)
+real(8) b2(nang) 
+real(8) t0(nang,nang)
+real(8) t1(nang,nang)
+real(8) t2(nang,nang)
+real(8) w0(nang,nang)
+real(8) w1(nang,nang)
+real(8) ma(nang,nang)
+real(8) mab(nang,nang)
+real(8) a11(nang,nang)
+real(8) a12(nang,nang)
+real(8) a21(nang,nang)
+real(8) a22(nang,nang)
+real(8) a11m1(nang,nang)
+real(8) a22m1(nang,nang)
+real(8) w2(nang,nang)
+real(8) t3(nang,nang)
+real(8) w3(nang,nang)
+real(8) lama12nm(nang,nang)
+real(8) dt0(nang,nang,nvar)
+real(8) dt1(nang,nang,nvar)
+real(8) dt2(nang,nang,nvar)
+real(8) dma(nang,nang,nvar)
+real(8) dmab(nang,nang,nvar)
+real(8) da11(nang,nang,nvar)
+real(8) da12(nang,nang,nvar)
+real(8) da21(nang,nang,nvar)
+real(8) da22(nang,nang,nvar)
+real(8) da11m1(nang,nang,nvar)
+real(8) da22m1(nang,nang,nvar)
+real(8) dw0(nang,nang,nvar)
+real(8) dw1(nang,nang,nvar)
+real(8) lama(nang)
+real(8) lamab(nang)
+real(8) lama12(nang)
+real(8) dlama(nang,nvar)
+real(8) dlamab(nang,nvar)
+real(8) db1(nang,nvar)
+real(8) db2(nang,nvar)
+real(8) dy0v(nang,nvar)
+real(8) dy1v(nang,nvar)
+real(8) dy2v(nang,nvar)
+integer ilev  ! (-) layer index
+integer n
+integer m
+integer k
+integer oblv  ! (-) local version of obs_lev
+integer ivar  ! (-) variable index
+real(8) s1
+real(8) s2
+logical q_d(nlev)
+logical rup_d(0:nlev)
+logical rdn_d(0:nlev)
+logical s_d(0:nlev)
+logical a_d
+integer alloc_err
 
 ! allocate variables
   allocate(a(nlev,nang,nang))
@@ -113,158 +187,162 @@ v(nlev,:)=0.d0
 
 !kz,Symmetrization of matrices
   DO ilev=1,nlev
-    IF(.NOT. LP(ilev,3)) THEN
-        a(ilev,:,:) = a0(ilev,:,:)+b0(ilev,:,:)
-        b(ilev,:,:) = a0(ilev,:,:)-b0(ilev,:,:)
-! symmetrization of matrices _a,_b below - principally not needed
-        a(ilev,:,:)=(a(ilev,:,:)+TRANSPOSE(a(ilev,:,:)))/2 
-        b(ilev,:,:)=(b(ilev,:,:)+TRANSPOSE(b(ilev,:,:)))/2 
+    IF(.NOT. diagonal(ilev,3)) THEN
+      a(ilev,:,:) = a0(ilev,:,:)+b0(ilev,:,:)
+      b(ilev,:,:) = a0(ilev,:,:)-b0(ilev,:,:)
+      ! symmetrization of matrices _a,_b below - principally not needed
+      a(ilev,:,:)=(a(ilev,:,:)+TRANSPOSE(a(ilev,:,:)))/2 
+      b(ilev,:,:)=(b(ilev,:,:)+TRANSPOSE(b(ilev,:,:)))/2 
     END IF
 
-    IF(LP(ilev,3)) THEN
-        a(ilev,:,:) = 0.0d0
-        b(ilev,:,:) = 0.0d0
-        DO n=1,nang
-            a(ilev,n,n) = a0(ilev,n,n)+b0(ilev,n,n) !kz,Eqn. 30
-            b(ilev,n,n) = a0(ilev,n,n)-b0(ilev,n,n)
-        END DO
+    IF(diagonal(ilev,3)) THEN
+      a(ilev,:,:) = 0.0d0
+      b(ilev,:,:) = 0.0d0
+      DO n=1,nang
+        a(ilev,n,n) = a0(ilev,n,n)+b0(ilev,n,n) !kz,Eqn. 30
+        b(ilev,n,n) = a0(ilev,n,n)-b0(ilev,n,n)
+      END DO
     END IF
 
     DO ivar=1,nvar
-        IF(.NOT. LP(ilev,3+ivar)) THEN
-            da(ilev,:,:,ivar) = da0(ilev,:,:,ivar)+db0(ilev,:,:,ivar)
-            db(ilev,:,:,ivar) = da0(ilev,:,:,ivar)-db0(ilev,:,:,ivar)
-! symmetrization of matrices _da,_db below - principally not needed
-            da(ilev,:,:,ivar)=(da(ilev,:,:,ivar)+TRANSPOSE(da(ilev,:,:,ivar)))/2 
-            db(ilev,:,:,ivar)=(db(ilev,:,:,ivar)+TRANSPOSE(db(ilev,:,:,ivar)))/2
-        END IF
-        IF(LP(ilev,3+ivar)) THEN
-            da(ilev,:,:,ivar) = 0.0d0
-            db(ilev,:,:,ivar) = 0.0d0
-            DO n=1,nang
-                da(ilev,n,n,ivar) = da0(ilev,n,n,ivar)+db0(ilev,n,n,ivar)
-                db(ilev,n,n,ivar) = da0(ilev,n,n,ivar)-db0(ilev,n,n,ivar)
-            END DO
-        END IF
+      IF(.NOT. diagonal(ilev,3+ivar)) THEN
+        da(ilev,:,:,ivar) = da0(ilev,:,:,ivar)+db0(ilev,:,:,ivar)
+        db(ilev,:,:,ivar) = da0(ilev,:,:,ivar)-db0(ilev,:,:,ivar)
+        ! symmetrization of matrices _da,_db below - principally not needed
+        da(ilev,:,:,ivar)=(da(ilev,:,:,ivar)+TRANSPOSE(da(ilev,:,:,ivar)))/2 
+        db(ilev,:,:,ivar)=(db(ilev,:,:,ivar)+TRANSPOSE(db(ilev,:,:,ivar)))/2
+      END IF
+      IF(diagonal(ilev,3+ivar)) THEN
+        da(ilev,:,:,ivar) = 0.0d0
+        db(ilev,:,:,ivar) = 0.0d0
+        DO n=1,nang
+          da(ilev,n,n,ivar) = da0(ilev,n,n,ivar)+db0(ilev,n,n,ivar)
+          db(ilev,n,n,ivar) = da0(ilev,n,n,ivar)-db0(ilev,n,n,ivar)
+        END DO
+      END IF
     END DO
   END DO
 
-rup(0,:,:) = r(:,:)
-ust(0,:) = f(0,:)
+  rup(0,:,:) = r(:,:)
+  ust(0,:) = f(0,:)
+  rup_d(0)=diagonal(0,3) ! TRUE if reflection matrix is diagonal
 
-rup_d(0)=LP(0,3) ! rup_d(0) is _TRUE if reflection matrix is diagonal
-
-DO ilev=1,nlev ! the first loop over _ilev
-    rup_d(ilev)=rup_d(ilev-1) .AND. LP(ilev,3)
+  DO ilev=1,nlev ! the first loop over _ilev
+    rup_d(ilev)=rup_d(ilev-1) .AND. diagonal(ilev,3)
     q_d(ilev)=.FALSE.
-    IF(.NOT. LP(ilev,3)) THEN ! non-diagonal case: part 0
-        call jacobi(a(ilev,:,:),nang,nang,lama,ma,nrot)
+    IF(.NOT. diagonal(ilev,3)) THEN ! non-diagonal case: part 0
+      call jacobi(a(ilev,:,:),nang,nang,lama,ma,nrot)
     END IF ! end of non-diagonal case: part 0
 
-    IF(LP(ilev,3)) THEN ! diagonal case: part 0
-       DO n=1,nang
-            lama(n)=a(ilev,n,n)
-       END DO
+    IF(diagonal(ilev,3)) THEN ! diagonal case: part 0
+     DO n=1,nang
+       lama(n)=a(ilev,n,n)
+     END DO
     END IF ! end of diagonal case: part 0
 
     lama12=DSQRT(lama) !kz: square root of eigenvalues of A
 
-    DO ivar=0,nvar ! sic - ivar=0,..
-        IF(.NOT. LP(ilev,ivar+3)) THEN
+    DO ivar=0,nvar
+      IF(.NOT. diagonal(ilev,ivar+3)) THEN
         DO n=1,nang
-            lama12nm(n,n)=lama(n)
-            DO m=n+1,nang
-                lama12nm(n,m)=lama12(n)*lama12(m)
-                lama12nm(m,n)=lama12nm(n,m)
-            END DO
+          lama12nm(n,n)=lama(n)
+          DO m=n+1,nang
+            lama12nm(n,m)=lama12(n)*lama12(m)
+            lama12nm(m,n)=lama12nm(n,m)
+          END DO
         END DO
         EXIT
-        END IF
+      END IF
     END DO
 
-    IF(.NOT. LP(ilev,3)) THEN ! non-diagonal case: part 1
-        DO ivar=1,nvar
-            IF(.NOT. LP(ilev,ivar+3)) t3=MATMUL(da(ilev,:,:,ivar),ma)
-            DO n=1,nang
-                DO m=n,nang
-                    IF(.NOT. LP(ilev,ivar+3)) THEN ! non-diagonal perturbation
-                        s1=DOT_PRODUCT(ma(:,n),t3(:,m))
-                    ELSE ! diagonal perturbation
-                        s1=0.d0
-                        DO k=1,nang
-                            s1=s1+ma(k,n)*da(ilev,k,k,ivar)*ma(k,m)      
-                        END DO
-                    END IF ! end of diagonal/non-diagonal perturbation
-                    IF(n == m) THEN
-                        dlama(n,ivar)=s1
-                        t2(n,n)=0.d0
-                    ELSE
-                        t2(n,m)=s1/(lama(m)-lama(n))
-                        t2(m,n)=-t2(n,m)
-                    END IF
-                 END DO ! m
-             END DO ! n
-             dma(:,:,ivar)=MATMUL(ma,t2) !kz,Eqn. 94
-        END DO ! ivar
+!-------------------------------------------------------------
+    IF(.NOT. diagonal(ilev,3)) THEN ! non-diagonal case: part 1
+      DO ivar=1,nvar
+        IF(.NOT. diagonal(ilev,ivar+3)) t3=MATMUL(da(ilev,:,:,ivar),ma)
+        DO n=1,nang
+          DO m=n,nang
+            IF(.NOT. diagonal(ilev,ivar+3)) THEN ! non-diagonal perturbation
+              s1=DOT_PRODUCT(ma(:,n),t3(:,m))
+            ELSE ! diagonal perturbation
+              s1=0.d0
+              DO k=1,nang
+                s1=s1+ma(k,n)*da(ilev,k,k,ivar)*ma(k,m)      
+              END DO
+            END IF ! end of diagonal/non-diagonal perturbation
+            IF(n == m) THEN
+              dlama(n,ivar)=s1
+              t2(n,n)=0.d0
+            ELSE
+              t2(n,m)=s1/(lama(m)-lama(n))
+              t2(m,n)=-t2(n,m)
+            END IF
+          END DO ! m
+        END DO ! n
+        dma(:,:,ivar)=MATMUL(ma,t2) !kz,Eqn. 94
+      END DO ! ivar
 
-        t3=MATMUL(TRANSPOSE(ma),b(ilev,:,:))
+      t3=MATMUL(TRANSPOSE(ma),b(ilev,:,:))
 
       DO n=1,nang
+        DO m=n,nang
+          s1=0.d0
+          s2=0.d0
+          DO k=1,nang
+            s1=s1+ma(n,k)/lama(k)*ma(m,k)
+            s2=s2+t3(n,k)*ma(k,m)
+          END DO
+          am1(ilev,n,m)=s1
+          am1(ilev,m,n)=s1
+          t1(n,m)=s2
+          t1(m,n)=s2
+        END DO
+      END DO
+
+      t0=t1*lama12nm
+      w2=t1/lama12nm/2
+
+      DO ivar=1,nvar
+        DO n=1,nang
           DO m=n,nang
-            s1=0.d0
-            s2=0.d0
-            DO k=1,nang
-               s1=s1+ma(n,k)/lama(k)*ma(m,k)
-               s2=s2+t3(n,k)        *ma(k,m)
-            END DO
-            am1(ilev,n,m)=s1
-            am1(ilev,m,n)=s1
-            t1(n,m)=s2
-            t1(m,n)=s2
-         END DO
-       END DO
-
-       t0=t1*lama12nm
-       w2=t1/lama12nm/2
-
-       DO ivar=1,nvar
-         DO n=1,nang
-            DO m=n,nang
                w3(n,m)=dlama(n,ivar)*lama(m)+lama(n)*dlama(m,ivar)
                w3(m,n)=w3(n,m)
+          END DO
+        END DO
+
+        IF(.NOT. diagonal(ilev,ivar+3)) THEN ! non-diagonal perturbation
+          t2= MATMUL(db(ilev,:,:,ivar),ma)
+          DO n=1,nang
+            DO m=n,nang
+              s1=0.d0
+              DO k=1,nang
+                s1=s1+ma(k,n)*t2(k,m)
+              END DO
+              t1(n,m)=s1
+              t1(m,n)=s1
             END DO
-         END DO
-         IF(.NOT. LP(ilev,ivar+3)) THEN ! non-diagonal perturbation
-            t2= MATMUL(db(ilev,:,:,ivar),ma)
-            DO n=1,nang
-               DO m=n,nang
-                  s1=0.d0
-                  DO k=1,nang
-                     s1=s1+ma(k,n)*t2(k,m)
-                  END DO
-                  t1(n,m)=s1
-                  t1(m,n)=s1
-               END DO
+          END DO
+        ELSE ! diagonal perturbation
+          DO n=1,nang
+            DO m=n,nang
+              s1=0.d0
+              DO k=1,nang
+                s1=s1+ma(k,n)*db(ilev,k,k,ivar)*ma(k,m)
+              END DO
+              t1(n,m)=s1
+              t1(m,n)=s1
             END DO
-         ELSE ! diagonal perturbation
-            DO n=1,nang
-               DO m=n,nang
-                  s1=0.d0
-                  DO k=1,nang
-                     s1=s1+ma(k,n)*db(ilev,k,k,ivar)*ma(k,m)
-                  END DO
-                  t1(n,m)=s1
-                  t1(m,n)=s1
-               END DO
-            END DO
-         END IF ! end of diagonal/non-diagonal perturbation
-         t2=MATMUL(t3,dma(:,:,ivar))
-         dt0(:,:,ivar)=lama12nm*(t2+TRANSPOSE(t2)+t1)+w3*w2           
-       END DO ! ivar
+          END DO
+        END IF ! end of diagonal/non-diagonal perturbation
+        t2=MATMUL(t3,dma(:,:,ivar))
+        dt0(:,:,ivar)=lama12nm*(t2+TRANSPOSE(t2)+t1)+w3*w2           
+      END DO ! ivar
     END IF ! end of non-diagonal case: part 1
-    IF(LP(ilev,3)) THEN ! diag case: part 1
+
+
+!-------------------------------------------------------------
+    IF(diagonal(ilev,3)) THEN ! diag case: part 1
       DO ivar=1,nvar
-         IF(.NOT. LP(ilev,ivar+3)) THEN ! non-diagonal perturbation 
+         IF(.NOT. diagonal(ilev,ivar+3)) THEN ! non-diagonal perturbation 
             DO n=1,nang 
                dlama(n,ivar)=da(ilev,n,n,ivar)
                dma(n,n,ivar)=0.d0
@@ -286,7 +364,7 @@ DO ilev=1,nlev ! the first loop over _ilev
       END DO
 
       DO ivar=1,nvar
-         IF(.NOT. LP(ilev,ivar+3)) THEN ! non-diagonal perturbation
+         IF(.NOT. diagonal(ilev,ivar+3)) THEN ! non-diagonal perturbation
             DO n=1,nang
                DO m=n,nang
                   dt0(n,m,ivar)=(dma(m,n,ivar)*b(ilev,m,m)+b(ilev,n,n)*dma(n,m,ivar) &
@@ -305,7 +383,8 @@ DO ilev=1,nlev ! the first loop over _ilev
 
    END IF ! end of diagonal case: part 1
 
-   IF(LP(ilev,3)) THEN ! diagonal case
+!-------------------------------------------------------------
+   IF(diagonal(ilev,3)) THEN ! diagonal case
       DO n=1,nang
          lamab(n)=t0(n,n) !kz,Eqn. 46??
       END DO
@@ -313,7 +392,7 @@ DO ilev=1,nlev ! the first loop over _ilev
       call jacobi(t0,nang,nang,lamab,mab,nrot)
    END IF ! diagonal / non-diagonal case
 
-   IF(.NOT. LP(ilev,3)) THEN ! non-giagonal case: part 2
+   IF(.NOT. diagonal(ilev,3)) THEN ! non-giagonal case: part 2
    DO ivar=1,nvar
     t1=MATMUL(dt0(:,:,ivar),mab)
     DO n=1,nang
@@ -332,12 +411,13 @@ DO ilev=1,nlev ! the first loop over _ilev
    END DO ! ivar
  END IF ! end of non-diagonal case: part 2
 
- IF(LP(ilev,3)) THEN ! diagonal case: part 2
+!-------------------------------------------------------------
+ IF(diagonal(ilev,3)) THEN ! diagonal case: part 2
   DO ivar=1,nvar
    DO n=1,nang
     dlamab(n,ivar)=dt0(n,n,ivar)
    END DO
-    IF(.NOT. LP(ilev,ivar+3)) THEN ! non-diagonal perturbation
+    IF(.NOT. diagonal(ilev,ivar+3)) THEN ! non-diagonal perturbation
      DO n=1,nang
       dmab(n,n,ivar)=0.d0
       DO m=n+1,nang
@@ -350,10 +430,11 @@ DO ilev=1,nlev ! the first loop over _ilev
  END IF ! end of diag case: part 2
 
 ! calculation of _p1,_p2   (T,R operators)
-CALL md_inv32 (nang,h(ilev),lama,ma,lamab,mab,lama12,t1,t2, &
-                        dlama,dma,dlamab,dmab,dt1,dt2,nvar,LP(ilev,:))
+CALL md_inv32 (nang,thick(ilev),lama,ma,lamab,mab,lama12,t1,t2, &
+              dlama,dma,dlamab,dmab,dt1,dt2,nvar,diagonal(ilev,:))
 
- IF(.NOT. LP(ilev,3)) THEN ! non-diagonal case: part 3
+!-------------------------------------------------------------
+ IF(.NOT. diagonal(ilev,3)) THEN ! non-diagonal case: part 3
    p1(ilev,:,:)=t1
    p2(ilev,:,:)=t2
  ELSE ! diagonal case: part 3
@@ -366,7 +447,7 @@ CALL md_inv32 (nang,h(ilev),lama,ma,lamab,mab,lama12,t1,t2, &
  END IF ! end of diagonal case: part 3
 
  DO ivar=1,nvar
-    IF(LP(ilev,3) .AND. LP(ilev,ivar+3)) THEN ! diagonal layer and diagonal perturbation
+    IF(diagonal(ilev,3) .AND. diagonal(ilev,ivar+3)) THEN ! diagonal layer and diagonal perturbation
   dp1(ilev,:,:,ivar) = 0.0d0
   dp2(ilev,:,:,ivar) = 0.0d0
    DO n=1,nang
@@ -379,8 +460,9 @@ CALL md_inv32 (nang,h(ilev),lama,ma,lamab,mab,lama12,t1,t2, &
     END IF ! end of non-diagonal/diagonal layer/perturbation
  END DO ! ivar
 
+!-------------------------------------------------------------
 ! calculation of matrix RUP
- IF(.NOT. LP(ilev,3)) THEN ! non-diagonal case: part 4
+ IF(.NOT. diagonal(ilev,3)) THEN ! non-diagonal case: part 4
 
   IF(.NOT. rup_d(ilev-1)) THEN ! non-diagonal _rup(ilev-1)
    t0=-MATMUL(p2(ilev,:,:),rup(ilev-1,:,:))
@@ -416,7 +498,8 @@ CALL md_inv32 (nang,h(ilev),lama,ma,lamab,mab,lama12,t1,t2, &
  
  END IF ! end of non-diagonal case: part 4
 
- IF(LP(ilev,3)) THEN ! diagonal case: part 4
+!-------------------------------------------------------------
+ IF(diagonal(ilev,3)) THEN ! diagonal case: part 4
   IF(.NOT. rup_d(ilev-1)) THEN ! non-diagonal rup(ilev-1)
    DO n=1,nang
      s1=p2(ilev,n,n)
@@ -449,85 +532,83 @@ CALL md_inv32 (nang,h(ilev),lama,ma,lamab,mab,lama12,t1,t2, &
 
  END IF ! end of diagonal case: part 4
 
- IF(.NOT. LP(ilev,3)) THEN ! non-diagonal case: part 5
-  y0=MATMUL(am1(ilev,:,:),f(ilev,:))
-  t1=p1(ilev,:,:)+p2(ilev,:,:)
-  unh(ilev,:)= y0-MATMUL(t1,y0)
-  DO ivar=1,nvar
-    dy0=MATMUL(am1(ilev,:,:),df(ilev,:,ivar)-MATMUL(da(ilev,:,:,ivar),y0))
-   dunh(ilev,:,ivar)=dy0-MATMUL(dp1(ilev,:,:,ivar)+dp2(ilev,:,:,ivar),y0) &
-                       -MATMUL(t1,dy0)
-  END DO
-
-  IF(.NOT. rup_d(ilev-1)) THEN ! non-diagonal rup(ilev-1)
-   y0=ust(ilev-1,:)+MATMUL(rup(ilev-1,:,:),unh(ilev,:))
-   ust(ilev,:)=unh(ilev,:)+MATMUL(p1(ilev,:,:),y0+MATMUL(rup(ilev-1,:,:),&
-       MATMUL(q (ilev,:,:),MATMUL(p2(ilev,:,:),y0))))
- 
-  ELSE ! diagonal rup(ilev-1)
-   DO n=1,nang
-    y0(n)=ust(ilev-1,n)+rup(ilev-1,n,n)*unh(ilev,n)
-   END DO
-   y1=MATMUL(q(ilev,:,:),MATMUL(p2(ilev,:,:),y0))
-   DO n=1,nang
-    y2(n)=y0(n)+rup(ilev-1,n,n)*y1(n)
-   END DO
-   ust(ilev,:)=unh(ilev,:)+MATMUL(p1(ilev,:,:),y2)
-  END IF ! non-diagonal/diagonal rup(ilev-1)
- END IF ! end of non-diagonal case: part 5
-
-  IF(LP(ilev,3)) THEN ! diagonal case: part 5
-   DO n=1,nang
-    y0(n)=f(ilev,n)/a(ilev,n,n)
-    unh(ilev,n)=(1-p1(ilev,n,n)-p2(ilev,n,n))*y0(n)
-   END DO
-    DO ivar=1,nvar
-     IF(.NOT. LP(ilev,ivar+3)) THEN ! non-diagonal perturbation
-      y1=df(ilev,:,ivar)-MATMUL(da(ilev,:,:,ivar),y0)
-     ELSE ! diagonal perturbation
-      DO n=1,nang
-       y1(n)=df(ilev,n,ivar)-da(ilev,n,n,ivar)*y0(n)
+!-------------------------------------------------------------
+    IF(.NOT. diagonal(ilev,3)) THEN ! non-diagonal case: part 5
+      y0=MATMUL(am1(ilev,:,:),f(ilev,:))
+      t1=p1(ilev,:,:)+p2(ilev,:,:)
+      unh(ilev,:)= y0-MATMUL(t1,y0)
+      DO ivar=1,nvar
+        dy0=MATMUL(am1(ilev,:,:),df(ilev,:,ivar)-MATMUL(da(ilev,:,:,ivar),y0))
+        dunh(ilev,:,ivar)=dy0-MATMUL(dp1(ilev,:,:,ivar)+dp2(ilev,:,:,ivar),y0)-MATMUL(t1,dy0)
       END DO
-     END IF ! end of diagonal/non-diagonal perturbation
-     DO n=1,nang
-      dy0(n)=y1(n)/a(ilev,n,n)
-     END DO
-    IF(.NOT. LP(ilev,ivar+3)) THEN ! non-diagonal perturbation
-     dunh(ilev,:,ivar)=dy0-MATMUL(dp1(ilev,:,:,ivar)+dp2(ilev,:,:,ivar),y0)
-    ELSE ! diagonal perturbation
-     DO n=1,nang
-      dunh(ilev,n,ivar)=dy0(n)-(dp1(ilev,n,n,ivar)+dp2(ilev,n,n,ivar))*y0(n)
-     END DO
-    END IF ! end of diagonal/non-diagonal perturbation
 
-     DO n=1,nang
-      dunh(ilev,n,ivar)=dunh(ilev,n,ivar)-(p1(ilev,n,n)+p2(ilev,n,n))*dy0(n)
-     END DO
-    END DO ! ivar
+      IF(.NOT. rup_d(ilev-1)) THEN ! non-diagonal rup(ilev-1)
+        y0=ust(ilev-1,:)+MATMUL(rup(ilev-1,:,:),unh(ilev,:))
+        ust(ilev,:)=unh(ilev,:)+MATMUL(p1(ilev,:,:),y0+MATMUL(rup(ilev-1,:,:),&
+        MATMUL(q (ilev,:,:),MATMUL(p2(ilev,:,:),y0))))
+      ELSE ! diagonal rup(ilev-1)
+        DO n=1,nang
+          y0(n)=ust(ilev-1,n)+rup(ilev-1,n,n)*unh(ilev,n)
+        END DO
+        y1=MATMUL(q(ilev,:,:),MATMUL(p2(ilev,:,:),y0))
+        DO n=1,nang
+          y2(n)=y0(n)+rup(ilev-1,n,n)*y1(n)
+        END DO
+        ust(ilev,:)=unh(ilev,:)+MATMUL(p1(ilev,:,:),y2)
+      END IF ! non-diagonal/diagonal rup(ilev-1)
+    END IF ! end of non-diagonal case: part 5
 
-  IF(.NOT. rup_d(ilev-1)) THEN ! non-diagonal rup(ilev-1)
-   y0=ust(ilev-1,:)+MATMUL(rup(ilev-1,:,:),unh(ilev,:))
-   DO n=1,nang
-    y1(n)=p2(ilev,n,n)*y0(n)
-   END DO
-   y2=y0+MATMUL(rup(ilev-1,:,:),MATMUL(q(ilev,:,:),y1))
-  ELSE ! diagonal rup(ilev-1)
-   DO n=1,nang
-    y0(n)=ust(ilev-1,n)+rup(ilev-1,n,n)*unh(ilev,n)
-    y1(n)=p2(ilev,n,n)*y0(n)  
-   END DO
-   b1=MATMUL(q(ilev,:,:),y1)
-   DO n=1,nang
-    y2(n)=y0(n)+rup(ilev-1,n,n)*b1(n)  
-   END DO
-  END IF ! non-diagonal/diagonal rup(ilev-1)
+!-------------------------------------------------------------
+    IF(diagonal(ilev,3)) THEN ! diagonal case: part 5
+      DO n=1,nang
+        y0(n)=f(ilev,n)/a(ilev,n,n)
+        unh(ilev,n)=(1-p1(ilev,n,n)-p2(ilev,n,n))*y0(n)
+      END DO
+      DO ivar=1,nvar
+        IF(.NOT. diagonal(ilev,ivar+3)) THEN ! non-diagonal perturbation
+          y1=df(ilev,:,ivar)-MATMUL(da(ilev,:,:,ivar),y0)
+        ELSE ! diagonal perturbation
+          DO n=1,nang
+            y1(n)=df(ilev,n,ivar)-da(ilev,n,n,ivar)*y0(n)
+          END DO
+        END IF ! end of diagonal/non-diagonal perturbation
+        DO n=1,nang
+          dy0(n)=y1(n)/a(ilev,n,n)
+        END DO
+        IF(.NOT. diagonal(ilev,ivar+3)) THEN ! non-diagonal perturbation
+          dunh(ilev,:,ivar)=dy0-MATMUL(dp1(ilev,:,:,ivar)+dp2(ilev,:,:,ivar),y0)
+        ELSE ! diagonal perturbation
+          DO n=1,nang
+            dunh(ilev,n,ivar)=dy0(n)-(dp1(ilev,n,n,ivar)+dp2(ilev,n,n,ivar))*y0(n)
+          END DO
+        END IF ! end of diagonal/non-diagonal perturbation
+        DO n=1,nang
+          dunh(ilev,n,ivar)=dunh(ilev,n,ivar)-(p1(ilev,n,n)+p2(ilev,n,n))*dy0(n)
+        END DO
+      END DO ! ivar
 
-   DO n=1,nang
-    ust(ilev,n)=unh(ilev,n)+p1(ilev,n,n)*y2(n)
-   END DO
+      IF(.NOT. rup_d(ilev-1)) THEN ! non-diagonal rup(ilev-1)
+        y0=ust(ilev-1,:)+MATMUL(rup(ilev-1,:,:),unh(ilev,:))
+        DO n=1,nang
+          y1(n)=p2(ilev,n,n)*y0(n)
+        END DO
+        y2=y0+MATMUL(rup(ilev-1,:,:),MATMUL(q(ilev,:,:),y1))
+      ELSE ! diagonal rup(ilev-1)
+        DO n=1,nang
+          y0(n)=ust(ilev-1,n)+rup(ilev-1,n,n)*unh(ilev,n)
+          y1(n)=p2(ilev,n,n)*y0(n)  
+        END DO
+        b1=MATMUL(q(ilev,:,:),y1)
+        DO n=1,nang
+          y2(n)=y0(n)+rup(ilev-1,n,n)*b1(n)  
+        END DO
+      END IF ! non-diagonal/diagonal rup(ilev-1)
 
-  END IF ! end of diagonal case: part 5
-END DO ! end of the first _ilev loop
+      DO n=1,nang
+        ust(ilev,n)=unh(ilev,n)+p1(ilev,n,n)*y2(n)
+      END DO
+    END IF ! end of diagonal case: part 5
+  END DO ! end of the first _ilev loop
 
 !------------------------------------------------------------------
 ! The second loop over _ilev calculates vectors _u and _v which
@@ -550,13 +631,13 @@ END DO ! end of the first _ilev loop
  rdn(nlev-1,:,:)=p2(nlev,:,:)
 
  rdn_d(nlev)=.TRUE.
- rdn_d(nlev-1)=LP(nlev,3)
+ rdn_d(nlev-1)=diagonal(nlev,3)
 
  DO ilev=nlev-1,1,-1 ! the third loop: calculation of _rdn,_vst
 
-   rdn_d(ilev-1)=rdn_d(ilev).AND.LP(ilev,3)
+   rdn_d(ilev-1)=rdn_d(ilev).AND.diagonal(ilev,3)
 
- IF(.NOT. LP(ilev,3)) THEN ! non-diagonal case: part 6
+ IF(.NOT. diagonal(ilev,3)) THEN ! non-diagonal case: part 6
 
  IF(.NOT. rdn_d(ilev)) THEN ! rdn(ilev) - non-diagonal
   t0=-MATMUL(rdn(ilev,:,:),p2(ilev,:,:))
@@ -607,7 +688,7 @@ END DO ! end of the first _ilev loop
  END IF ! rdn(ilev) - non-diagonal/diagonal
  END IF ! end of non-diagonal case: part 6
 
- IF(LP(ilev,3)) THEN ! diagonal case: part 6
+ IF(diagonal(ilev,3)) THEN ! diagonal case: part 6
  IF(.NOT. rdn_d(ilev)) THEN ! rdn(ilev) - non-diagonal
   DO n=1,nang
    DO m=1,nang
@@ -660,7 +741,7 @@ END DO ! end of the third loop over _ilev: calculation of _rdn,_vst
  s_d(oblv)=.TRUE.
 
  IF(oblv < nlev) THEN
-  IF(.NOT.LP(oblv+1,3)) THEN
+  IF(.NOT.diagonal(oblv+1,3)) THEN
    s11(oblv+1,:,:)=p1(oblv+1,:,:)
    s22(oblv+1,:,:)=p1(oblv+1,:,:)
    s12(oblv+1,:,:)=p2(oblv+1,:,:)
@@ -673,14 +754,14 @@ END DO ! end of the third loop over _ilev: calculation of _rdn,_vst
     s21(oblv+1,n,n)=p2(oblv+1,n,n)
    END DO
   END IF
-  s_d(oblv+1)=LP(oblv+1,3)
+  s_d(oblv+1)=diagonal(oblv+1,3)
  END IF
 
 DO ilev=oblv+2,nlev ! the first half of the forth _ilev loop: top layers
 
-  s_d(ilev)=s_d(ilev-1).AND.LP(ilev,3)
+  s_d(ilev)=s_d(ilev-1).AND.diagonal(ilev,3)
 
-  IF(.NOT. LP(ilev,3)) THEN ! non-diagonal case: part 7
+  IF(.NOT. diagonal(ilev,3)) THEN ! non-diagonal case: part 7
    IF(.NOT. s_d(ilev-1)) THEN ! non-diagonal s_d(ilev-1)
  t0=-MATMUL(s12(ilev-1,:,:),p2(ilev,:,:))
  w0=-MATMUL(p2(ilev,:,:),s12(ilev-1,:,:))
@@ -754,7 +835,7 @@ DO ilev=oblv+2,nlev ! the first half of the forth _ilev loop: top layers
   END IF ! end of the non-diagonal/diagonal s_d(ilev-1)
 
   END IF ! end of the non-diagonal case: part 7
-  IF(LP(ilev,3)) THEN ! diagonal case: part 7
+  IF(diagonal(ilev,3)) THEN ! diagonal case: part 7
 
    IF(.NOT. s_d(ilev-1)) THEN ! non-diagonal s_d(ilev-1)
    DO n=1,nang
@@ -813,7 +894,7 @@ DO ilev=oblv+2,nlev ! the first half of the forth _ilev loop: top layers
 END DO ! end of the  first half of the forth _ilev loop
 
  IF(oblv > 0) THEN
-  IF(.NOT.LP(oblv,3)) THEN
+  IF(.NOT.diagonal(oblv,3)) THEN
    s11(oblv-1,:,:)=p1(oblv,:,:)
    s22(oblv-1,:,:)=p1(oblv,:,:)
    s12(oblv-1,:,:)=p2(oblv,:,:)
@@ -830,13 +911,13 @@ END DO ! end of the  first half of the forth _ilev loop
     s21(oblv-1,n,n)=p2(oblv,n,n)
    END DO
   END IF
-  s_d(oblv-1)=LP(oblv,3)
+  s_d(oblv-1)=diagonal(oblv,3)
  END IF
 
 DO ilev=oblv-1,1,-1 ! the second half of the forth _ilev loop
-  s_d(ilev-1)=s_d(ilev).AND.LP(ilev,3)
+  s_d(ilev-1)=s_d(ilev).AND.diagonal(ilev,3)
 
-  IF(.NOT.LP(ilev,3)) THEN ! non-diagonal case: part 8
+  IF(.NOT.diagonal(ilev,3)) THEN ! non-diagonal case: part 8
 
    IF(.NOT. s_d(ilev)) THEN ! non-diagonal s_d(ilev)
  t0=-MATMUL(s21(ilev,:,:),p2(ilev,:,:))
@@ -911,7 +992,7 @@ DO ilev=oblv-1,1,-1 ! the second half of the forth _ilev loop
 
   END IF ! end of the non-diagonal/diagonal s_d(ilev)
   END IF ! end of the non-diagonal case: part 8
-  IF(LP(ilev,3)) THEN ! diagonal case: part 8
+  IF(diagonal(ilev,3)) THEN ! diagonal case: part 8
    IF(.NOT. s_d(ilev)) THEN ! non-diagonal s_d(ilev)
  DO n=1,nang
     DO m=1,nang
@@ -979,11 +1060,11 @@ END DO ! end of the second half of the forth _ilev loop
   da21=0.d0
   da22=0.d0
 
-   a_d=LP(ilev,3).AND.rup_d(ilev-1).AND.rdn_d(ilev)
+   a_d=diagonal(ilev,3).AND.rup_d(ilev-1).AND.rdn_d(ilev)
 
 ! calculation of  a11,a12,a21,a22,b1,b2 !kz,eqn. (88)
 ! and da11,da12,da21,da22,db1,db2
-  IF(.NOT. LP(ilev,3)) THEN ! non-diagonal case: part 9
+  IF(.NOT. diagonal(ilev,3)) THEN ! non-diagonal case: part 9
 
   IF (rdn_d(ilev)) THEN
     DO n=1,nang
@@ -1010,7 +1091,7 @@ END DO ! end of the second half of the forth _ilev loop
   END IF
 
   END IF ! end of the non-diagonal case: part 9
-  IF(LP(ilev,3)) THEN ! diagonal case: part 9
+  IF(diagonal(ilev,3)) THEN ! diagonal case: part 9
 
   IF (rdn_d(ilev)) THEN
   a11 = 0.0d0
@@ -1053,7 +1134,7 @@ END DO ! end of the second half of the forth _ilev loop
    END DO
 
    DO ivar=1,nvar
-    IF(LP(ilev,3) .AND. LP(ilev,ivar+3)) THEN ! diagonal layer and diagonal perturbation
+    IF(diagonal(ilev,3) .AND. diagonal(ilev,ivar+3)) THEN ! diagonal layer and diagonal perturbation
      IF(rdn_d(ilev).AND.rup_d(ilev-1)) THEN
   da11(:,:,ivar) = 0.0d0
   da12(:,:,ivar) = 0.0d0
@@ -1114,18 +1195,18 @@ END DO ! end of the second half of the forth _ilev loop
       END DO
     END IF
 
-  IF(.NOT. LP(ilev,3)) THEN ! non-diagonal case: part 10
+  IF(.NOT. diagonal(ilev,3)) THEN ! non-diagonal case: part 10
    b1=MATMUL(p1(ilev,:,:),y1) + MATMUL(p2(ilev,:,:),y2)
    b2=MATMUL(p2(ilev,:,:),y1) + MATMUL(p1(ilev,:,:),y2)
   END IF ! end of the non-diagonal case: part 10
-  IF(LP(ilev,3)) THEN ! diagonal case: part 10
+  IF(diagonal(ilev,3)) THEN ! diagonal case: part 10
    DO n=1,nang
     b1(n)=p1(ilev,n,n)*y1(n)+p2(ilev,n,n)*y2(n)
     b2(n)=p2(ilev,n,n)*y1(n)+p1(ilev,n,n)*y2(n)
    END DO
   END IF ! end of the diagonal case: part 10
 
-  IF(.NOT. LP(ilev,3)) THEN ! non-diagonal case: part 11
+  IF(.NOT. diagonal(ilev,3)) THEN ! non-diagonal case: part 11
    DO ivar=1,nvar
     db1(:,ivar)=  MATMUL(dp1(ilev,:,:,ivar),y1) &
                 + MATMUL(dp2(ilev,:,:,ivar),y2) &
@@ -1138,9 +1219,9 @@ END DO ! end of the second half of the forth _ilev loop
    END DO
 
   END IF ! end of the non-diagonal case: part 11
-  IF(LP(ilev,3)) THEN ! diagonal case: part 11
+  IF(diagonal(ilev,3)) THEN ! diagonal case: part 11
   DO ivar=1,nvar
-    IF(LP(ilev,3) .AND. LP(ilev,ivar+3)) THEN ! diagonal layer and diagonal perturbation
+    IF(diagonal(ilev,3) .AND. diagonal(ilev,ivar+3)) THEN ! diagonal layer and diagonal perturbation
       DO n=1,nang
        db1(n,ivar)=dp1(ilev,n,n,ivar)*y1(n)+dp2(ilev,n,n,ivar)*y2(n)
        db2(n,ivar)=dp2(ilev,n,n,ivar)*y1(n)+dp1(ilev,n,n,ivar)*y2(n)
@@ -1185,7 +1266,7 @@ END DO ! end of the second half of the forth _ilev loop
     dt0(:,:,ivar)=0.d0
     dt1(:,:,ivar)=0.d0
 
-    IF(a_d.AND.LP(ilev,ivar+3)) THEN ! all diag
+    IF(a_d.AND.diagonal(ilev,ivar+3)) THEN ! all diag
 
      DO n=1,nang
   s1=da21(n,n,ivar)*a11m1(n,n)-a21(n,n)*da11(n,n,ivar)*a11m1(n,n)**2 ! =dw0
@@ -1198,7 +1279,7 @@ END DO ! end of the second half of the forth _ilev loop
       dt1(n,n,ivar)=da11(n,n,ivar)-s2*a21(n,n)-w1(n,n)*da21(n,n,ivar)
      END DO
 
-    ELSE ! a_d .OR. LP(ilev,ivar+3)  - non diag
+    ELSE ! a_d .OR. diagonal(ilev,ivar+3)  - non diag
 
      da11m1(:,:,ivar)=-MATMUL(MATMUL(a11m1,da11(:,:,ivar)),a11m1)
      da22m1(:,:,ivar)=-MATMUL(MATMUL(a22m1,da22(:,:,ivar)),a22m1)
@@ -1255,7 +1336,6 @@ END DO ! end of the second half of the forth _ilev loop
   END IF
 
 DO ivar=1,nvar
-! it should be y3(n)=u(ilev,n),dy3(n)=du(ilev,n)
 
   IF(.NOT. a_d) THEN ! non-diagonal _w0,_w1
 
@@ -1267,7 +1347,7 @@ DO ivar=1,nvar
 
   ELSE ! diagonal _w0,_w1
 
-   IF (.NOT. LP(ilev,ivar+3)) THEN ! non-diagonal perturbation
+   IF (.NOT. diagonal(ilev,ivar+3)) THEN ! non-diagonal perturbation
 
      DO n=1,nang
       s1=dy0v(n,ivar)
@@ -1292,73 +1372,67 @@ DO ivar=1,nvar
    END IF ! non-diagonal/diagonal perturbation
   END IF ! non-diagonal/diagonal   _w0,_w1
 END DO ! ivar
-
- END DO ! end of the fifth _ilev loop
+  END DO ! end of the fifth _ilev loop
 
   DO ilev=1,oblv ! lower part
-   IF(.NOT. s_d(ilev)) THEN ! non-diagonal matrices s11,..,s22
-    IF(.NOT. rdn_d(oblv)) THEN ! non-diagonal matrix rdn(oblv)
-     t0=-MATMUL(s12(ilev,:,:),rdn(oblv,:,:))
-     DO n=1,nang
-      t0(n,n)=t0(n,n)+1.d0
-     END DO
-     CALL dlinrg(nang,t0,t1) ! t1=(1-S12*R)**(-1)
-     DO ivar=1,nvar
-      du0(ilev,:,ivar)=MATMUL(t1,MATMUL(s11(ilev,:,:),dz3(ilev,:,ivar)))
-      dv0(ilev,:,ivar)=MATMUL(rdn(oblv,:,:),du0(ilev,:,ivar))
-     END DO ! ivar
-    ELSE ! diagonal matrix rdn(oblv)
-     DO n=1,nang
-      DO m=1,nang
-       t0(n,m)=-s12(ilev,n,m)*rdn(oblv,m,m)
-      END DO
-      t0(n,n)=t0(n,n)+1.d0
-     END DO
-     CALL dlinrg(nang,t0,t1) ! t1=(1-S12*R)**(-1)
-     DO ivar=1,nvar
-      du0(ilev,:,ivar)=MATMUL(t1,MATMUL(s11(ilev,:,:),dz3(ilev,:,ivar)))
-      DO n=1,nang
-        dv0(ilev,n,ivar)=rdn(oblv,n,n)*du0(ilev,n,ivar)
-      END DO
-     END DO ! ivar
-    END IF ! non-diagonal/diagonal matrix rdn(oblv)
+    IF(.NOT. s_d(ilev)) THEN ! non-diagonal matrices s11,..,s22
+      IF(.NOT. rdn_d(oblv)) THEN ! non-diagonal matrix rdn(oblv)
+        t0=-MATMUL(s12(ilev,:,:),rdn(oblv,:,:))
+        DO n=1,nang
+          t0(n,n)=t0(n,n)+1.d0
+        END DO
+        CALL dlinrg(nang,t0,t1) ! t1=(1-S12*R)**(-1)
+        DO ivar=1,nvar
+          dtb_up_dp(ilev,:,ivar)=MATMUL(t1,MATMUL(s11(ilev,:,:),dz3(ilev,:,ivar)))
+          dtb_dn_dp(ilev,:,ivar)=MATMUL(rdn(oblv,:,:),dtb_up_dp(ilev,:,ivar))
+        END DO ! ivar
+      ELSE ! diagonal matrix rdn(oblv)
+        DO n=1,nang
+          DO m=1,nang
+            t0(n,m)=-s12(ilev,n,m)*rdn(oblv,m,m)
+          END DO
+          t0(n,n)=t0(n,n)+1.d0
+        END DO
+        CALL dlinrg(nang,t0,t1) ! t1=(1-S12*R)**(-1)
+        DO ivar=1,nvar
+          dtb_up_dp(ilev,:,ivar)=MATMUL(t1,MATMUL(s11(ilev,:,:),dz3(ilev,:,ivar)))
+          DO n=1,nang
+            dtb_dn_dp(ilev,n,ivar)=rdn(oblv,n,n)*dtb_up_dp(ilev,n,ivar)
+          END DO
+        END DO ! ivar
+      END IF ! non-diagonal/diagonal matrix rdn(oblv)
 
-   ELSE ! diagonal matrices s11,..,s22
+    ELSE ! diagonal matrices s11,..,s22
+      IF(.NOT. rdn_d(oblv)) THEN ! non-diagonal matrix rdn_d(oblv)
+        DO n=1,nang
+          DO m=1,nang
+            t0(n,m)=-s12(ilev,n,n)*rdn(oblv,n,m)
+          END DO
+          t0(n,n)=t0(n,n)+1.d0
+        END DO
 
-    IF(.NOT. rdn_d(oblv)) THEN ! non-diagonal matrix rdn_d(oblv)
+        CALL dlinrg(nang,t0,t1) ! t1=(1-S12*R)**(-1)
+        DO ivar=1,nvar
+          DO n=1,nang
+            s1=0.d0
+            DO m=1,nang
+              s1=s1+t1(n,m)*s11(ilev,m,m)*dz3(ilev,m,ivar)
+            END DO
+            dtb_up_dp(ilev,n,ivar)=s1
+          END DO
+          dtb_dn_dp(ilev,:,ivar)=MATMUL(rdn(oblv,:,:),dtb_up_dp(ilev,:,ivar))   
+        END DO
+      ELSE ! diagonal matrix rdn_d(oblv)
+        DO ivar=1,nvar
+          DO n=1,nang
+            dtb_up_dp(ilev,n,ivar)=s11(ilev,n,n)/(1-s12(ilev,n,n)*rdn(oblv,n,n))*dz3(ilev,n,ivar)
+            dtb_dn_dp(ilev,n,ivar)=rdn(oblv,n,n)*dtb_up_dp(ilev,n,ivar)
+          END DO  
+        END DO
+      END IF ! non-diagonal/diagonal matrix rdn_d(oblv)
+    END IF ! non-diagonal/diagonal matrices s11,..,s22
+  END DO ! end of the ilev loop
 
-    DO n=1,nang
-     DO m=1,nang
-      t0(n,m)=-s12(ilev,n,n)*rdn(oblv,n,m)
-     END DO
-     t0(n,n)=t0(n,n)+1.d0
-    END DO
-
-    CALL dlinrg(nang,t0,t1) ! t1=(1-S12*R)**(-1)
-
-    DO ivar=1,nvar
-     DO n=1,nang
-      s1=0.d0
-      DO m=1,nang
-       s1=s1+t1(n,m)*s11(ilev,m,m)*dz3(ilev,m,ivar)
-      END DO
-      du0(ilev,n,ivar)=s1
-     END DO
-     dv0(ilev,:,ivar)=MATMUL(rdn(oblv,:,:),du0(ilev,:,ivar))   
-    END DO
-    ELSE ! diagonal matrix rdn_d(oblv)
-     DO ivar=1,nvar
-      DO n=1,nang
-       du0(ilev,n,ivar)=s11(ilev,n,n)/(1-s12(ilev,n,n)*rdn(oblv,n,n))*dz3(ilev,n,ivar)
-       dv0(ilev,n,ivar)=rdn(oblv,n,n)*du0(ilev,n,ivar)
-      END DO  
-     END DO
-    END IF ! non-diagonal/diagonal matrix rdn_d(oblv)
-   END IF ! non-diagonal/diagonal matrices s11,..,s22
-  END DO ! end of the lower part
-
-! du0(ilev,n,ivar)=ds1  du0 is variation of upwelling radiation at
-! level _obs_lev in respond to variation at level _ilev
 !--------------------------------------------------------------------------
 
   DO ilev=oblv+1,nlev ! upper part
@@ -1375,8 +1449,8 @@ END DO ! ivar
      CALL dlinrg(nang,w0,w1) ! w1=(1-S21*R)**(-1)
 
      DO ivar=1,nvar
-       dv0(ilev,:,ivar)=MATMUL(w1,MATMUL(s22(ilev-1,:,:),dz2(ilev-1,:,ivar)))
-       du0(ilev,:,ivar)=MATMUL(rup(oblv,:,:),dv0(ilev,:,ivar))
+       dtb_dn_dp(ilev,:,ivar)=MATMUL(w1,MATMUL(s22(ilev-1,:,:),dz2(ilev-1,:,ivar)))
+       dtb_up_dp(ilev,:,ivar)=MATMUL(rup(oblv,:,:),dtb_dn_dp(ilev,:,ivar))
      END DO ! ivar
 
     ELSE ! diagonal matrix rup(oblv)
@@ -1391,9 +1465,9 @@ END DO ! ivar
      CALL dlinrg(nang,w0,w1) ! w1=(1-S21*R)**(-1)
 
      DO ivar=1,nvar
-      dv0(ilev,:,ivar)=MATMUL(w1,MATMUL(s22(ilev-1,:,:),dz2(ilev-1,:,ivar)))
+      dtb_dn_dp(ilev,:,ivar)=MATMUL(w1,MATMUL(s22(ilev-1,:,:),dz2(ilev-1,:,ivar)))
       DO n=1,nang
-        du0(ilev,n,ivar)=rup(oblv,n,n)*dv0(ilev,n,ivar)
+        dtb_up_dp(ilev,n,ivar)=rup(oblv,n,n)*dtb_dn_dp(ilev,n,ivar)
       END DO
      END DO ! ivar
 
@@ -1414,15 +1488,15 @@ END DO ! ivar
       DO m=1,nang
        s1=s1+w1(n,m)*s22(ilev-1,m,m)*dz2(ilev-1,m,ivar)
       END DO
-      dv0(ilev,n,ivar)=s1
+      dtb_dn_dp(ilev,n,ivar)=s1
      END DO
-     du0(ilev,:,ivar)=MATMUL(rup(oblv,:,:),dv0(ilev,:,ivar))   
+     dtb_up_dp(ilev,:,ivar)=MATMUL(rup(oblv,:,:),dtb_dn_dp(ilev,:,ivar))   
     END DO
     ELSE ! diagonal matrix rup(oblv)
      DO ivar=1,nvar
       DO n=1,nang
-       dv0(ilev,n,ivar)= s22(ilev-1,n,n)/(1-s21(ilev-1,n,n)*rup(oblv,n,n))*dz2(ilev-1,n,ivar)
-       du0(ilev,n,ivar)=rup(oblv,n,n)*dv0(ilev,n,ivar)
+       dtb_dn_dp(ilev,n,ivar)= s22(ilev-1,n,n)/(1-s21(ilev-1,n,n)*rup(oblv,n,n))*dz2(ilev-1,n,ivar)
+       dtb_up_dp(ilev,n,ivar)=rup(oblv,n,n)*dtb_dn_dp(ilev,n,ivar)
       END DO  
      END DO
     END IF ! non-diagonal/diagonal matrix rup_d(oblv)
@@ -1463,7 +1537,7 @@ SUBROUTINE md_inv32 (nang,h,lama,ma,lamab,mab,lama12d,p1,p2, &
 ! Parameter _nvar correspond to a vector of variations:
 ! the "derivatives" vectors have in fact one extra dimension.
 ! Logical array L characterizes "diagonal properties" and
-! corresponds to the _ilev-th row of matrix LP
+! corresponds to the _ilev-th row of matrix diagonal
 
 
 IMPLICIT NONE

@@ -15,12 +15,15 @@
   implicit none
 
 ! local variables
-  real(8) col_tot  ! (g/m2) local column total mass
-  logical do_prof  ! (-) logical to construct vertical hydrometeor profile
+  integer iman ! index of number of update manipulations
   real(8),dimension(1) :: ppl
   real(8),dimension(1) :: ttl
   real(8),dimension(1) :: esst
   real(8),dimension(1) :: dtesst
+
+! initialize update manipulation count
+  iman = 0
+  call Set_up_update_man
 
 ! assign scanning values
   generic=value(1)
@@ -41,87 +44,64 @@
   obs_den=10.d0**value(15)
   gen_hm%dens=10.d0**value(16)
 
-  col_tot=10.d0**value(17)
-  if (Xvar==17.or.Yvar==17) then
-    print*, 'var 17', col_tot, value(17)
-    cloud%clw%tot=col_tot
-    call construct_hydromet_profile (col_tot, atm(:)%clw%ftot, atm(:)%clw%dens)
+  if (Xvar==17.or.Yvar==17) then ! clw tot
+    update_man(1)%doit = .true.
+    update_man(1)%val1=value(17)
   endif
 
-  col_tot=10.d0**value(18)
-  if (Xvar==18.or.Yvar==18) then
-    print*, 'var 18', col_tot
-    cloud%rain%tot=col_tot
-    call construct_hydromet_profile (col_tot, atm(:)%rain%ftot, atm(:)%rain%dens)
+  if (Xvar==18.or.Yvar==18) then ! rain tot
+    update_man(2)%doit = .true.
+    update_man(2)%val1=value(18)
   endif
 
-  col_tot=10.d0**value(19)
-  if (Xvar==19.or.Yvar==19) then
-    print*, 'var 19 ', col_tot
-    cloud%ice%tot=col_tot
-    call construct_hydromet_profile (col_tot, atm(:)%ice%ftot, atm(:)%ice%dens)
+  if (Xvar==19.or.Yvar==19) then ! ice tot
+    update_man(3)%doit = .true.
+    update_man(3)%val1=value(19)
   endif
 
-  col_tot=10.d0**value(20)
-  if (Xvar==20.or.Yvar==20) then
-    print*, 'var 20 ', col_tot
-    cloud%snow%tot=col_tot
-    call construct_hydromet_profile (col_tot, atm(:)%snow%ftot, atm(:)%snow%dens)
+  if (Xvar==20.or.Yvar==20) then ! snow tot
+    update_man(4)%doit = .true.
+    update_man(4)%val1=value(20)
   endif
 
-  col_tot=10.d0**value(21)
-  if (Xvar==21.or.Yvar==21) then
-    print*, 'var 21 ', col_tot
-    cloud%grpl%tot=col_tot
-    call construct_hydromet_profile (col_tot, atm(:)%grpl%ftot, atm(:)%grpl%dens)
+  if (Xvar==21.or.Yvar==21) then ! grpl tot
+    update_man(5)%doit = .true.
+    update_man(5)%val1=value(21)
   endif
   
-    col_tot=10.d0**value(22)
-  if (Xvar==22.or.Yvar==22) then
-    print*, 'var 22 ', col_tot
-    cloud%cloud%tot=col_tot
-    call construct_hydromet_profile (col_tot, atm(:)%clw%fcloud,  atm(:)%clw%dens)
-    call construct_hydromet_profile (col_tot, atm(:)%ice%fcloud,  atm(:)%ice%dens)
+  if (Xvar==22.or.Yvar==22) then ! cloud tot
+    update_man(6)%doit = .true.
+    update_man(6)%val1=value(22)
   endif
 
-  col_tot=10.d0**value(23)
-  if (Xvar==23.or.Yvar==23) then
-    print*, 'var 23 ', col_tot
-    cloud%precip%tot=col_tot
-    call construct_hydromet_profile (col_tot, atm(:)%rain%fhydro, atm(:)%rain%dens)
-    call construct_hydromet_profile (col_tot, atm(:)%snow%fhydro, atm(:)%snow%dens)
-    call construct_hydromet_profile (col_tot, atm(:)%grpl%fhydro, atm(:)%grpl%dens)
+  if (Xvar==23.or.Yvar==23) then ! precip tot
+    update_man(7)%doit = .true.
+    update_man(7)%val1=value(23)
   endif
 
-
-  col_tot=10.d0**value(24)
-  if (Xvar==24.or.Yvar==24) then
-    print*, 'var 24 ', col_tot
-    cloud%hydro%tot=col_tot
-    call construct_hydromet_profile (col_tot, atm(:)%clw%fhydro,  atm(:)%clw%dens)
-    call construct_hydromet_profile (col_tot, atm(:)%rain%fhydro, atm(:)%rain%dens)
-    call construct_hydromet_profile (col_tot, atm(:)%ice%fhydro,  atm(:)%ice%dens)
-    call construct_hydromet_profile (col_tot, atm(:)%snow%fhydro, atm(:)%snow%dens)
-    call construct_hydromet_profile (col_tot, atm(:)%grpl%fhydro, atm(:)%grpl%dens)
+  if (Xvar==24.or.Yvar==24) then ! hydro tot
+    update_man(8)%doit = .true.
+    update_man(8)%val1=value(24)
   endif
 
-  cloud%cloud%top=value(25)
-  cloud%cloud%bot=value(26)
-  cloud%cloud%top= max(cloud%cloud%top,cloud%cloud%bot)
-  cloud%precip%top=value(27)
-  cloud%precip%bot=value(28)
-  do_prof = .false.
-  if(Xvar==25) do_prof = .true.
-  if(yvar==25) do_prof = .true.
-  if(Xvar==26) do_prof = .true.
-  if(yvar==26) do_prof = .true.
-  if(Xvar==27) do_prof = .true.
-  if(yvar==27) do_prof = .true.
-  if(Xvar==28) do_prof = .true.
-  if(yvar==28) do_prof = .true.
-  if (do_prof) then
-    print*, cloud%cloud%top, cloud%cloud%bot, cloud%precip%bot
-    call construct_precip_profile(cloud%cloud%top, cloud%cloud%bot, cloud%precip%bot)
+  if (Xvar==25.or.Yvar==25) then ! cloud peak
+    update_man(6)%doit = .true.
+    update_man(6)%val2=value(25)
+  endif
+
+  if (Xvar==26.or.Yvar==26) then ! cloud std
+    update_man(6)%doit = .true.
+    update_man(6)%val3=value(26)
+  endif
+
+  if (Xvar==27.or.Yvar==27) then ! precip peak
+    update_man(7)%doit = .true.
+    update_man(7)%val2=value(27)
+  endif
+
+  if (Xvar==28.or.Yvar==28) then ! precip std
+    update_man(7)%doit = .true.
+    update_man(7)%val3=value(28)
   endif
 
   unused=value(29)
@@ -137,6 +117,12 @@
   unused=value(39)
   unused=value(40)
 
+! some optional debugging code
+!  iman = iman+1
+!  n_up_man=iman
+!  update_man(iman)%doit = .true.
+!  update_man(iman)%typ = 'print_prof'
+  
 ! humidity
   call dtess_eau(1,ppl,ttl,esst,dtesst)
 
@@ -156,6 +142,90 @@
   kroot(10)=5.5
   kroot(11)=2.0
   kroot(12)=5.5
+
+  return                                                                    
+  end
+!=======================================================================
+  subroutine Set_up_update_man
+!=======================================================================      
+! sets up update manipulation variable tree
+!
+! Modifications:
+!  5/25/2021 Kevin Schaefer created routine
+!----------------------------------------------------------------------
+  use scan_Variables
+  use dotlrt_variables
+  use profiles
+  use dotlrt_output
+!
+  implicit none
+
+! local variables
+  integer iman ! index of number of update manipulations
+
+  n_up_man = 9
+
+! assign values to update manipulation variable tree
+  iman = 1
+  update_man(iman)%doit = .false.
+  update_man(iman)%typ = 'clw'
+  update_man(iman)%val1=dlog10(cur_lay%clw%tot)
+  update_man(iman)%val2=cur_lay%clw%pk
+  update_man(iman)%val3=cur_lay%clw%std
+
+  iman = 2
+  update_man(iman)%doit = .false.
+  update_man(iman)%typ = 'rain'
+  update_man(iman)%val1=dlog10(cur_lay%rain%tot)
+  update_man(iman)%val2=cur_lay%rain%pk
+  update_man(iman)%val3=cur_lay%rain%std
+
+  iman = 3
+  update_man(iman)%doit = .false.
+  update_man(iman)%typ = 'ice'
+  update_man(iman)%val1=dlog10(cur_lay%ice%tot)
+  update_man(iman)%val2=cur_lay%ice%pk
+  update_man(iman)%val3=cur_lay%ice%std
+
+  iman = 4
+  update_man(iman)%doit = .false.
+  update_man(iman)%typ = 'snow'
+  update_man(iman)%val1=dlog10(cur_lay%snow%tot)
+  update_man(iman)%val2=cur_lay%snow%pk
+  update_man(iman)%val3=cur_lay%snow%std
+
+  iman = 5
+  update_man(iman)%doit = .false.
+  update_man(iman)%typ = 'grpl'
+  update_man(iman)%val1=dlog10(cur_lay%grpl%tot)
+  update_man(iman)%val2=cur_lay%grpl%pk
+  update_man(iman)%val3=cur_lay%grpl%std
+  
+  iman = 6
+  update_man(iman)%doit = .false.
+  update_man(iman)%typ = 'cloud'
+  update_man(iman)%val1=typical(23)
+  update_man(iman)%val2=typical(25)
+  update_man(iman)%val3=typical(26)
+
+  iman = 7
+  update_man(iman)%doit= .false.
+  update_man(iman)%typ = 'precip'
+  update_man(iman)%val1=typical(24)
+  update_man(iman)%val2=typical(27)
+  update_man(iman)%val3=typical(28)
+
+  iman = 8
+  update_man(iman)%doit = .false.
+  update_man(iman)%typ = 'hydro'
+  update_man(iman)%val1=dlog10(cur_lay%hydro%tot)
+  update_man(iman)%val2=cur_lay%hydro%pk
+  update_man(iman)%val3=cur_lay%hydro%std
+
+  iman = 9
+  update_man(iman)%doit = .false.
+  update_man(iman)%typ = 'print_prof'
+  update_man(iman)%ind1=1
 
   return                                                                    
   end

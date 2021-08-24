@@ -5,7 +5,7 @@ subroutine construct_single_surf_ref()
 ! Constructs surface reflectivities for single point run
 !
 ! History: 
-!  12/9/2020 Kevin Schaefer created routine
+!  12/9/2020 Kevin Schaefer created routine 
 !----------------------------------------------------------------------
 use dotlrt_variables
 use profiles
@@ -38,13 +38,13 @@ subroutine construct_surf_ref_table()
 ! History: 
 !  11/30/2020 Kevin Schaefer created routine
 !  12/9/2020  Kevin Schaefer moved WRF stuff here from construct_surf_characteristics
+!  7/8/2021   Kevin Schaefer removed channel outer loop
 !----------------------------------------------------------------------
 use dotlrt_variables
 use profiles
 implicit none
 
 ! local variables
-  integer ichan  ! (-) channel index
   integer ilon   ! (-) longitude index
   integer ilat   ! (-) latitude index
 
@@ -55,16 +55,13 @@ implicit none
   surf%ocean_mod = ocean_mod
   surf%nstream = nstream_surf
 
-! loop through all channels and lociations
-  do ichan = 1,nchan
-    call extract_channel(ichan)
-    do ilat = 1,nlat
-      do ilon = 1,nlon
-        surf%temp = TSK(ilon, ilat)
-        surf%type = landmask(ilon, ilat)
-        if (trim(surf%ocean_mod) == 'Wilheit') surf%wind = wind(ilon, ilat)
-        call construct_surf_characteristics(sref_hor(ilon,ilat,ichan,:), sref_ver(ilon,ilat,ichan,:))
-      enddo
+! loop through all lociations
+  do ilat = 1,nlat
+    do ilon = 1,nlon
+      surf%temp = TSK(ilon, ilat)
+      surf%type = int(landmask(ilon, ilat))
+      if (trim(surf%ocean_mod) == 'Wilheit') surf%wind = wind(ilon, ilat)
+      call construct_surf_characteristics(sref_hor(ilon,ilat,:), sref_ver(ilon,ilat,:))
     enddo
   enddo
 

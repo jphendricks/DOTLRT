@@ -44,8 +44,8 @@ real(8), allocatable :: QRAIN(:,:,:)  ! (g m-3) rain mixing ratio
 real(8), allocatable :: TSK(:,:)          ! (K) surface skin temperature
 real(8), allocatable :: landmask(:,:)     ! (-) land vs. ocean/water mask
 real(8), allocatable :: lakemask(:,:)     ! (-) lake vs. ocean mask
-real(8), allocatable :: sref_hor(:,:,:,:) ! (-) surface reflectivity horizontally polarized
-real(8), allocatable :: sref_ver(:,:,:,:) ! (-) surface reflectivity vertically polarized
+real(8), allocatable :: sref_hor(:,:,:)   ! (-) surface reflectivity horizontally polarized
+real(8), allocatable :: sref_ver(:,:,:)   ! (-) surface reflectivity vertically polarized
 
 ! optional wind speed variables when ocean_mod = 'Wilheit'
 real(8), allocatable :: u10m(:,:)     ! (m s-1) u wind component

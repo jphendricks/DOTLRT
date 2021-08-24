@@ -16,11 +16,34 @@
   use profiles
   use dotlrt_output
   use netcdf
+  use netcdf_utilities_mod
 
   IMPLICIT NONE
 
   integer ix   ! x value index
   integer iy   ! y value index
+
+  integer dsize
+  integer tsize
+  integer vsize
+
+100 format(5(A,","))
+
+  if (gen_index_table) then
+     open(61,file='data-hab.txt',  action='write', status='replace')
+     open(62,file='data-hsc.txt',  action='write', status='replace')
+     open(63,file='data-g.txt',    action='write', status='replace')
+     open(64,file='data-dhab.txt', action='write', status='replace')
+     open(65,file='data-dhsc.txt', action='write', status='replace')
+     open(66,file='data-dg.txt',   action='write', status='replace')
+
+     write(61,100) 'error', 'vals', 'real', 'dens', 'temp'
+     write(62,100) 'error', 'vals', 'real', 'dens', 'temp'
+     write(63,100) 'error', 'vals', 'real', 'dens', 'temp'
+     write(64,100) 'error', 'vals', 'real', 'dens', 'temp'
+     write(65,100) 'error', 'vals', 'real', 'dens', 'temp'
+     write(66,100) 'error', 'vals', 'real', 'dens', 'temp'
+  endif
 
 ! allocate sib variable tree
   nsib=1
@@ -29,13 +52,48 @@
 ! read inputs
   call scan_read_input
 
+  print*, 'file_index_table = ', file_index_table
+  ncltid = nc_open_file_readonly(file_index_table)
+  print*, 'ncltid ' , ncltid
+
+  if (use_index_table) then
+
+     vsize =  nc_get_dimension_size(ncltid, 'values')
+     dsize =  nc_get_dimension_size(ncltid, 'density')
+     tsize =  nc_get_dimension_size(ncltid, 'temperature')
+
+     if (dbg_index_table) then
+         print*, 'tsize = ', tsize
+         print*, 'dsize = ', dsize
+         print*, 'vsize = ', vsize
+     endif
+
+     if (.not. allocated(dens_lt))      allocate(dens_lt(dsize))
+     if (.not. allocated(temp_lt))      allocate(temp_lt(tsize))
+     if (.not. allocated(lookup_table)) allocate(lookup_table(5,24,tsize,dsize,vsize))
+
+     print*, "SIZE dens_lt", size(dens_lt)
+     print*, "SIZE temp_lt", size(temp_lt)
+
+     call nc_get_variable(ncltid, 'density',     dens_lt)
+     call nc_get_variable(ncltid, 'temperature', temp_lt)
+
+    print*, ncltid, lookup_table(1,1,1,1,1)
+    call fill_index_table(ncltid, lookup_table)
+
+  end if ! use_index_table
+
+  if (.not. allocated(dens_lt))      allocate(dens_lt(numpts))
+  if (.not. allocated(temp_lt))      allocate(temp_lt(numpts))
+  if (.not. allocated(lookup_table)) allocate(lookup_table(5,24,numpts,numpts,12))
+
   !call write_netcdf('myfilename.nc')
   !open (unit=444, file='results.txt', status='unknown')
   !write(444,*) '['
 
 ! set start values X variable
-  print*, '-----------------------------'
-  print*, '  hab-     hydro_d(1),      hab,                      hydro_d(1)              (dens                       temp                  )'
+  ! print*, '-----------------------------'
+  ! print*, '  hab-     hydro_d(1),      hab,                      hydro_d(1)              (dens                       temp                  )'
   call Plot2D3D('StartX  ')
   do ix=1,maxi
 !
@@ -61,9 +119,6 @@
         zval(2,ix,iy)=testvar1
         x3(ix)=value(xvar)
         y3(iy)=value(yvar)
-        !print*, trim(Label(xvar)), value(xvar), " :: ", trim(Label(yvar)), value(yvar)
-        !tarray(ix) = value(xvar)
-        !parray(iy) = value(yvar)
       endif
 
 ! increment Y variable
@@ -74,17 +129,24 @@
     call Plot2D3D('IncrX   ')
   enddo ! end x-loop
   !write(444,*) ']'
+
+  if (gen_index_table) then
+     close(61)
+     close(62)
+     close(63)
+     close(64)
+     close(65)
+     close(66)
+  endif
+
   write(*,*) 'FINISHED Program'
 
 ! write Output
   !call write_output
   !print*, 'nchannel = ', nchannel
-  !print*, 'tarray = ', tarray
-  !print*, 'parray = ', parray
-  !print*, 'myarray = ', myarray
   if (gen_index_table) then
-     !call write_netcdf('index_table_10_conv.nc')
-     call write_netcdf('index_table.nc')
+     !call write_index_table('index_table_10_conv.nc')
+     call write_index_table('index_table.nc')
   end if
 
 !--------------------------------------------------
@@ -139,7 +201,7 @@
       if(out_man(iman)%doit.and.flagDim==2.and.out_man(iman)%typ=='sum') then
         print*, '2-D Integral sum'
         var2=(xmax-xmin)/real(numpts)
-     do ilin=1,numy
+     do ilin=1,nline
        var1=0.
        do iptx=1,Numpts
          var1=var1+Y(ilin,iptx)
@@ -167,7 +229,6 @@
 !
     return
     end
-
 !
 !=======================================================================
     subroutine write_output
@@ -196,15 +257,15 @@
     open(87, file=trim(plotfile)//'_'//trim(scantype)//'.dat', form='formatted')
 
 ! header
-    write(form,'(i2)') numy
+    write(form,'(i2)') nline
     form='(a15,1x,'//trim(form)//'(a15,1x))'
-    Write(87,form) labx,legend(1:numy)
+    Write(87,form) labx,legend(1:nline)
 
 ! main body
-    write(form,'(i2)') numy
+    write(form,'(i2)') nline
     form='(e15.8,1x,'//trim(form)//'(e15.8,1x))'
     do ipt=1,Numpts
-      Write(87,form) x(1,ipt),Y(1:numy,ipt)
+      Write(87,form) x(1,ipt),Y(1:nline,ipt)
     enddo
     close(unit=87)
   endif
@@ -217,7 +278,7 @@
 
 ! header
     write_line=trim(labx)
-    do iy=1,numy
+    do iy=1,nline
       write_line=trim(adjustl(write_line))//','//trim(adjustl(legend(iy)))
     enddo
     Write(87,*) adjustl(write_line)
@@ -227,7 +288,7 @@
     do ipt=1,Numpts
       write(var_char, '(e15.8)') x(1,ipt)
       write_line=trim(adjustl(var_char))
-      do iy=1,numy
+      do iy=1,nline
         write(var_char, '(e15.8)') Y(iy,ipt)
         write_line=trim(adjustl(write_line))//','//trim(adjustl(var_char))
       enddo
@@ -240,7 +301,7 @@
 !--------------------------------------------------------------------------
 ! Save contour data as CSV file
 !--------------------------------------------------------------------------
-  if(save_3d==2) then
+  if(flagDim==3 .and. save_3d==2) then
     do i3d = 1,2
       if(i3d == 1) open(87, file=trim(plotfile)//'_'//trim(scantype)//'_3d_01.csv', form='formatted')
       if(i3d == 2) open(87, file=trim(plotfile)//'_'//trim(scantype)//'_3d_02.csv', form='formatted')
@@ -271,13 +332,12 @@
     enddo
   endif
 
-
   return
   end
 
 !
 !=======================================================================
-    subroutine write_netcdf(filename)
+    subroutine write_index_table(filename)
 !=========================================================================
 ! writes output from scan program
 !
@@ -330,7 +390,7 @@
   integer :: dimids(NDIMS)
 
   integer :: i, ichan, ihydro, indx
-  integer :: ncid
+  integer :: myid
 
   integer :: temp_dimid
   integer :: dens_dimid
@@ -355,41 +415,40 @@
      vars(i)  = i
   enddo
 
-
   allocate(chan_varid(NCHANNS*NHYDROS))
   allocate(vals(npts,npts,NHYDROS))
 
   ! Create the file.
-  call check( nf90_create(filename, nf90_clobber, ncid) , 'nf90_create')
+  call check( nf90_create(filename, nf90_clobber, myid))
 
   ! Define the dimensions.
-  call check( nf90_def_dim(ncid, TEMP_DIM_NAME, npts,       temp_dimid), 'nf90_def_dim')
-  call check( nf90_def_dim(ncid, DENS_DIM_NAME, npts,       dens_dimid), 'nf90_def_dim')
-  call check( nf90_def_dim(ncid, VALS_DIM_NAME, NVARIABLES, vals_dimid), 'nf90_def_dim')
+  call check( nf90_def_dim(myid, TEMP_DIM_NAME, npts,       temp_dimid))
+  call check( nf90_def_dim(myid, DENS_DIM_NAME, npts,       dens_dimid))
+  call check( nf90_def_dim(myid, VALS_DIM_NAME, NVARIABLES, vals_dimid))
 
 
   ! Define the coordinate variables. They will hold the coordinate
   ! information, that is, the latitudes and longitudes. A varid is
   ! returned for each.
-  call check( nf90_def_var(ncid, TEMP_DIM_NAME, NF90_DOUBLE, temp_dimid, temp_varid) ,'nf90_def_var')
-  call check( nf90_def_var(ncid, DENS_DIM_NAME, NF90_DOUBLE, dens_dimid, dens_varid) ,'nf90_def_var')
-  call check( nf90_def_var(ncid, VALS_DIM_NAME, NF90_DOUBLE, vals_dimid, vals_varid) ,'nf90_def_var')
+  call check( nf90_def_var(myid, TEMP_DIM_NAME, NF90_DOUBLE, temp_dimid, temp_varid))
+  call check( nf90_def_var(myid, DENS_DIM_NAME, NF90_DOUBLE, dens_dimid, dens_varid))
+  call check( nf90_def_var(myid, VALS_DIM_NAME, NF90_DOUBLE, vals_dimid, vals_varid))
 
   ! Assign units attributes to coordinate var data. This attaches a
   ! text attribute to each of the coordinate variables, containing the
   ! units.
-  call check( nf90_put_att(ncid, temp_varid, UNITS, TEMP_UNITS) ,'nf90_put_att')
-  call check( nf90_put_att(ncid, dens_varid, UNITS, DENS_UNITS) ,'nf90_put_att')
-  call check( nf90_put_att(ncid, vals_varid, UNITS, VALS_UNITS) ,'nf90_put_att')
+  call check( nf90_put_att(myid, temp_varid, UNITS, TEMP_UNITS))
+  call check( nf90_put_att(myid, dens_varid, UNITS, DENS_UNITS))
+  call check( nf90_put_att(myid, vals_varid, UNITS, VALS_UNITS))
 
   ! Define the netCDF variables. The dimids array is used to pass the
   ! dimids of the dimensions of the netCDF variables.
-  dimids = (/ temp_dimid, dens_dimid, vals_dimid /)
+  dimids = (/ dens_dimid, temp_dimid, vals_dimid /)
   do ichan=1,NCHANNS
     do ihydro=1,NHYDROS
       write(var_name, '(A5,"_",I2.2,"_",A)') "chann", ichan, trim(get_hydro_name(ihydro))
       indx = ihydro + NHYDROS*(ichan-1)
-      call check( nf90_def_var(ncid, trim(var_name), NF90_DOUBLE, dimids, chan_varid(indx) ) , 'nf90_def_var')
+      call check( nf90_def_var(myid, trim(var_name), NF90_DOUBLE, dimids, chan_varid(indx) ))
     end do
   end do
 
@@ -398,24 +457,20 @@
   do ichan=1,NCHANNS
     do ihydro=1,NHYDROS
       indx = ihydro + NHYDROS*(ichan-1)
-      call check( nf90_put_att(ncid, chan_varid(indx), UNITS, VALS_UNITS) , 'nf90_put_att')
+      call check( nf90_put_att(myid, chan_varid(indx), UNITS, VALS_UNITS))
     end do
   end do
 
 
   ! End define mode.
-  call check( nf90_enddef(ncid) , 'nf90_enddef')
+  call check( nf90_enddef(myid))
 
   ! Write the coordinate variable data. This will put the latitudes
   ! and longitudes of our data grid into the netCDF file.
-  !print*, 'ncid, temp_varid', ncid, temp_varid
-  !print*, 'tarray', tarray
-  !print*, 'parray', parray
-  !print*, 'vars', vars
 
-  call check( nf90_put_var(ncid, temp_varid, tarray) , 'nf90_put_var: temp_varid')
-  call check( nf90_put_var(ncid, dens_varid, parray) , 'nf90_put_var: parray')
-  call check( nf90_put_var(ncid, vals_varid, vars(1:NVARIABLES)) , 'nf90_put_var: vars')
+  call check( nf90_put_var(myid, temp_varid, tarray))
+  call check( nf90_put_var(myid, dens_varid, parray))
+  call check( nf90_put_var(myid, vals_varid, vars(1:NVARIABLES)))
 
   ! Write the pretend data. This will write our surface pressure and
   ! surface temperature data. The arrays of data are the same size as
@@ -424,22 +479,18 @@
     do ihydro=1,NHYDROS
       indx = ihydro + NHYDROS*(ichan-1)
       vals = myarray(ihydro, ichan,:,:,:)
-
-      !print*, 'chan_varid(indx) = ', chan_varid(indx)
-      !print*, 'indx             = ', indx
-      !print*, 'shape(vals)      = ', shape(vals)
-      call check( nf90_put_var(ncid, chan_varid(indx), vals) , 'nf90_put_var: chan_varid')
+      call check( nf90_put_var(myid, chan_varid(indx), vals))
     end do
   end do
 
   ! Close the file.
-  call check( nf90_close(ncid) , 'nf90_close')
+  call check( nf90_close(myid))
 
 contains
   subroutine check(status, context)
     integer, intent ( in) :: status
-    character(len=*), intent ( in) :: context
-    !print*, 'running - ', context
+    character(len=*), intent ( in), optional :: context
+    if (present(context)) print*, 'running - ', context
     if(status /= nf90_noerr) then
       print *, trim(nf90_strerror(status))
       stop "Stopped"
@@ -466,4 +517,4 @@ contains
      end select
   end function get_hydro_name
 
-end subroutine write_netcdf
+end subroutine write_index_table

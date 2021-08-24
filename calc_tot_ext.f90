@@ -62,7 +62,7 @@ subroutine calc_tot_ext(freq)
                                    atm(ilev)%clw%a0, &
                                    abs_cloud_liq, scat_cloud_liq, g_cloud_liq, &
                                    dhab, dhsc, dg, &
-                                   atm(ilev)%clw%a0_const, testvar1, testvar2, testvar3 )
+                                   atm(ilev)%clw%a0_const)
 
     name='hydro'
     call ex_time(2, name)
@@ -90,7 +90,7 @@ subroutine calc_tot_ext(freq)
                                    atm(ilev)%rain%a0, &
                                    abs_cloud_rn, scat_cloud_rn, g_cloud_rn, &
                                    dhab, dhsc, dg, &
-                                   atm(ilev)%rain%a0_const, testvar1, testvar2, testvar3)
+                                   atm(ilev)%rain%a0_const)
     name='hydro'
     call ex_time(2, name)
     call system_clock(time_start)
@@ -117,7 +117,7 @@ subroutine calc_tot_ext(freq)
                                    atm(ilev)%ice%a0, &
                                    abs_cloud_ice, scat_cloud_ice, g_cloud_ice, &
                                    dhab, dhsc, dg, &
-                                   atm(ilev)%ice%a0_const, testvar1, testvar2, testvar3)
+                                   atm(ilev)%ice%a0_const)
     name='hydro'
     call ex_time(2, name)
     call system_clock(time_start)
@@ -144,7 +144,7 @@ subroutine calc_tot_ext(freq)
                                    atm(ilev)%snow%a0, &
                                    abs_cloud_snow, scat_cloud_snow, g_cloud_snow, &
                                    dhab, dhsc, dg, &
-                                   atm(ilev)%snow%a0_const, testvar1, testvar2, testvar3)
+                                   atm(ilev)%snow%a0_const)
     name='hydro'
     call ex_time(2, name)
     call system_clock(time_start)
@@ -171,7 +171,7 @@ subroutine calc_tot_ext(freq)
                                    atm(ilev)%grpl%a0, &
                                    abs_cloud_grpl, scat_cloud_grpl, g_cloud_grpl, &
                                    dhab, dhsc, dg, &
-                                   atm(ilev)%grpl%a0_const, testvar1, testvar2, testvar3)
+                                   atm(ilev)%grpl%a0_const)
     name='hydro'
     call ex_time(2, name)
     hydro_prof(ilev,phase)%cloudab = abs_cloud_grpl

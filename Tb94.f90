@@ -17,6 +17,7 @@ SUBROUTINE  tb94()
 !
 ! History:
 ! 4/24/2003  blw eps_err introduced for max allowed relative error in brightness temperature.
+! 4/24/2003  blw added logical for diagonal matrices
 ! 11/11/2003 blw CORE95.F90 called rather then DTB27.F90 because it has special treatment for diagonal layers.
 ! 9/11/2004  blw eps_err deleted due to parrallelization errors
 ! 5/20/2005  blw fixed diagonal layer problem
@@ -25,19 +26,20 @@ SUBROUTINE  tb94()
 ! 12/9/2020  Kevin Schaefer deleted unused debugging code
 ! 12/12/2020 Kevin Schaefer deleted commented code, outdated equations
 ! 12/12/2020 Kevin Schaefer moved comment variable definitions to dotlrt_variables
+! 5/16/2021  Kevin Schaefer changed LP to diagonal and note that BLW did not fix diagonal layer problem
 !------------------------------------------------------
 use dotlrt_variables
 IMPLICIT NONE
 
-real(8), DIMENSION(nlev) :: h
+real(8) thick(nlev) ! (km) layer thickness
 real(8), allocatable :: a0(:,:,:)
 real(8), allocatable :: b0(:,:,:)
 real(8), allocatable :: da0(:,:,:,:)
 real(8), allocatable :: db0(:,:,:,:)
 real(8) f(0:nlev+1,nangover2)
 real(8) df(0:nlev+1,nangover2,nvar)
-real(8) r(nangover2,nangover2)
-real(8) dr(nangover2,nangover2)
+real(8) r(nangover2,nangover2)  ! (-) surface reflectivity
+real(8) dr(nangover2,nangover2) ! (-) derivative of surface reflectitivty
 real(8) u(0:nlev,nangover2)
 real(8) v(0:nlev,nangover2)
 real(8) du(0:nlev,nangover2,nvar)
@@ -56,20 +58,22 @@ real(8) dat_g(nangover2,nangover2,max_nphase)
 real(8) dbt_g(nangover2,nangover2,max_nphase)
 real(8) dat_sc(nangover2,nangover2,max_nphase)
 real(8) dbt_sc(nangover2,nangover2,max_nphase)
-LOGICAL LP(0:nlev,nvar+3) ! (-) logical matrix to determine if layer will be treated as diagonal or not
-integer i
-integer j
-integer ivar
+logical diagonal(0:nlev,nvar+3) ! (-) logical matrix to determine if layer will be treated as diagonal or not
+integer i      ! (-) angle index
+integer j      ! (-) angle index
+integer ivar   ! (-) variable index
 integer iphase ! (-) hydrometeor phase index
-integer ilev ! (-) layer or level index
-integer jlev ! (-) secondary layer index
+integer ilev   ! (-) layer index
+integer jlev   ! (-) secondary layer index
 real(8) dt_srf
 real(8) dt_cb
 real(8) albedo
 real(8) dsurf_reflec(nangover2)
 
-allocate( a0(nlev,nangover2,nangover2), b0(nlev,nangover2,nangover2) )
-allocate( da0(nlev,nangover2,nangover2,nvar), db0(nlev,nangover2,nangover2,nvar) )
+allocate( a0(nlev,nangover2,nangover2) )
+allocate( b0(nlev,nangover2,nangover2) )
+allocate( da0(nlev,nangover2,nangover2,nvar) )
+allocate( db0(nlev,nangover2,nangover2,nvar) )
 
          dt_srf = 0.d0
           dt_cb = 0.d0
@@ -125,7 +129,7 @@ allocate( da0(nlev,nangover2,nangover2,nvar), db0(nlev,nangover2,nangover2,nvar)
       END DO
    END DO
    
-   h(ilev)=altitude(ilev+1)-altitude(ilev)
+   thick(ilev)=altitude(ilev+1)-altitude(ilev)
    
     DO i=1,nangover2
       DO j=1,nangover2
@@ -147,14 +151,13 @@ allocate( da0(nlev,nangover2,nangover2,nvar), db0(nlev,nangover2,nangover2,nvar)
           a0(ilev,i,i) = a0(ilev,i,i) + abs_total1(ilev) / cos_ang(i) + pt_sc(i) / t2(i)
           da0(ilev,i,i,2) = da0(ilev,i,i,2) + ( dal_gas1(ilev) + dabs_cloud1(ilev) ) / cos_ang(i)
           do iphase = 1, nphase
-            ivar = 1 + 2 * iphase
+            ivar = 1 + 2 * iphase ! scattering
             da0(ilev,i,i,ivar) = da0(ilev,i,i,ivar)+ dscat_cloud1(ilev) * pt(i) / t2(i) 
             ! this is why we need phase11 without scat_cloud
-            ivar = 2 + 2 * iphase
+            ivar = 2 + 2 * iphase ! asymmetry
             da0(ilev,i,i,ivar) = da0(ilev,i,i,ivar) + dpt_g(i,iphase) / t2(i)
           end do ! iphase
         END IF    ! i == j
-
       END DO   ! loop over j
 
       f(ilev,i)= abs_total1(ilev) * temperature1(ilev) * t1(i)
@@ -186,19 +189,19 @@ allocate( da0(nlev,nangover2,nangover2,nvar), db0(nlev,nangover2,nangover2,nvar)
   END DO
  
 ! defining diagonal layers (04/24/03) 
-  LP = .false. ! all layers/perturbations are considered non-diagonal
+  diagonal = .false. ! all layers/perturbations are considered non-diagonal
   DO ilev=1,nlev
     albedo = scat_cloud1(ilev) / ( scat_cloud1(ilev) + abs_total1(ilev) )
-    IF( albedo .le. d_albedo ) THEN
-      LP(ilev,3)=.true.   ! diagonal layer
+    IF( albedo <= albedo_diag ) THEN
+      diagonal(ilev,3)=.true.   ! diagonal layer
       do ivar = 1, nvar
-        LP(ilev,3+ivar)=.true.
+        diagonal(ilev,3+ivar)=.true.
       end do
     END IF
   END DO
 
   call system_clock(time_start)
-  CALL core95 (nlev,nangover2,h,a0,b0,f,r,u,v,da0,db0,df,du,dv,obs_lev,nvar,LP)
+  CALL core95 (nlev,nangover2,thick,a0,b0,f,r,u,v,da0,db0,df,du,dv,obs_lev,nvar,diagonal)
   name='core95'
   call ex_time(3, name)
   call system_clock(time_start)

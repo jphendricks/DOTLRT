@@ -24,9 +24,8 @@ SUBROUTINE HG_phmat()
 !  12/12/2020 Kevin Schaefer moved nhg assignment to dotlrt_variables
 !  12/13/2020 Kevin Schaefer moved sin/cosine quad angles to configure
 !-------------------------------------------------------
-
 use dotlrt_variables
-IMPLICIT NONE
+Implicit none
 
 integer i
 integer j
@@ -47,98 +46,87 @@ real(8) rf
 real(8) rd
 external rf, rd
 
+! set asymetry values
   do k = 1, nhg
     HGg(k)= (2.0d0*k-nhg-1.0d0)/dble(nhg)
   end do
 
-DO k=1,nhg
- g=HGg(k)
-
- IF( DABS(g) >= 1) THEN
-  WRITE(*,*) 'HG_phmat: k= ',k,' , HGg(k) = ', g, ' is not allowed'
-  STOP
- END IF
-
- DO i=1,nstream
-  DO j=i,nstream
-
-   IF( g >= 0.d0 ) THEN
-
-    t1=1+g*g+2*g*(cos_ang(i)*cos_ang(j)+sin_ang(i)*sin_ang(j))
-    t2=1+g*g+2*g*(cos_ang(i)*cos_ang(j)-sin_ang(i)*sin_ang(j))
-    kappa_sq=4*g*sin_ang(i)*sin_ang(j)/t1
-    kappa = DSQRT(kappa_sq)
-    xrf = 0.0d0
-    yrf = 1.0d0 - kappa_sq
-    zrf = 1.0d0
-    el = rf(xrf,yrf,zrf) - (kappa_sq/3.0d0) * rd(xrf,yrf,zrf)
-
-    ! "The Adding-doubling method, Scott Prahl" P.114
-    HGph(k,i,j)=1.0d0/pi*(1-g*g)/dsqrt(t1)/t2*el 
-    HGph(k,j,i)=HGph(k,i,j)
-
-    dkappa_sq_dg=4*sin_ang(i)*sin_ang(j)*(t1-2*g*(g+cos_ang(i)*cos_ang(j)+sin_ang(i)*sin_ang(j)))/t1/t1
-
-    IF( kappa > 0.01d0) THEN
-
-     xrf = 0.0d0
-     yrf = 1.0d0 - kappa_sq
-     zrf = 1.0d0
-     kl = rf(xrf,yrf,zrf)
-
-     t3=(el-kl)/kappa_sq
-    ELSE
-     t3=-pi/512*( (((25*kappa_sq+30)*kappa_sq+48)*kappa_sq+128))
+! loop through asymmetry values
+  DO k=1,nhg
+    g=HGg(k)
+    IF( dabs(g) >= 1) THEN
+      WRITE(*,*) 'HG_phmat: k= ',k,' , HGg(k) = ', g, ' is not allowed'
+      STOP
     END IF
 
-   dHGph(k,i,j) = (-2*g/(1-g*g)                                        &
-                   -  (g+cos_ang(i)*cos_ang(j)+sin_ang(i)*sin_ang(j))/t1                   &
-                   -2*(g+cos_ang(i)*cos_ang(j)-sin_ang(i)*sin_ang(j))/t2                   &
-                   +t3/el*dkappa_sq_dg/2             )*HGph(k,i,j)
+! loop through all stream angles
+    DO i=1,nstream
+      DO j=i,nstream
+        IF( g >= 0.d0 ) THEN
+          t1=1+g*g+2*g*(cos_ang(i)*cos_ang(j)+sin_ang(i)*sin_ang(j))
+          t2=1+g*g+2*g*(cos_ang(i)*cos_ang(j)-sin_ang(i)*sin_ang(j))
+          kappa_sq=4*g*sin_ang(i)*sin_ang(j)/t1
+          kappa = DSQRT(kappa_sq)
+          xrf = 0.0d0
+          yrf = 1.0d0 - kappa_sq
+          zrf = 1.0d0
+          el = rf(xrf,yrf,zrf) - (kappa_sq/3.0d0) * rd(xrf,yrf,zrf)
 
-   dHGph(k,j,i)=dHGph(k,i,j)
+          ! "The Adding-doubling method, Scott Prahl" P.114
+          HGph(k,i,j)=1.0d0/pi*(1-g*g)/dsqrt(t1)/t2*el 
+          HGph(k,j,i)=HGph(k,i,j)
 
-!----------------------   
-    ELSE   ! g < 0
-!----------------------   
+          dkappa_sq_dg=4*sin_ang(i)*sin_ang(j)*(t1-2*g*(g+cos_ang(i)*cos_ang(j)+sin_ang(i)*sin_ang(j)))/t1/t1
 
-    t1=1+g*g+2*g*(cos_ang(i)*cos_ang(j)-sin_ang(i)*sin_ang(j))
-    t2=1+g*g+2*g*(cos_ang(i)*cos_ang(j)+sin_ang(i)*sin_ang(j))
-    kappa_sq=4*DABS(g)*sin_ang(i)*sin_ang(j)/t1
-    kappa   =DSQRT(kappa_sq)
-    xrf = 0.0d0
-    yrf = 1.0d0 - kappa_sq
-    zrf = 1.0d0
-    el = rf(xrf,yrf,zrf) - (kappa_sq/3.0d0) * rd(xrf,yrf,zrf)
+          IF( kappa > 0.01d0) THEN
+            xrf = 0.0d0
+            yrf = 1.0d0 - kappa_sq
+            zrf = 1.0d0
+            kl = rf(xrf,yrf,zrf)
+            t3=(el-kl)/kappa_sq
+          ELSE
+            t3=-pi/512*( (((25*kappa_sq+30)*kappa_sq+48)*kappa_sq+128))
+          END IF
 
-    HGph(k,i,j)=1.0d0/pi*(1-g*g)/dsqrt(t1)/t2*el
-    HGph(k,j,i)=HGph(k,i,j)
+          dHGph(k,i,j) = (-2*g/(1-g*g) &
+            -(g+cos_ang(i)*cos_ang(j)+sin_ang(i)*sin_ang(j))/t1 &
+            -2*(g+cos_ang(i)*cos_ang(j)-sin_ang(i)*sin_ang(j))/t2 &
+            +t3/el*dkappa_sq_dg/2)*HGph(k,i,j)
+          dHGph(k,j,i)=dHGph(k,i,j)
 
-    dkappa_sq_dg=4*sin_ang(i)*sin_ang(j)*(t1-2*g*(g+cos_ang(i)*cos_ang(j)-sin_ang(i)*sin_ang(j)))/t1/t1
+        ELSE   ! g < 0
+          t1=1+g*g+2*g*(cos_ang(i)*cos_ang(j)-sin_ang(i)*sin_ang(j))
+          t2=1+g*g+2*g*(cos_ang(i)*cos_ang(j)+sin_ang(i)*sin_ang(j))
+          kappa_sq=4*DABS(g)*sin_ang(i)*sin_ang(j)/t1
+          kappa   =DSQRT(kappa_sq)
+          xrf = 0.0d0
+          yrf = 1.0d0 - kappa_sq
+          zrf = 1.0d0
+          el = rf(xrf,yrf,zrf) - (kappa_sq/3.0d0) * rd(xrf,yrf,zrf)
 
-    IF( kappa > 0.01d0) THEN
+          HGph(k,i,j)=1.0d0/pi*(1-g*g)/dsqrt(t1)/t2*el
+          HGph(k,j,i)=HGph(k,i,j)
 
-     xrf = 0.0d0
-     yrf = 1.0d0 - kappa_sq
-     zrf = 1.0d0
-     kl = rf(xrf,yrf,zrf)
+          dkappa_sq_dg=4*sin_ang(i)*sin_ang(j)*(t1-2*g*(g+cos_ang(i)*cos_ang(j)-sin_ang(i)*sin_ang(j)))/t1/t1
 
-     t3=(el-kl)/kappa_sq
-    ELSE
-     t3=-pi/512*( (((25*kappa_sq+30)*kappa_sq+48)*kappa_sq+128))
-    END IF
+          IF( kappa > 0.01d0) THEN
+            xrf = 0.0d0
+            yrf = 1.0d0 - kappa_sq
+            zrf = 1.0d0
+            kl = rf(xrf,yrf,zrf)
+            t3=(el-kl)/kappa_sq
+          ELSE
+            t3=-pi/512*( (((25*kappa_sq+30)*kappa_sq+48)*kappa_sq+128))
+          END IF
 
-   dHGph(k,i,j) =-( 2*g/(1-g*g)                                        &
-                   +  (g+cos_ang(i)*cos_ang(j)-sin_ang(i)*sin_ang(j))/t1                   &
-                   +2*(g+cos_ang(i)*cos_ang(j)+sin_ang(i)*sin_ang(j))/t2                   &
-                   +t3/el*dkappa_sq_dg/2             )*HGph(k,i,j)
-
-   dHGph(k,j,i)=dHGph(k,i,j)
-
-    END IF ! g
-
-  END DO ! j
- END DO ! i
-END DO ! k
+          dHGph(k,i,j) =-( 2*g/(1-g*g) &
+            +(g+cos_ang(i)*cos_ang(j)-sin_ang(i)*sin_ang(j))/t1 &
+            +2*(g+cos_ang(i)*cos_ang(j)+sin_ang(i)*sin_ang(j))/t2 &
+            +t3/el*dkappa_sq_dg/2)*HGph(k,i,j)
+          dHGph(k,j,i)=dHGph(k,i,j)
+        END IF ! g values
+      END DO ! j stream angles
+    END DO ! i stream angles
+  END DO ! g values
 
 END SUBROUTINE HG_phmat

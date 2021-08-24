@@ -9,7 +9,7 @@ program dot
 !  10/5/2020  Kevin Schaefer removed all ancient, unused code from gaussq.f90
 !  10/5/2020  Kevin Schaefer changed surfinp to prevent negative values
 !  11/30/2020 Kevin Schaefer deleted call to surface characteristics in main loop
-!  11/30/2020 Kevin Schaefer recalculate surface reflectances each time frequency changes
+!  7/8/2021   Kevin Schaefer recalculate surface reflectances each time frequency changes
 !-------------------------------------------------------------------------
 !
   use dotlrt_variables
@@ -54,10 +54,11 @@ call get_command_argument(2, out_path)
   do ichan = chan_strt,chan_stop
     call extract_channel(ichan)
     if(flag_print_full) print*, 'Channel: ',ichan, channel%lo_freq
+    call construct_surf_ref_table()
 
     do ilon = lon_strt,lon_stop
       do ilat = lat_strt,lat_stop
-        if (trim(prof_src) == 'WRF') call construct_atmospheric_profile(ichan, ilon, ilat)
+        if (trim(prof_src) == 'WRF') call construct_atmospheric_profile(atm, ilon, ilat)
         if (trim(prof_src) == 'single') call construct_single_surf_ref()
 
         call mrt( )

@@ -14,6 +14,7 @@ module dotlrt_variables
 !  12/1/2020  Kevin Schaefer added permmitivity of free space as constant
 !  12/12/2020 Kevin Schaefer removed all but one nlev variable
 !  1/24/2021  Kevin Schaefer restructured reduced dimension branch
+!  5/16/2021  Kevin Schaefer changed d_albedo = 1.d-7 to albedo_diag=1.0d-12
 ! --------------------------------------------------------------
 
 implicit none
@@ -28,9 +29,11 @@ integer lat_stop  ! stop index for latitude
 logical flag_print_full  ! (-) flag to print full messages
 logical flag_read_anc    ! (-) flag to read in ancillary data from WRF
 logical flag_reduce_nvar ! (-) flag to use only part of atmos profile from WRF
+
 logical gen_index_table  ! (-) flag to use only part of atmos profile from WRF
 logical use_index_table  ! (-) flag to use only part of atmos profile from WRF
 logical dbg_index_table  ! (-) flag to use only part of atmos profile from WRF
+
 integer new_nlev         ! (-) number of levels to use in reduced profile
 character(20) prof_src   ! (-) source of atmospheric profile data
                          ! 'single' single column text file
@@ -39,6 +42,9 @@ character(20) ocean_mod  ! (-) ocean model type
                          ! 'Fresnel' Fresnel reflectivity model
                          ! 'Wilheit' Wilheit reflectivity model
                          ! 'ITRA'    ITRA reflectivity model
+
+! real(8), allocatable :: dens(:)
+! real(8), allocatable :: temp(:)
 
 ! file names
 character*250 file_in          ! (-) path to input atm profile
@@ -87,6 +93,7 @@ integer, parameter :: updown = 2              ! (-) number major directions (1 =
 
 ! physical constant parameters
 real(8), parameter :: grav = 9.80655d0        ! (m/s2) acceleration of gravity
+real(8), parameter :: gravi        = 1.0d0/grav                ! (s/m) inverse grav constant
 real(8), parameter :: hplank = 6.6252d-34     ! (J s) Plank's constant
 real(8), parameter :: kboltz = 1.380662d-23   ! (J/K) Boltzmann's constant
 real(8), parameter :: pi= 3.14159265358979d0  ! (-) value of pi
@@ -104,6 +111,7 @@ real(8), parameter :: water_refl = 0.5d0      ! (-) reference surface reflectivi
 real(8), parameter :: sal_ocean = 0.035d0     ! (-) ocean reference salinity fraction (avg = 0.035)
 real(8), parameter :: sal_lake = 0.d0         ! (-) freshwater lake salinity fraction
 real(8), parameter :: d_albedo=1.0d-7         ! (-) lower limit scat/abs total for diagonalization layer inst parameters
+real(8), parameter :: albedo_diag=1.0d-12     ! (-) lower limit on albedo to assume diagonal matrices
 real(8), parameter :: t_frz=273.15d0          ! (K) freezing point of water
 
 ! quadrature parameters
@@ -128,6 +136,7 @@ real(8) passband_freq(max_nfreq)
 real(8) testvar1 ! test diagnostic variable 1
 real(8) testvar2 ! test diagnostic variable 2
 real(8) testvar3 ! test diagnostic variable 3
+real(8) testval(10) ! test diagnostic variable array
 
 type gas_type
     real(8) absn2      ! (nepers/km) nitrogen absorption
@@ -163,20 +172,20 @@ end type hydro_type
 type (hydro_type), dimension(max_nlev,max_nphase) :: hydro_prof
 
 ! brightness temperature and Jacobian in observation direction
-real(8), allocatable :: Tb_obs_mat(:,:)         ! (K)      (nlev,npol)              Brightness temperature in sensor direction
-real(8), allocatable :: dTb_dT_obs_mat(:,:)     ! (K/K)    (nlev,npol)              Jacobian brightness temp wrt air temperature in sensor direction
-real(8), allocatable :: dTb_dp_obs_mat(:,:)     ! (K/mb)   (nlev,npol)              Jacobian brightness temp wrt pressure in sensor direction
-real(8), allocatable :: dTb_dq_obs_mat(:,:)     ! (K m3/g) (nlev,npol)              Jacobian brightness temp wrt specific humidity in sensor direction
-real(8), allocatable :: dTb_dw_obs_mat(:,:,:)   ! (K m3/g) (nvar,nlev,npol)         Jacobian brightness temp wrt hydrometeor in sensor direction
-real(8)  Tbo_mat(2)                             ! (K)      (npol)                   Brightness temperature at sensor nadir angle
-real(8)  tau_mat(2)                             ! (-)      (npol)                   opacity at sensor
+real(8), allocatable :: Tb_obs_mat(:,:)         ! (K)      (nlev,npol)           Brightness temperature in sensor direction
+real(8), allocatable :: dTb_dT_obs_mat(:,:)     ! (K/K)    (nlev,npol)           Jacobian brightness temp wrt air temperature in sensor direction
+real(8), allocatable :: dTb_dp_obs_mat(:,:)     ! (K/mb)   (nlev,npol)           Jacobian brightness temp wrt pressure in sensor direction
+real(8), allocatable :: dTb_dq_obs_mat(:,:)     ! (K m3/g) (nlev,npol)           Jacobian brightness temp wrt specific humidity in sensor direction
+real(8), allocatable :: dTb_dw_obs_mat(:,:,:)   ! (K m3/g) (nvar,nlev,npol)      Jacobian brightness temp wrt hydrometeor in sensor direction
+real(8)  Tbo_mat(2)                             ! (K)      (npol)                Brightness temperature at sensor nadir angle
+real(8)  tau_mat(2)                             ! (-)      (npol)                opacity at sensor
 
 ! brightness temperature and Jacobian as function of stream angle
-real(8), allocatable :: Tbo_str_mat(:,:)        ! (K)      (nstream,npol)           Brightness temperature at top of atmosphere
-real(8), allocatable :: dTb_dT_str_mat(:,:,:)   ! (K/K)    (nlev,nstream,npol)      Jacobian brightness temp wrt air temperature
-real(8), allocatable :: dTb_dp_str_mat(:,:,:)   ! (K/mb)   (nlev,nstream,npol)      Jacobian brightness temp wrt pressure
-real(8), allocatable :: dTb_dq_str_mat(:,:,:)   ! (K m3/g) (nlev,nstream,npol)      Jacobian brightness temp wrt specific humidity
-real(8), allocatable :: dTb_dw_str_mat(:,:,:,:) ! (K m3/g) (nvar,nlev,nstream,npol) Jacobian brightness temp wrt hydrometeor
+real(8), allocatable :: Tbo_str_mat(:,:)        ! (K)      (nstream,npol)        Brightness temperature at top of atmosphere
+real(8), allocatable :: dTb_dT_str_mat(:,:,:)   ! (K/K)    (nlev,nstream,npol)   Jacobian brightness temp wrt air temperature
+real(8), allocatable :: dTb_dp_str_mat(:,:,:)   ! (K/mb)   (nlev,nstream,npol)   Jacobian brightness temp wrt pressure
+real(8), allocatable :: dTb_dq_str_mat(:,:,:)   ! (K m3/g) (nlev,nstream,npol)   Jacobian brightness temp wrt specific humidity
+real(8), allocatable :: dTb_dw_str_mat(:,:,:,:) ! (K m3/g) (nlev,nstream,5,npol) Jacobian brightness temp wrt hydrometeor
 
 ! geophysical Jacobian
 real(8), dimension(max_nlev) :: dKab_dT
@@ -225,16 +234,13 @@ type hydrometeor_characteristics
 end type hydrometeor_characteristics
 type(hydrometeor_characteristics) gen_hm
 
-! atmospheric profile branch
+! atmospheric profile branch atm%
 type profile_type
     ! Gaseous state variables
     real(8) press       ! (mb) pressure
     real(8) temp        ! (K) temperature
     real(8) humid       ! (g/m3) water vapor density
-
-    ! Derived water vapor quantities
-    real(8) h2o_v_sat   ! water vapor saturation pressure in mb
-    real(8) rel_hum     ! relative humidity 0-100%
+    real(8) f_froz      ! (-) frozen fraction of hydrometeors
 
     ! Derived radiative transfer quantities : frequency dependent
     real(8) abs_o2      ! oxygen and nitrogen absorption in nepers/km
@@ -247,7 +253,7 @@ type profile_type
     real(8) bb_spec_int ! (W/m2/Hz/ster) black body intensity for either polarization at level in W/m**2/Hz/ster
 
     ! layer geometry variables
-    real(8) hgt         ! (km) height to middle of layer wrt to surface
+    real(8) hgt_mid     ! (km) height to middle of layer wrt to surface
     real(8) hgt_top     ! (km) height to top of layer wrt to surface
     real(8) hgt_bot     ! (km) height to bottom of layer wrt to surface
     real(8) hgt_del     ! (m) layer thickness (note the units are meters not km)
@@ -263,9 +269,9 @@ type profile_type
     type(hydrometeor_characteristics) hydro
 end type profile_type
 type(profile_type) atm(max_nlev)
-type(profile_type) temp_atm(max_nlev)
-type(profile_type) obs_atm(max_nlev)
-type(profile_type) gen_atm(max_nlev)
+type(profile_type) atm_temp(max_nlev)
+type(profile_type) atm_psuedo(max_nlev)
+type(profile_type) atm_init(max_nlev)
 
 ! hydrometeor characteristic and geometry branch
 type hm_geometry_type

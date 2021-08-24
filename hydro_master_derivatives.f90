@@ -1,8 +1,8 @@
 !======================================================================
-SUBROUTINE hydrometeor_master_5ph_d( freq, phase, temp, p, q, k0, a0,       &
-                                     hab, hsc, g,                           &
-                                     dhab, dhsc, dg,                        &
-                                     a0_const, testvar1, testvar2, testvar3 )
+SUBROUTINE hydrometeor_master_5ph_d( freq, phase, temp, p, q, k0, a0, &
+                                     hab, hsc, g, &
+                                     dhab, dhsc, dg, &
+                                     a0_const)
 !======================================================================
 ! This file contains subroutine HYDROMETEOR_MASTER_5PH_d.F90
 ! and all slave subroutines called by it
@@ -34,6 +34,7 @@ SUBROUTINE hydrometeor_master_5ph_d( freq, phase, temp, p, q, k0, a0,       &
 !  9/26/2020 Kevin Schaefer deleted unused variables
 !  2/2/2021  Kevin Schaefer cleaned up code, deleted unused code
 !-----------------------------------------------------------------------
+! use dotlrt_variables, only: testval ! for debugging only
 IMPLICIT NONE
 
 ! Inputs
@@ -53,7 +54,7 @@ logical, intent(in) :: a0_const ! this single value corresponds to one atmospher
  real(8), intent(out) :: dhab(3) ! (?) derivative absorption wrt to temp, k0, a0
  real(8), intent(out) :: dhsc(3) ! (?) derivative scattering wrt to temp, k0, a0
  real(8), intent(out) :: dg(3)   ! (?) derivative asymytry factor wrt to temp, k0, a0
-! nvars x nhydro x nchan x dx = 12 x 5 x {15,24}{FY,GEMS}
+
 ! local variables
  integer, parameter :: m1=20
  integer, parameter :: m2=10
@@ -110,9 +111,6 @@ logical, intent(in) :: a0_const ! this single value corresponds to one atmospher
  double complex index
  double complex dindex_dt
  real(8), parameter :: t_frz=273.15d0 ! (K) freezing point of water
-  real(8) testvar1 ! test diagnostic variable 1
-  real(8) testvar2 ! test diagnostic variable 2
-  real(8) testvar3 ! test diagnostic variable 3
 
 ! initialize some variables 
   numpanels = 0
@@ -149,11 +147,11 @@ logical, intent(in) :: a0_const ! this single value corresponds to one atmospher
       speclength=1.028d0   
 
     elseif (phase == 4) then ! snow
-      call h2o_mixed_dielectric(freq, temp, phase, epsil, depsil_dt, testvar1, testvar2, testvar3) 
+      call h2o_mixed_dielectric(freq, temp, phase, epsil, depsil_dt) 
       speclength=1.028d0   
 
     elseif (phase == 5) then ! graupel
-      call h2o_mixed_dielectric(freq, temp, phase, epsil, depsil_dt, testvar1, testvar2, testvar3) 
+      call h2o_mixed_dielectric(freq, temp, phase, epsil, depsil_dt) 
       speclength=1.028d0   
     endif
 
@@ -378,9 +376,6 @@ real(8) ::  pi, c , speclength, f, meanradrel, sigmarel, ka   &
                    , weight , alph, alph1, dalph, alphu, w , dw_dt
 real(8) :: dw_dk0, dhsc_da0, dhex_da0, dg_da0
 DOUBLE COMPLEX   ::   epsil, depsil_dt, index, dindex_dt
-  real(8) testvar1 ! test diagnostic variable 1
-  real(8) testvar2 ! test diagnostic variable 2
-  real(8) testvar3 ! test diagnostic variable 3
 LOGICAL fixnumpanels
 real(8) ::   df_dk0
    pi=4.0d0*DATAN(1.d0)
@@ -406,7 +401,7 @@ real(8) ::   df_dk0
     IF( phase == 3)  THEN                                                
      CALL h2o_ice_dielectric( freq, DMIN1(273.15d0,temp), epsil, depsil_dt) 
     ELSE    ! ice/liquid mixture
-    CALL h2o_mixed_dielectric(freq, temp, phase, epsil, depsil_dt, testvar1, testvar2, testvar3)
+    CALL h2o_mixed_dielectric(freq, temp, phase, epsil, depsil_dt)
     END IF
 
     speclength=1.028d0   
@@ -868,8 +863,8 @@ DOUBLE COMPLEX  , PARAMETER :: iz=(0.d0,1.d0)
 
       ksc   = ksc   + delksc
 
-     dksc_dt=dksc_dt+ddelksc_dt
-     dksc_da=dksc_da+ddelksc_da
+     dksc_dt=dksc_dt+dreal(ddelksc_dt)
+     dksc_da=dksc_da+dreal(ddelksc_da)
 
        kex   = kex   +dble(2*n+1)*DREAL( smalan   +smalbn   )
 
@@ -1109,7 +1104,7 @@ dnIMAG_dt=     -( tt*( tt*3.d0*inv3(1,j) + 2.d0*inv3(2,j) )  + inv3(3,j))*nIMAG*
 END SUBROUTINE INV
 
 !======================================================================
-SUBROUTINE h2o_mixed_dielectric(freq, temp, phase, epsil, depsil_dt, testvar1, testvar2, testvar3)
+SUBROUTINE h2o_mixed_dielectric(freq, temp, phase, epsil, depsil_dt)
 !======================================================================
 ! Complex dielectric constant for snow or graupel particle composed of ice, water and air
 ! Uses dielectric mixing theory [Matthew and Sadiku, 1985] 
@@ -1131,6 +1126,7 @@ SUBROUTINE h2o_mixed_dielectric(freq, temp, phase, epsil, depsil_dt, testvar1, t
 ! 2/6/2021   Kevin Schaefer cleaned up code and deleted unused code
 ! 2/6/2021   Kevin Schaefer changed name to h2o_mixed_dielectric
 !----------------------------------------------------------------------
+! use dotlrt_variables, only: testval ! for debugging only
   implicit none
 
 ! inputs
@@ -1171,9 +1167,6 @@ SUBROUTINE h2o_mixed_dielectric(freq, temp, phase, epsil, depsil_dt, testvar1, t
   double complex dri_dt     ! (1/K) derivative refractive index ice wrt temperature
   double complex rm         ! (-) refractive index mixed phase
   double complex drm_dt     ! (1/K) derivative refractive index mixed phase wrt temperature
-  real(8) testvar1 ! test diagnostic variable 1
-  real(8) testvar2 ! test diagnostic variable 2
-  real(8) testvar3 ! test diagnostic variable 3
   real(8) wmax
   real(8) w_liq_trans
 
@@ -1183,7 +1176,7 @@ SUBROUTINE h2o_mixed_dielectric(freq, temp, phase, epsil, depsil_dt, testvar1, t
   real(8), parameter :: A3 = 1.4324101899475d0
   real(8), parameter :: zeta3 = -1.7495065207990d0
   real(8), parameter :: coefs(3) = (/ -2.0079700293637d-1, 6.8397684390001d-1, -4.2709198240675d-1 /)
-     
+
 ! assign ci and cw according to phase type
   if ( phase == 4 ) then ! snow
     ci = 0.109d0 ! density of snow/density of ice 
@@ -1246,7 +1239,6 @@ SUBROUTINE h2o_mixed_dielectric(freq, temp, phase, epsil, depsil_dt, testvar1, t
 ! dielectric constant
   epsil    = (1.0d0+f*rm)/(1.0d0-rm)
   depsil_dt = (df_dt*rm + drm_dt*(f + epsil))/(1.0d0-rm)
-  testvar1=dreal(depsil_dt)
 
  END SUBROUTINE h2o_mixed_dielectric
 

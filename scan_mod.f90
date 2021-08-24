@@ -12,10 +12,13 @@
   Integer DevFlag    ! send plot to screen or postscript file
   integer sla_flag   ! scan calculations of specific leaf area
   Integer PlotFlag   ! plot data
+  integer max_nline  ! max number of plotted variables
+  integer nline      ! number of plotted variables
   Integer color_con  ! plot color contours
   integer NumY       ! number of plotted variables
   integer max_NumY   ! max number of plotted variables
   integer LegFlag    ! flag to plot legends
+  integer nLeg       ! number of legends
   integer flagDim    ! scan in 2-D or 3-D
   integer save_2d    ! save 2-dimensional data from scan
   integer save_3d    ! save 3-dimensional data from scan
@@ -30,18 +33,30 @@
   character*8 barformat ! format for color bar labels
   Character *45 Junk ! junk variable for reading input descriptors
   Character *100 Plotfile ! file name for output plot
+  integer nits       ! (-) max number of iterations
+  Character*250 atm_txt_file ! file name for text atm profile file
+  Character*250 atm_wrf_file ! file name for wrf atm profile file
 
-! program control variables
-  integer nchannel ! (-) total number of channels
-  Integer minchan  ! (-) minimum channel number
-  Integer maxchan  ! (-) maximum channel number
-  integer nsib     ! (-) number of points
-  integer ns       ! (-) total number of possible soil types
+! channel variables
+  integer nchannel  ! (-) total number of channels
+  Integer minchan   ! (-) minimum channel number
+  Integer maxchan   ! (-) maximum channel number
+  integer nsib      ! (-) number of points
+  integer ns        ! (-) total number of possible soil types
+
+  Character*100 src_obs  ! source for observations
+  Character*100 src_init ! source for initial atmospheric profile
+  logical calc_psuedo ! flag to calculate psuedo data
+  logical calc_init  ! flag to calculate psuedo data
+  logical read_fy3   ! flag to fy3 swath
+  logical read_wrf   ! flag to read wrf output
+  logical read_sin   ! flag to read single text atm profile
+
 
 ! scan output variables
   character*25 LabX                  ! Label for x-axis
   character*25 LabY                  ! Label for y-axis
-  character*25 legend(10)            ! legends for plotted lines
+  character*25 legend(100)           ! legends for plotted lines
   Character*100 Titlebase            ! title for individual plot
   Character*100 Title                ! title for individual plot
   Integer Scale                      ! Contour interval scaling factor for plotting
@@ -55,10 +70,14 @@
   real(8), allocatable :: Y3(:)      ! generic y values
   real(8), allocatable :: zval(:,:,:)! generic Z values
   real(8), allocatable :: myvals(:)  ! values from hydrometior_master_5
-  real(8), allocatable :: myarray(:,:,:,:,:)! values from hydrometior_master_5
-  real(8), allocatable :: tparray(:,:,:,:)! values from hydrometior_master_5
+  real(8), allocatable :: dens_lt(:)! values from hydrometior_master_5
+  real(8), allocatable :: temp_lt(:)! values from hydrometior_master_5
   real(8), allocatable :: tarray(:)! values from hydrometior_master_5
   real(8), allocatable :: parray(:)! values from hydrometior_master_5
+  real(8), allocatable :: myarray(:,:,:,:,:)! values from hydrometior_master_5
+  real(8), allocatable :: lookup_table(:,:,:,:,:)! (iphase, ichan, iden, itemp, val)
+  integer ncltid
+
   integer myphase ! values from hydrometior_master_5
   integer NumScanVar                 ! number of variables in table
   character (len=25), allocatable :: Label(:) ! labels for plotting
@@ -95,34 +114,41 @@
   integer jmin   ! (-) minimum latitude index for subset of domain grid
   integer jmax   ! (-) maximum latitude index for subset of domain grid
 
-! manipulation specifications
-  integer nout_man  ! number of manipulations
+! profile setup specifications
+  integer n_psuedo      ! (-) number of manipulations for pseudo data atm profile
+  integer n_init        ! (-) number of manipulations for initial atm profile
+  integer nout_man      ! (-) number of manipulations for output file (unused)
+  integer n_up_man      ! (-) number of manipulations for update to atm profile
+
   type manipulation
-    logical doit      ! perform the manipulation
-    character*20 typ  ! type
-    real(8) val1         ! 1st value
-    real(8) val2         ! 2nd value
-    real(8) val3         ! 3rd value
-    real(8) val4         ! 4th value
-    integer ind1      ! index value 1
-    integer ind2      ! index value 2
-    integer ind3      ! index value 3
-    integer npath1    ! 1st path number
-    integer npath2    ! 2nd path number
-    integer npath3    ! 3rd path number
-    Character *100 path1       ! 1st path
-    Character *100 path2       ! 2st path
-    Character *100 path3       ! 3st path
-    integer null1     ! index of 1st null value
-    integer null2     ! index of 2nd null value
-    integer null3     ! index of 3rd null value
-    character*20 txt1 ! text 1
-    character*20 txt2 ! text 2
-    character*20 txt3 ! text 3
-    character*20 txt4 ! text 4
-    logical saveit    ! save to file
+    logical doit        ! perform the manipulation
+    character*20 typ    ! type
+    real(8) val1        ! 1st value
+    real(8) val2        ! 2nd value
+    real(8) val3        ! 3rd value
+    real(8) val4        ! 4th value
+    integer ind1        ! index value 1
+    integer ind2        ! index value 2
+    integer ind3        ! index value 3
+    integer npath1      ! 1st path number
+    integer npath2      ! 2nd path number
+    integer npath3      ! 3rd path number
+    Character*100 path1 ! 1st path
+    Character*100 path2 ! 2st path
+    Character*100 path3 ! 3st path
+    integer null1       ! index of 1st null value
+    integer null2       ! index of 2nd null value
+    integer null3       ! index of 3rd null value
+    character*20 txt1   ! text 1
+    character*20 txt2   ! text 2
+    character*20 txt3   ! text 3
+    character*20 txt4   ! text 4
+    logical saveit      ! save to file
   end type manipulation
-  type(manipulation) out_man(1000) ! maps manipulations
+  type(manipulation) out_man(1000)    ! manipulations for output
+  type(manipulation) psuedo_man(1000) ! manipulations for pseudo data atm profile
+  type(manipulation) init_man(1000)   ! manipulations for initial profile atm profile
+  type(manipulation) update_man(1000) ! manipulations for profile update atm profile
 
 ! biophysical parameters
   real(8), parameter :: Plank        = 6.63e-34                  ! (J s) plank's constant
@@ -130,12 +156,12 @@
   real(8), parameter :: light        = 2.9973e8                  ! (m/s) speed of light
   real(8), parameter :: pidaypy      = 0.0172142d0               ! (?) TBD
   real(8), parameter :: a            = 6.37122d+06               ! (m) earth radius
-  real(8), parameter :: grav         = 9.8100d0                  ! (m/s) gravity constant
-  real(8), parameter :: gravi        = 1.0d0/grav                ! (s/m) inverse grav constant
+  !real(8), parameter :: grav         = 9.8100d0                  ! (m/s) gravity constant
+  !real(8), parameter :: gravi        = 1.0d0/grav                ! (s/m) inverse grav constant
   real(8), parameter :: omega        = 2.0d0*pi/86400.0d0        ! (1/s) earth angular velocity
   real(8), parameter :: earth_area   = 5.100996990707616d+14     ! (m2) surface area of earth
   real(8), parameter :: gas_const_R  = 287.000d0                 ! (J/kg/K))gas constant for dry air
-  real(8), parameter :: heat_cp = 1005.000d0                     ! (J/kg/K)) specific heat at constant pressure
+  real(8), parameter :: heat_cp      = 1005.000d0                ! (J/kg/K)) specific heat at constant pressure
   real(8), parameter :: kappa        = gas_const_R/heat_cp       ! (?) gas_const_R/spec_heat_cp
   real(8), parameter :: inv_kappa    = 1.0d0 / kappa             ! (?) inverse kappa
   real(8), parameter :: p0_sfc       = 1.0d+05                   ! (Pa) surface pressure
@@ -170,16 +196,59 @@
   type in_files
     integer       num   ! file number
     character*20  type  ! file type
-    character*100 path  ! file name
+    character*250 path  ! file name
   end type in_files
   type(in_files), allocatable :: files(:) ! input file information
 
 ! cost function variables
+  integer nlev_sin   ! (-) number of layers for reference atmosphere profile
+  integer nlev_ref   ! (-) number of layers for reference atmosphere profile
+  integer nlev_fy3   ! (-) number of layers for fy3 atmosphere profiles
+  integer nlev_wrf   ! (-) number of layers for wrf atmosphere profiles
   real(8), allocatable :: Tbo_obs(:,:) ! (K) (nchan,npol) observed brightness temperature at top of atmosphere
   real(8), allocatable :: Tbo_sim(:,:) ! (K) (nchan,npol) simulated brightness temperature at top of atmosphere
   real(8) cost_tot                     ! (K) total cost function
+  real(8), allocatable :: Jacob(:)     ! (K m2/g) (nchannel) Jacobian brightness temperature wrt tot col precip
+  real(8), allocatable :: res(:)       ! (K) residual observed minus simulated brightness temperatures
+  real(8) precip_cur                   ! (log10(g/m2)) current tot col precip
+  real(8) precip_new                   ! (log10(g/m2)) updated tot col precip
+  real(8) precip_del                   ! (log10(g/m2)) perturbed tot col precip
   real(8), allocatable :: cost_chan(:) ! (K) cost function per channel
   real(8) obs_den                      ! (g/m2) observed hydrometeor column total
+  integer init_nlook                   ! (-) number of records for init lookup table
+  real(8), allocatable :: init_look(:,:) ! (K) lookup table for initial brightness temperature at top of atmosphere
+  real(8), allocatable :: init_dens(:)   ! (g/m2) lookup table tot col density x values
+  real(8), allocatable :: init_precip(:) ! (log10(g/m2)) initial precip interpolated from lookup table
+  logical bad_point    ! (-) point is false positive of cloud mask
+  integer swath_pt_num ! (-) point number for retrieval
+  integer swath_npts   ! (-) number of swath points
+  integer swath_nchan  ! (-) number of swath channels
+  integer swath_nlev   ! (-) number of vertical levels in swath
+  integer swath_nang   ! (-) number of cross track angles in swath
+  integer swath_nlin   ! (-) number of lines in swath
+  real(8), allocatable :: swath_tb_full(:,:) ! (K) swath observed brightness temperatures at top of atmosphere
+  real(8), allocatable :: swath_tb_chan(:,:) ! (K) subset by channel swath observed brightness temperatures at top of atmosphere
+  real(8), allocatable :: swath_angle(:)     ! (deg) nadir angle of measurement
+  real(8), allocatable :: swath_land(:)      ! (-) land mask
+  real(8), allocatable :: swath_cloud(:)     ! (-) cloud mask
+  real(8), allocatable :: swath_temp(:,:)    ! (K) temperatures as a function of height
+  integer, allocatable :: swath_lin_indx(:)  ! (-) swath line number index
+  integer, allocatable :: swath_ang_indx(:)  ! (-) angle number index
+  real(8), allocatable :: swath_dem(:)       ! (m) surface height above sea level
+  real(8), allocatable :: swath_geo(:)       ! (m2/s2) geopotential height
+  real(8), allocatable :: swath_bot(:)       ! (km) height layer bottom
+  real(8), allocatable :: swath_mid(:)       ! (km) height layer middle
+  real(8), allocatable :: swath_top(:)       ! (km) height layer top
+  real(8), allocatable :: swath_del(:)       ! (m) height layer thickness
+
+  real(8), allocatable :: swath_precip(:)    ! (log10(g/m2)) estimated total column precip
+  real(8), allocatable :: swath_iter(:)      ! (-) number of iterations to convergence
+  real(8), allocatable :: swath_cost(:)      ! (-) Final cost function at convergence
+  real(8), allocatable :: swath_tb_sim(:)    ! (K) simulated brightness temperatures at convergence
+  real(8), allocatable :: swath_res(:)       ! (K) residual at convergence
+  real(8), allocatable :: swath_point(:)     ! (-) swath point number
+  real(8), allocatable :: swath_ex(:)        ! (s) swath execution time per point
+  real(8), allocatable :: swath_bad(:)       ! (-) bad data point flag
 
 ! hydrometeor_ph5 variables
   integer phase   ! (-) phase identifier (1=clw 2=rain 3=ice 4=snow 5 =grpl)
@@ -193,6 +262,27 @@
   double complex epsil     ! (-) ice dielectric constant
   double complex depsil_dt ! (1/K) derivative of ice dielectric constant wrt temperature
 
+! hydrometeor profile variables
+  type hydro_lay_geo
+    real(8) bot  ! (km) height of bottom of hydrometeor layer
+    real(8) top  ! (km) height of top of hydrometeor layer
+    real(8) std  ! (km) height of peak value of hydrometeor layer
+    real(8) pk   ! (km) height of peak value of hydrometeor layer
+    real(8) tot  ! (g/m2) total column mass of hydrometeor
+  end type hydro_lay_geo
+  type hydro_layers
+    type(hydro_lay_geo) clw    ! (-) cloud liquid water layer
+    type(hydro_lay_geo) rain   ! (-) rain layer
+    type(hydro_lay_geo) ice    ! (-) ice layer
+    type(hydro_lay_geo) snow   ! (-) snow layer
+    type(hydro_lay_geo) grpl   ! (-) graupel layer
+    type(hydro_lay_geo) cloud  ! (-) cloud layer (clw + ice)
+    type(hydro_lay_geo) precip ! (-) precip layer (rain + snow + grpl)
+    type(hydro_lay_geo) hydro  ! (-) total hydromet layer (clw + rain + ice + snow + grpl)
+  end type hydro_layers
+  type(hydro_layers) cur_lay    ! hydrometeor layer variables for current profile
+  type(hydro_layers) psuedo_lay ! hydrometeor layer variables for psuedo-data
+  type(hydro_layers) init_lay   ! hydrometeor layer variables for initial guess
 ! generic cloud variables
   type hydrometeor_layer
     real(8) bot  ! (km) height of bottom of hydrometeor layer
@@ -201,6 +291,7 @@
     real(8) top  ! (km) height of top of hydrometeor layer
     real(8) tot  ! (g/m2) total column mass of hydrometeor
   end type hydrometeor_layer
+
   type generic_cloud
     type(hydrometeor_layer) clw    ! (-) cloud liquid water layer
     type(hydrometeor_layer) rain   ! (-) rain layer

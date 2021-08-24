@@ -7,7 +7,7 @@ subroutine setup_all_outputs( )
 ! History:
 !  5/27/2005 Bob Weber created routine
 !  9/26/2020 Kevin Schaefer deleted unused variables
-!  10/15/2020 Kevin Schaefer deleted all arguments duplicated in variables module 
+!  10/15/2020 Kevin Schaefer deleted all arguments duplicated in variables module
 !---------------------------------------------------------------------------------
 use dotlrt_variables
 use profiles
@@ -39,14 +39,14 @@ bad= .false.
   if (save_rad_file) then
     allocate(Tbo_wrt(nlon,nlat,npol))
     allocate(Tbo_str_wrt(nlon,nlat,nstream_surf,npol))
-    allocate(dTb_dp_str_wrt(nlat,nlon,nlev,nstream_surf,npol)) ! Jacobian brightness temperature wrt pressure 
-    allocate(dTb_dT_str_wrt(nlat,nlon,nlev,nstream_surf,npol)) ! Jacobian brightness temperature wrt air temperature 
-    allocate(dTb_dq_str_wrt(nlat,nlon,nlev,nstream_surf,npol)) ! Jacobian brightness temperature wrt absolute humidity 
-    allocate(dTb_dc_str_wrt(nlat,nlon,nlev,nstream_surf,npol)) ! Jacobian brightness temperature wrt cloud liquid water 
-    allocate(dTb_dr_str_wrt(nlat,nlon,nlev,nstream_surf,npol)) ! Jacobian brightness temperature wrt rain 
-    allocate(dTb_di_str_wrt(nlat,nlon,nlev,nstream_surf,npol)) ! Jacobian brightness temperature wrt ice 
-    allocate(dTb_ds_str_wrt(nlat,nlon,nlev,nstream_surf,npol)) ! Jacobian brightness temperature wrt snow 
-    allocate(dTb_dg_str_wrt(nlat,nlon,nlev,nstream_surf,npol)) ! Jacobian brightness temperature wrt graupel 
+    allocate(dTb_dp_str_wrt(nlat,nlon,nlev,nstream_surf,npol)) ! Jacobian brightness temperature wrt pressure
+    allocate(dTb_dT_str_wrt(nlat,nlon,nlev,nstream_surf,npol)) ! Jacobian brightness temperature wrt air temperature
+    allocate(dTb_dq_str_wrt(nlat,nlon,nlev,nstream_surf,npol)) ! Jacobian brightness temperature wrt absolute humidity
+    allocate(dTb_dc_str_wrt(nlat,nlon,nlev,nstream_surf,npol)) ! Jacobian brightness temperature wrt cloud liquid water
+    allocate(dTb_dr_str_wrt(nlat,nlon,nlev,nstream_surf,npol)) ! Jacobian brightness temperature wrt rain
+    allocate(dTb_di_str_wrt(nlat,nlon,nlev,nstream_surf,npol)) ! Jacobian brightness temperature wrt ice
+    allocate(dTb_ds_str_wrt(nlat,nlon,nlev,nstream_surf,npol)) ! Jacobian brightness temperature wrt snow
+    allocate(dTb_dg_str_wrt(nlat,nlon,nlev,nstream_surf,npol)) ! Jacobian brightness temperature wrt graupel
 
     Tbo_wrt = missing
     Tbo_str_wrt = missing
@@ -58,7 +58,7 @@ bad= .false.
     dTb_di_str_wrt = missing
     dTb_ds_str_wrt = missing
     dTb_dg_str_wrt = missing
-    
+
     call create_tb_file()
   endif
 
@@ -74,9 +74,9 @@ subroutine setup_all_inputs( )
 ! and checks for bad inputs
 !
 ! History:
-!  5/27/2005 Bob Weber created routine
-!  9/26/2020 Kevin Schaefer deleted unused variables
-!  10/15/2020 Kevin Schaefer deleted all arguments duplicated in variables module 
+!  5/27/2005  Bob Weber created routine
+!  9/26/2020  Kevin Schaefer deleted unused variables
+!  10/15/2020 Kevin Schaefer deleted all arguments duplicated in variables module
 !---------------------------------------------------------------------------------
 use dotlrt_variables
 use profiles
@@ -99,7 +99,7 @@ implicit none
 
 ! Read namel file
   call read_namel_dotlrt
-! 
+!
 ! check source
   bad=.true.
   if (trim(prof_src) == 'single' ) bad = .false.
@@ -135,13 +135,13 @@ implicit none
     stop
   endif
 
-! assign nlev 
+! assign nlev
   if(flag_reduce_nvar) then
     nlev=new_nlev
   else
     nlev=nlev_max
   endif
-  
+
 ! instrument specification parameters input file:
   call get_instr_spec( )
 
@@ -168,18 +168,13 @@ implicit none
     enddo
 
 ! Henyey-Greenstein phase matrix
-    call HG_phmat()
+  call HG_phmat()
 
 ! read atmosphere profiles
   if (trim(prof_src) == 'single' ) then
-    call read_text_profile()
+    call read_text_profile(atm, file_in)
   elseif (trim(prof_src) == 'WRF') then
     call get_wrf_data()
-  endif
-
-! create surface reflectance tables
-  if (trim(prof_src) == 'WRF') then
-    call construct_surf_ref_table()
   endif
 
 ! execution time diagnostics

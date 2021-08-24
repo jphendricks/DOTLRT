@@ -1,3 +1,12 @@
-#./dot.out /home/johnny/code/DOTLRTv2.1/inputs/atm_profile.txt /home/johnny/code/DOTLRTv2.1/output/
+#!/bin/bash
 
-./dot.out /home/johe6518/inputs/WRF_Output/wrfout_d02_2019-05-26_12_00_00 /home/johe6518/code/DOTLRTv2.1/output/
+# Arguments
+ARG1="${HOME}/dotlrt/inputs/WRF_Output/wrfout_d02_2019-05-26_12_00_00"
+ARG2="${HOME}/dotlrt/output/wrf_output"
+
+# Palallel
+# mpirun -np 1 ./dot ${ARG1} ${ARG2}
+
+# Sequential
+./dot ${ARG1} ${ARG2}
+

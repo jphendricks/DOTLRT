@@ -1,7 +1,7 @@
 !=======================================================================
       subroutine gaussq(kind, n, alpha, beta, kpts, endpts, b, t, w)
 !=======================================================================
-! 
+!
 !           this set of routines computes the nodes t(j) and weights
 !        w(j) for gaussian-type quadrature rules with pre-assigned
 !        nodes.  these are used when one wishes to approximate
@@ -738,7 +738,7 @@
             IMACH(13) = IMACH(16)
          ELSE
             RMACH = 1234567.
-            IF (SMALL(1) .EQ. 1234613304) THEN 
+            IF (SMALL(1) .EQ. 1234613304) THEN
 !               *** IEEE ***
                IMACH(10) = 2
                IMACH(11) = 24
@@ -924,7 +924,7 @@
 !      DATA RMACH(4) / O147400000000 /
 !      DATA RMACH(5) / O177464202324 /, SC/987/
 !
-      IF (SC .NE. 987) THEN 
+      IF (SC .NE. 987) THEN
 !        *** CHECK FOR AUTODOUBLE ***
          SMALL(2) = 0
          RMACH(1) = 1E13
@@ -1024,11 +1024,11 @@
                   SMALL(1) = J
  10               CONTINUE
 !              *** CRAY T3E ***
-               CALL I1MCRA(SMALL, K, 16, 0, 0)
-               CALL I1MCRA(LARGE, K, 32751, 16777215, 16777215)
-               CALL I1MCRA(RIGHT, K, 15520, 0, 0)
-               CALL I1MCRA(DIVER, K, 15536, 0, 0)
-               CALL I1MCRA(LOG10, K, 16339, 4461392, 10451455)
+               CALL I1MCRA(SMALL(1), K, 16, 0, 0)
+               CALL I1MCRA(LARGE(1), K, 32751, 16777215, 16777215)
+               CALL I1MCRA(RIGHT(1), K, 15520, 0, 0)
+               CALL I1MCRA(DIVER(1), K, 15536, 0, 0)
+               CALL I1MCRA(LOG10(1), K, 16339, 4461392, 10451455)
                GO TO 30
  20            CALL I1MCRA(J, K, 16405, 9876536, 0)
                IF (SMALL(1) .NE. J) THEN

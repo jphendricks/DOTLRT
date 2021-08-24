@@ -6,12 +6,12 @@ subroutine jacobi(a,n,np,d,v,nrot)
 !  'd' is a vector of length N that returns the eigenvalues of 'a'.
 !  'v' is an NxN matrix whose columns contian, on output, the normalised eigenvectors of 'a'.
 !  'nrot' returns the number of Jacobi rotations that were required in the computation.
-!
+! 
 ! History
 !  1986-92 copyright Numerical Recipes Software "1"7%A2.
 !  12/12/2020 Kevin Schaefer brought code into 21st century by removing continue statements
 !------------------------------------------------------------------------------------
-implicit none
+  implicit none
 
 ! Internal
 ! output

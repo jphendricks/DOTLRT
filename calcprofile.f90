@@ -18,91 +18,89 @@ use dotlrt_variables
 
 ! internal variables
   integer ilev   ! (-) level index
-  real(8) dk0_dw ! (?) derivative of k0 wrt water density
+  real(8) den_min ! (g/m3) minimum density
+  
+  den_min=1.0d-10
 
 ! derivatives of k0 and a0 with respect to cloud water density (each phase)
 ! is multipled by cloud water density (each phase) to remove infinities
 ! when cloud water density (each phase) goes to zero.
 
-! Cloud liquid water
   do ilev= 1, nlev
-    if( atm(ilev)%clw%dens .ne. 0.0d0 ) then
-      ! Marshall Palmer distribution
+    !print*, ilev, atm(ilev)%clw%fhydro, atm(ilev)%rain%fhydro, atm(ilev)%ice%fhydro, atm(ilev)%snow%fhydro, atm(ilev)%grpl%fhydro
+
+! Cloud liquid water
+! Marshall Palmer distribution
+! Constant a0, k0 varies wrt mass
+    if( atm(ilev)%clw%dens > den_min ) then
       atm(ilev)%clw%p  = 0.0d0
       atm(ilev)%clw%q  = 1.0d0
-      ! Constant a0, k0 varies w/r/t M
-      dk0_dw = 2.0d0 * 1989436788.65d0
-      atm(ilev)%clw%dk0_dw = dk0_dw
-      atm(ilev)%clw%k0 = dk0_dw * atm(ilev)%clw%dens
-      atm(ilev)%clw%a0 = 0.01d0
+      atm(ilev)%clw%dk0_dw = 2.0d0 * 1989436788.65d0
       atm(ilev)%clw%da0_dw = 0.0d0
+      atm(ilev)%clw%k0 = atm(ilev)%clw%dk0_dw * atm(ilev)%clw%dens
+      atm(ilev)%clw%a0 = 0.01d0
       atm(ilev)%clw%a0_const = .true.
     else
       atm(ilev)%clw%p  = 0.0d0
-      atm(ilev)%clw%q  = 0.0d0
-      atm(ilev)%clw%k0 = 0.0d0
-      atm(ilev)%clw%a0 = 0.0d0
-      atm(ilev)%clw%dk0_dw = 0.0d0
+      atm(ilev)%clw%q  = 1.0d0
+      atm(ilev)%clw%dk0_dw = 2.0d0 * 1989436788.65d0
       atm(ilev)%clw%da0_dw = 0.0d0
+      atm(ilev)%clw%k0 = atm(ilev)%clw%dk0_dw * den_min
+      atm(ilev)%clw%a0 = 0.01d0
       atm(ilev)%clw%a0_const = .true.
     end if
 
 ! rain
-    if( atm(ilev)%rain%dens .ne.  0.0d0 ) then
-      ! Marshall Palmer distribution
+! Marshall Palmer distribution
+    if( atm(ilev)%rain%dens > den_min ) then
       atm(ilev)%rain%p  = 0.0d0
       atm(ilev)%rain%q  = 1.0d0
       atm(ilev)%rain%k0 = 16000.0d0 
       atm(ilev)%rain%a0 = 0.22331d0 * ( atm(ilev)%rain%dens**0.250d0 )
-      if( atm(ilev)%rain%dens < 1.d0-8 ) then
-        atm(ilev)%rain%da0_dw = 0.0d0
-      else
-        atm(ilev)%rain%da0_dw = 0.250d0 * (atm(ilev)%rain%a0)/(atm(ilev)%rain%dens)
-      end if
+      atm(ilev)%rain%da0_dw = 0.250d0 * (atm(ilev)%rain%a0)/(atm(ilev)%rain%dens)
       atm(ilev)%rain%dk0_dw = 0.0d0
       atm(ilev)%rain%a0_const = .false.
     else
       atm(ilev)%rain%p  = 0.0d0
-      atm(ilev)%rain%q  = 0.0d0
-      atm(ilev)%rain%k0 = 0.0d0
-      atm(ilev)%rain%a0 = 0.0d0
+      atm(ilev)%rain%q  = 1.0d0
+      atm(ilev)%rain%k0 = 16000.0d0 
+      atm(ilev)%rain%a0 = 0.22331d0 * ( den_min**0.250d0 )
+      atm(ilev)%rain%da0_dw = 0.250d0 * (atm(ilev)%rain%a0)/(den_min)
       atm(ilev)%rain%dk0_dw = 0.0d0
-      atm(ilev)%rain%da0_dw = 0.0d0
-      atm(ilev)%rain%a0_const = .true.
+      atm(ilev)%rain%a0_const = .false.
     end if
 
 ! ice
-    if( atm(ilev)%ice%dens .ne. 0.0d0 ) then
-      ! Sekhon-Sriv. Distribution, for two phase ice
+! Sekhon-Sriv. Distribution, for two phase ice
+! Constant a0, k0 varies w/r/t M, assumes no size change when changing phase
+! (see Bauer and Schluessel) - allows for polydispersive sizes and for mie
+! and Rayleigh scattering
+    if( atm(ilev)%ice%dens > den_min ) then
       atm(ilev)%ice%p  = 0.0d0
       atm(ilev)%ice%q  = 1.0d0
-      ! Constant a0, k0 varies w/r/t M, assumes no size change when changing phase
-      ! (see Bauer and Schluessel) - allows for polydispersive sizes and for mie
-      ! and Rayleigh scattering
-      dk0_dw = 2.0d0 * 1989436788.65d0
-      atm(ilev)%ice%dk0_dw = dk0_dw
-      atm(ilev)%ice%k0 = dk0_dw * atm(ilev)%ice%dens
-      atm(ilev)%ice%a0 =  0.01d0
+      atm(ilev)%ice%dk0_dw = 2.0d0 * 1989436788.65d0
       atm(ilev)%ice%da0_dw = 0.d0
+      atm(ilev)%ice%k0 = atm(ilev)%ice%dk0_dw * atm(ilev)%ice%dens
+      atm(ilev)%ice%a0 =  0.01d0
       atm(ilev)%ice%a0_const = .true.
     else
       atm(ilev)%ice%p  = 0.0d0
-      atm(ilev)%ice%q  = 0.0d0
-      atm(ilev)%ice%k0 = 0.0d0
-      atm(ilev)%ice%a0 = 0.0d0
-      atm(ilev)%ice%dk0_dw = 0.0d0
-      atm(ilev)%ice%da0_dw = 0.0d0
+      atm(ilev)%ice%q  = 1.0d0
+      atm(ilev)%ice%dk0_dw = 2.0d0 * 1989436788.65d0
+      atm(ilev)%ice%da0_dw = 0.d0
+      atm(ilev)%ice%k0 = atm(ilev)%ice%dk0_dw * den_min
+      atm(ilev)%ice%a0 =  0.01d0
       atm(ilev)%ice%a0_const = .true.
     end if
 
 ! snow
-    if( atm(ilev)%snow%dens .ne. 0.0d0 ) then
-      ! Tao, Prasad, Alder snow size distributions converted to a0 and k0 form
-      ! (see ntbk#3 pg 111)
+! Tao, Prasad, Alder snow size distributions converted to a0 and k0 form
+! (see ntbk#3 pg 111)
+! If following Rutledge and Hobbs (1983), then parameterization: cloudsnowk0 = 20000.0
+! Instead, use Rutledge and Hobbs (1984)
+    if( atm(ilev)%snow%dens > den_min ) then
       atm(ilev)%snow%p  = 0.0d0
       atm(ilev)%snow%q  = 1.0d0
-      ! If following Rutledge and Hobbs (1983), then parameterization: cloudsnowk0 = 20000.0
-      ! Instead, use Rutledge and Hobbs (1984)
       atm(ilev)%snow%k0 = 8000.0d0
       atm(ilev)%snow%dk0_dw = 0.d0
       atm(ilev)%snow%a0 = 0.3757d0 * ( atm(ilev)%snow%dens**0.25d0 )
@@ -110,17 +108,17 @@ use dotlrt_variables
       atm(ilev)%snow%a0_const = .false.
     else
       atm(ilev)%snow%p  = 0.0d0
-      atm(ilev)%snow%q  = 0.0d0
-      atm(ilev)%snow%k0 = 0.0d0
-      atm(ilev)%snow%a0 = 0.0d0
-      atm(ilev)%snow%dk0_dw = 0.0d0
-      atm(ilev)%snow%da0_dw = 0.0d0
-      atm(ilev)%snow%a0_const = .true.
+      atm(ilev)%snow%q  = 1.0d0
+      atm(ilev)%snow%k0 = 8000.0d0
+      atm(ilev)%snow%dk0_dw = 0.d0
+      atm(ilev)%snow%a0 = 0.3757d0 * ( den_min**0.25d0 )
+      atm(ilev)%snow%da0_dw=0.25d0*(atm(ilev)%snow%a0)/(den_min)
+      atm(ilev)%snow%a0_const = .false.
     end if
 
 ! graupel
-    if( atm(ilev)%grpl%dens .ne. 0.0d0 ) then
-      ! Tao, Prasad, Alder graupel size distributions converted to a0 and k0 form (see ntbk#3 pg 111)
+! Tao, Prasad, Alder graupel size distributions converted to a0 and k0 form (see ntbk#3 pg 111)
+    if( atm(ilev)%grpl%dens > den_min ) then
       atm(ilev)%grpl%p  = 0.0d0
       atm(ilev)%grpl%q  = 1.0d0
       atm(ilev)%grpl%k0 = 8000.0d0 
@@ -130,12 +128,12 @@ use dotlrt_variables
       atm(ilev)%grpl%a0_const = .false.
     else
       atm(ilev)%grpl%p  = 0.0d0
-      atm(ilev)%grpl%q  = 0.0d0
-      atm(ilev)%grpl%k0 = 0.0d0
-      atm(ilev)%grpl%a0 = 0.0d0
+      atm(ilev)%grpl%q  = 1.0d0
+      atm(ilev)%grpl%k0 = 8000.0d0 
       atm(ilev)%grpl%dk0_dw = 0.0d0
-      atm(ilev)%grpl%da0_dw = 0.0d0
-      atm(ilev)%grpl%a0_const = .true.
+      atm(ilev)%grpl%a0 = 0.3340d0 * ( den_min**0.25d0 )
+      atm(ilev)%grpl%da0_dw=0.25d0*(atm(ilev)%grpl%a0)/(den_min)
+      atm(ilev)%grpl%a0_const = .false.
     end if
   end do 
 

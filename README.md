@@ -1,3 +1,1 @@
-# dotlrt
-Repository to consolodate DOTLRT related code
-# dotlrt
+# Simple Testbed program for running scan var

@@ -60,7 +60,6 @@ subroutine Jacobian()
     do ilev = 1, nlev
       dTb_dT(ilev,iang,1) = dtb_pl(ilev,iang,1) + dKab_dT(ilev) * dtb_pl(ilev,iang,2)
 
-      
       do iphase = 1, nphase ! hydrometeor phases
         jvar_sc = 1 + 2 * iphase
         jvar_g  = 2 + 2 * iphase
@@ -74,9 +73,15 @@ subroutine Jacobian()
         jvar_sc = 1 + 2 * iphase
         jvar_g  = 2 + 2 * iphase
         dTb_dw(ilev,iang,iphase,1) = dKab_dw(ilev,iphase) * dtb_pl(ilev,iang,2) &
-          + dKsc_dw(ilev,iphase) * dtb_pl(ilev,iang,jvar_sc) &
-          + dg_dw(ilev,iphase) * dtb_pl(ilev,iang,jvar_g)
+                                   + dKsc_dw(ilev,iphase) * dtb_pl(ilev,iang,jvar_sc) &
+                                   + dg_dw(ilev,iphase)   * dtb_pl(ilev,iang,jvar_g)
+        !if (abs(dTb_dw(ilev,iang,iphase,1)) < 1.d-15 ) dTb_dw(ilev,iang,iphase,1)=0.d0
       end do
+        If (ilev==7 ) testval(1) = dTb_dw(ilev,1,1,1)
+        If (ilev==7 ) testval(2) = dTb_dw(ilev,1,2,1)
+        If (ilev==12) testval(3) = dTb_dw(ilev,1,3,1)
+        If (ilev==12) testval(4) = dTb_dw(ilev,1,4,1)
+        If (ilev==12) testval(5) = dTb_dw(ilev,1,5,1)
     end do
   end do
 

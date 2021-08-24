@@ -1,20 +1,41 @@
 start input in column 46--------------------|
-generalized scanning?            1=yes 2=no =1
                                    scan type=hm_ph5
 Scan options--------------------------------|
   scan 2-D or 3-D?              2=2-D 3=3-D =3
   X var(see SibscanDat)?                    =16
   Y var(see SibscanDat)?                    =6
   number y-variables           (2-D only)   =1
-  Number of points in scan                  =100
-  min channel number                        =1
-  max channel number                        =1
-  Save data?               0=no 1=txt 2=csv =2
+  Number of points in scan                  =500
+                                 min channel=1
+                                 max channel=24
+  Save 2D data?            0=no 1=txt 2=csv =2
   Save 3D data?            0=no 1=txt 2=csv =2
-  Calc psuedo-data?              1=yes 2=no =1
-  num obs psuedo-data?               1 or 2 =1
-  X obs Variable (0= none)                  =24
-  y obs Variable (0= none)                  =0
+                      Source of observations='test'
+               Source of initial atm profile='test2'
+               Calculate psuedo data profile=f
+   num manipulations for psuedo data profile=9
+num doit  Varname      ind1    ind1   val1       val2       val3
+1   t     'FY3_text'   3       0      0.0d0      0.d0       0.0d0
+2   f     'FY3_swath'  7       0      0.0d0      0.d0       0.0d0
+3   f     'read_sing'  1       0      0.0d0      0.d0       0.0d0
+4   f     'cloud'      0       0      2.0d0      6.0d0      3.d0
+5   f     'precip'     0       0      0.0d0      6.d0       3.0d0
+6   f     'temp'       0       0      300.0d0    210.d0     15.0d0
+7   f     'calc_tb'    0       0      0.0d0      0.d0       0.0d0
+8   f     'print_prof' 2       0      0.0d0      0.d0       0.0d0
+9   t     'print_obs'  0       0      0.0d0      0.d0       0.0d0
+                      Calculate init profile=t
+          num manipulations for init profile=9
+num doit  Varname      ind1    ind1   val1       val2       val3
+1   t     'read_sing'  1       0      0.0d0      0.d0       0.0d0
+2   f     'read_wrf'   17      273    0.0d0      0.d0       0.0d0
+3   t     'temp'       0       0      300.0d0    210.d0     15.0d0
+4   t     'cloud'      0       0      2.0d0      1.0d0      3.0d0
+5   t     'precip'     0       0      2.0d0      0.0d0      3.0d0
+6   t     'print_prof' 1       0      0.0d0      0.d0       0.0d0
+7   f     'write_prof' 2       0      0.0d0      0.d0       0.0d0
+8   f     'calc_tb'    0       0      0.0d0      0.d0       0.0d0
+9   f     'print_obs'  0       0      0.0d0      0.d0       0.0d0
 Output options------------------------------|
   Plot data?                     1=yes 2=no =2
   color contour plots?           1=yes 2=no =1
@@ -24,18 +45,26 @@ Output options------------------------------|
                                         Ymax=0.
   plot title                                =
   plot legends?                  1=yes 2=no =1
-                                     legend1=Total
-                                     legend2=GEMS2 Ch 16
-                                     legend3=GEMS2 Ch 17
-                                     legend4=GEMS2 Ch 18
-                                     legend5=GEMS2 Ch 19
-                                     legend6=GEMS2 Ch 20
-                                     legend7=GEMS2 Ch 21
-                                     legend8=GEMS2 Ch 22
-                                     legend9=GEMS2 Ch 23
-                                    legend10=GEMS2 Ch 24
+                           number of legends=16
+num  legend
+1    'Total'
+2    'FY3 Ch 1'
+3    'FY3 Ch 2'
+4    'FY3 Ch 3'
+5    'FY3 Ch 4'
+6    'FY3 Ch 5'
+7    'FY3 Ch 6'
+8    'FY3 Ch 7'
+9    'FY3 Ch 8'
+10   'FY3 Ch 9'
+11   'FY3 Ch 10'
+12   'FY3 Ch 11'
+13   'FY3 Ch 12'
+14   'FY3 Ch 13'
+15   'FY3 Ch 14'
+16   'FY3 Ch 15'
             Plot to screen (=1) or file (=2)=1
-  plot file name                            =/home/johe6518/code/testbed/Plots/plot
+  plot file name                            =/home/johe6518/dotlrt/Plots/plot
   Contour scale (0=auto, 1=man, 2=int,3=pwr)=1
   Contour base                              =.05
   Mumber of Contours                        =10
@@ -43,12 +72,32 @@ Output options------------------------------|
                                   maxcontour=5.
                       colorbar number format=f4.1
 Input/Output Files--------------------------|
-                                number files=2
+                                number files=9
 num   type          path
-1     'atm_prof'    '/home/johe6518/code/DOTLRTv2.1/inputs/atm_profile.txt'
-1     'out_path'    '/home/johe6518/code/testbed/Plots/Atm_prof_opt.csv'
+1     'atm_txt'     '/home/johe6518/dotlrt/inputs/atm_profile.txt'
+2     'atm_wrf'     '/home/johe6518/dotlrt/inputs/WRF_Output/wrfout_d02_2019-05-26_12_00_00'
+3     'out_path'    '/home/johe6518/dotlrt/Plots/Atm_prof_opt.csv'
+4     'FY3_text'    '/home/johe6518/dotlrt/inputs/Case_01.csv'
+5     'prof_path'   '/home/johe6518/dotlrt/Plots/Atm_prof_init.csv'
+6     'init_precip' '/home/johe6518/dotlrt/inputs/Init_Tb.csv'
+7     'FY3_vec'     '/home/johe6518/dotlrt/inputs/FY3D_dorian.h5'
+8     'FY3_out'     '/home/johe6518/dotlrt/inputs/'
+9     'FY3_var'     '/home/johe6518/dotlrt/inputs/ret_var_def.txt'
 output manipulations------------------------|
                         number manipulations=1
 doit  type         map    ind2    Val1      val2
 f     'sum'        1      2       0.        0.
 -------does not read beyond this line--------
+
+
+atm profile Key:
+Varname      ind1        ind2     val1               val2          val3
+'cloud'      na          na       col_tot (g/m3)     peak (km)     std (km)
+'precip'     na          na       col_tot (g/m3)     peak (km)     std (km)
+'temp'       na          na       Tsurf (K)          Ttrop (K)     Height trop (km)
+'read_sing'  pathnum     na       na                 na            na
+'calc_tb'    na          na       na                 na            na    
+'FY3_text'   na          na       na                 na            na
+'print_prof' flag        na       na                 na            na          ! 1=full 2=short
+'write_prof' pathnum     na       na                 na            na
+'print_obs'  na          na       na                 na            na

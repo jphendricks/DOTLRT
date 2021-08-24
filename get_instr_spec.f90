@@ -38,7 +38,7 @@ subroutine get_instr_spec( )
     instr_spec(ichan)%if2_freq  = temp(3)
     instr_spec(ichan)%bandwidth = temp(4)
     instr_spec(ichan)%dtrms     = temp(5)
-    instr_spec(ichan)%desig     = temp(6)
+    instr_spec(ichan)%desig     = int(temp(6))
     instr_spec(ichan)%num       = ichan
     instr_spec(ichan)%name      = trim(junk)
 

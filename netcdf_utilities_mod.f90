@@ -61,7 +61,7 @@ public :: nc_check,                       &
           nc_begin_define_mode,           &
           nc_end_define_mode,             &
           nc_synchronize_file,            &
-          get_var_index_table,            &
+          fill_index_table,               &
           get_hydro_d
 
 ! note here that you only need to distinguish between
@@ -229,9 +229,10 @@ endif
 
 ! this does not return
 print *, subr_name, msgstring1
-!call error_handler(E_ERR, subr_name, msgstring1, source, revision, revdate, &
-!                   text2=context2, text3=saved_filename)
 
+if (present(context2)) then
+   print*, context2
+endif
 
 end subroutine nc_check
 
@@ -2244,127 +2245,112 @@ end subroutine find_name_from_fh
 !------------------------------------------------------------------
 
 !:========================================================================
-subroutine get_var_index_table(ncid,varname,vals)
+subroutine fill_index_table(ncid,lookup_table)
   use netcdf
   implicit none
 
   integer                  , intent(in)  :: ncid
-  character(len=*)         , intent(in)  :: varname
-  real(8), dimension(:,:,:), intent(out) :: vals
+  real(8), dimension(:,:,:,:,:), intent(out) :: lookup_table
 
-  integer :: ivals, jdens, ktemp
   integer :: vsize, dsize, tsize
+  integer :: mchan, mphase, iphase
+  character(NF90_MAX_NAME) :: varname
   integer,                  dimension(3) :: varsize
   character(NF90_MAX_NAME), dimension(3) :: dimnames
+  character(len=21) :: FMT
 
   vsize =  nc_get_dimension_size(ncid, 'values')
   dsize =  nc_get_dimension_size(ncid, 'density')
   tsize =  nc_get_dimension_size(ncid, 'temperature')
 
-  call nc_get_variable_size(ncid, varname, varsize)
-  call nc_get_variable_dimension_names(ncid, varname, dimnames)
-  call nc_get_variable(ncid, varname, vals)
+  mchan = 1
+  mphase = 1
+  do iphase = 1,5
 
-end subroutine get_var_index_table
+      FMT = "('chann_',i0.2,'_',A)"
+      write(varname,FMT) mchan, get_hydro_name(iphase)
+
+      call nc_get_variable_size(ncid, varname, varsize)
+      call nc_get_variable_dimension_names(ncid, varname, dimnames)
+      call nc_get_variable(ncid, varname, lookup_table(iphase,mchan,:,:,:))
+
+  enddo
+
+end subroutine fill_index_table
 !:========================================================================
 
 !:========================================================================
-subroutine get_hydro_d(ncid, mdens, mtair, mphase, mchan, vals, hydro_d, z)
+subroutine get_hydro_d(mdens, mtair, mphase, mchan, dens, temp, lookup_table, z)
 !,varname,vals)
   use netcdf
-  !use dotlrt_variables
-  !use scan_Variables
 
   implicit none
 
-  integer , intent(in)   :: ncid
   real(8) , intent(in)   :: mdens
   real(8) , intent(in)   :: mtair
   integer , intent(in)   :: mphase
   integer , intent(in)   :: mchan
-  real(8) , intent(out)  :: vals(:,:,:)
-  real(8) , intent(out)  :: hydro_d(12)
-  real(8) , intent(out)  :: z
+  real(8) , intent(in)   :: dens(:)
+  real(8) , intent(in)   :: temp(:)
+  real(8) , intent(out)  :: lookup_table(:,:,:,:,:)
+  real(8) , intent(out)  :: z(12)
 
-  integer :: ivals, jdens, ktemp
-  integer :: vsize, dsize, tsize
+  integer :: dsize, tsize
   integer :: dind, tind, dind_p1, tind_p1
-  integer,                  dimension(3) :: varsize
-  character(NF90_MAX_NAME), dimension(3) :: dimnames
-  character(NF90_MAX_NAME) :: varname
-  character(len=21) :: FMT1
 
-  real(8), allocatable :: dens(:)
-  real(8), allocatable :: temp(:)
-  real(8) :: x1, x, Dx, y1, y, Dy, z11, z21, z12, z22
+  real(8) :: x1, x, Dx, y1, y, Dy
+  real(8), dimension(12) :: z11, z21, z12, z22
   real(8) :: x2, y2
-  integer :: i,j
+  logical :: debug_hydro
 
-  !real(8), allocatable :: vals(:,:,:)
+300  format (A," = (",i5   , ",", i5   , ")" )
+301  format (A," = (",f27.15, ",", f27.15, ")" )
+302  format (A," = [",f27.15, ",", f27.15, "]" )
 
-  !print *, 'ncid    = ', ncid
-  !print *, 'freq   = ', mfreq
-  !print *, 'dens   = ', mdens
-  !print *, 'tair   = ', mtair
-  !print *, 'phase  = ', mphase
-  !print *, 'chann  = ', mchan
+  debug_hydro = .false.
 
-  vsize =  nc_get_dimension_size(ncid, 'values')
-  dsize =  nc_get_dimension_size(ncid, 'density')
-  tsize =  nc_get_dimension_size(ncid, 'temperature')
-
-  allocate(dens(dsize))
-  allocate(temp(tsize))
-
-  FMT1 = "('chann_',i0.2,'_',A)"
-  write(varname,FMT1) mchan, get_hydro_name(mphase)
-  !print*, 'varname  = ', varname
-
-  call nc_get_variable_size(ncid, varname, varsize)
-  !print*, 'varsize  = ', varsize
-
-  call nc_get_variable_dimension_names(ncid, varname, dimnames)
-  !print*, 'dimnames = ', dimnames
-
-  call nc_get_variable(ncid, varname, vals)
-
-  call nc_get_variable(ncid, 'density', dens)
-  dens = dens
   dind = get_index_to_array(dens, mdens)
-
-  call nc_get_variable(ncid, 'temperature', temp)
   tind = get_index_to_array(temp, mtair)
 
-  hydro_d = vals(tind,dind,:)
+  tsize = size(temp)
+  dsize = size(dens)
+
+  if (debug_hydro) then
+     write(*,*)   '--------------'
+     write(*,*)   'INPUT VARIABLES'
+     write(*,*)   '   dens     = ', mdens
+     write(*,*)   '   tair     = ', mtair
+     write(*,*)   '   phase    = ', mphase
+     write(*,*)   '   chann    = ', mchan
+     write(*,*)   '--------------'
+     write(*,*)   "temp        = ", temp(1), temp(tsize)
+     write(*,*)   "dens        = ", dens(1), dens(dsize)
+     write(*,*)   "tind          ", tind
+     write(*,*)   "dind          ", dind
+  endif
 
   if (tind .eq. 1) then
-     !print*, 'tind == 1'
      tind    = 1
      tind_p1 = 2
   else if (tind .eq. tsize) then
-     !print*, tind, ' = tind == tsize =', tsize
      tind    = tsize-1
      tind_p1 = tsize
   else if (tind < tsize) then
-     !print*, tind, '= tind < tsize =', tsize
      tind_p1 = tind+1
   else
-     !print*, 'something wrong ', 'tind = ', tind, 'tind_p1 = ', tind_p1
+     print*, 'something wrong "tind"', 'dind = ', dind, 'dind_p1 = ', dind_p1
   endif
 
   if (dind .eq. 1) then
-     !print*, 'dind == 1'
      dind    = 1
      dind_p1 = 2
   else if (dind .eq. dsize) then
-     !print*, dind, ' = dind == dsize =', dsize
      dind    = dsize-1
      dind_p1 = dsize
   else if (dind < dsize) then
-     !print*, dind, '= dind < dsize =', dsize
      dind_p1 = dind+1
   else
-     !print*, 'something wrong ', 'dind = ', dind, 'dind_p1 = ', dind_p1
+     print*, 'something wrong "dind"', 'dind = ', dind, 'dind_p1 = ', dind_p1
   endif
 
   Dx  = (dens(dind_p1)-dens(dind))
@@ -2375,38 +2361,37 @@ subroutine get_hydro_d(ncid, mdens, mtair, mphase, mchan, vals, hydro_d, z)
   y2  = temp(tind_p1)
   x   = mdens
   y   = mtair
-  z11 = vals(tind,    dind,    1)
-  z21 = vals(tind_p1, dind,    1)
-  z12 = vals(tind,    dind_p1, 1)
-  z22 = vals(tind_p1, dind_p1, 1)
-
-  if(.true.) then
-     print*, '--------------'
-     !print*, 'temp    = ', temp
-     print*, 'tind    = ', tind
-     print*, 'tind_p1 = ', tind_p1
-     !print*, 'dens    = ', dens
-     print*, 'dind    = ', dind
-     print*, 'dind_p1 = ', dind_p1
-     print*, '--------------'
-     print*, 'Dx  = ', Dx
-     print*, 'Dy  = ', Dy
-     print*, 'x1  = ', x1
-     print*, 'y1  = ', y1
-     print*, 'x2  = ', x2
-     print*, 'y2  = ', y2
-     print*, 'x   = ', x
-     print*, 'mdens= ', 10**mdens
-     print*, 'y   = ', y
-     print*, 'mtair= ', mtair
-     print*, 'z11 = ', z11
-     print*, 'z21 = ', z21
-     print*, 'z12 = ', z12
-     print*, 'z22 = ', z22
-     print*, '--------------'
-  endif
+  z11 = lookup_table(1,1,dind,    tind,   :)
+  z21 = lookup_table(1,1,dind_p1, tind,   :)
+  z12 = lookup_table(1,1,dind,    tind_p1,:)
+  z22 = lookup_table(1,1,dind_p1, tind_p1,:)
 
   call interpolate(x1, x, Dx, y1, y, Dy, z11, z21, z12, z22, z)
+
+  if (debug_hydro) then
+     write(*,*)   '--------------'
+     write(*,*)   'INPUT VARIABLES'
+     write(*,*)   '   dens     = ', mdens
+     write(*,*)   '   tair     = ', mtair
+     write(*,*)   '   phase    = ', mphase
+     write(*,*)   '   chann    = ', mchan
+     write(*,*)   '--------------'
+     write(*,*)   "tmin,tmax        = ", temp(1), temp(dsize)
+     write(*,*)   "dmin,tmax        = ", dens(1), dens(dsize)
+     write(*,300) "tind          ", tind, tind_p1
+     write(*,300) "dind          ", dind, dind_p1
+     write(*,*)   '--------------'
+     write(*,301) "(Dx ,  Dy)", Dx       , Dy
+     write(*,301) "(x1 ,  y1)", x1       , y1
+     write(*,301) "(x2 ,  y2)", x2       , y2
+     write(*,301) "(x  ,  y )", x        , y
+     write(*,301) "(md ,  mt)", 10**mdens, mtair
+     write(*,*)   '--------------'
+     write(*,302) "[z11, z21]", z11(1), z21(1)
+     write(*,302) "[z12, z22]", z12(1), z22(1)
+     write(*,*)   '--------------'
+     write(*,"('z          = ', f23.15)") z(1)
+  endif
 
 end subroutine get_hydro_d
 
@@ -2483,25 +2468,23 @@ subroutine interpolate(x1, x, Dx, y1, y, Dy, z11, z21, z12, z22, z)
 ! 4 closest data points (z11, z21, z12, and z22).
 
 ! begin input variables
-real(8) x1  ! the x grid location of z11
-real(8) x   ! x-value at which you will interpolate z=f(x,y)
-real(8) Dx  ! grid spacing in the x direction
-real(8) y1  ! the y grid location of z11
-!real(8) y   ! y-value at which you will interpolate z=f(x,y)
-real(8) y   ! y-value at which you will interpolate z=f(x,y)
-real(8) Dy  ! grid spacing in the y direction
-real(8) z11 ! f(x1, y1)
-real(8) z21 ! f(x1+Dx, y1)
-real(8) z12 ! f(x1, y1+Dy)
-real(8) z22 ! f(x1+Dx, y1+Dy)
+real(8), intent(in) :: x1  ! the x grid location of z11
+real(8), intent(in) :: x   ! x-value at which you will interpolate z=f(x,y)
+real(8), intent(in) :: Dx  ! grid spacing in the x direction
+real(8), intent(in) :: y1  ! the y grid location of z11
+real(8), intent(in) :: y   ! y-value at which you will interpolate z=f(x,y)
+real(8), intent(in) :: Dy  ! grid spacing in the y direction
+real(8), dimension(12), intent(in) :: z11 ! f(x1, y1)
+real(8), dimension(12), intent(in) :: z21 ! f(x1+Dx, y1)
+real(8), dimension(12), intent(in) :: z12 ! f(x1, y1+Dy)
+real(8), dimension(12), intent(in) :: z22 ! f(x1+Dx, y1+Dy)
 
 ! begin output variables
-real(8) z   ! f(x,y), the desired interpolated value
+real(8), dimension(12), intent(out) :: z   ! f(x,y), the desired interpolated value
 
 ! begin internal variables
-real(8) zp  ! z'=first interpolated value at (x, y1)
-real(8) zpp ! z''=second interpolated value at (x, Y1+Dy)
-
+real(8), dimension(12) :: zp  ! z'=first interpolated value at (x, y1)
+real(8), dimension(12) :: zpp ! z''=second interpolated value at (x, Y1+Dy)
 
    ! interpolate between z11 and z21 to calculate z' (zp) at (x, y1)
    zp=z11+(x-x1)*(z21-z11)/Dx

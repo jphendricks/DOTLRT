@@ -9,7 +9,7 @@ subroutine fresnel_refl( iang, surf_ref_hor, surf_ref_ver )
 !
 ! History:
 !  10/5/2020 Kevin Schaefer commented the code
-!  10/16/2020 Kevin Schaefer switched to variables module
+!  10/16/2020 Kevin Schaefer switched to variables module 
 !-----------------------------------------------------------------
 use dotlrt_variables
 implicit none
@@ -38,7 +38,7 @@ implicit none
   gamv = (term2-term1)/(term2+term1)
   term2 = mu*costheta
   gamh = (term2-term1)/(term2+term1)
-  surf_ref_ver = gamv * dconjg(gamv)
-  surf_ref_hor = gamh * dconjg(gamh)
+  surf_ref_ver = dreal(gamv * dconjg(gamv))
+  surf_ref_hor = dreal(gamh * dconjg(gamh))
 
 end subroutine fresnel_refl
